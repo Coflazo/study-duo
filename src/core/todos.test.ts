@@ -1,10 +1,21 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
-import { addTodo, editTodo, moveTodo, normalizeTodos, removeTodo, todosItem, toggleTodo, updateTodos, type Todo } from './todos';
+import { addTodo, editTodo, moveAmongOpen, moveTodo, normalizeTodos, removeTodo, todosItem, toggleTodo, updateTodos, type Todo } from './todos';
+
+let stored: unknown;
+const fakeStore = () => stored;
 
 const t = (id: string, text = id): Todo => ({ id, text, course: null, done: false, doneAt: null, ifThen: null });
 
-beforeEach(() => fakeBrowser.reset());
+beforeEach(() => {
+  fakeBrowser.reset();
+  stored = undefined;
+  const set = todosItem.setValue.bind(todosItem);
+  todosItem.setValue = async (v) => {
+    stored = v;
+    return set(v);
+  };
+});
 
 describe('to-do list operations', () => {
   it('adds at the end with a cleaned course tag and plan', () => {
@@ -48,5 +59,21 @@ describe('updateTodos', () => {
     const fromDashboard = updateTodos((list) => addTodo(list, { text: 'from dashboard' }, 'd'));
     await Promise.all([fromPopup, fromDashboard]);
     expect((await todosItem.getValue()).map((x) => x.id).sort()).toEqual(['a', 'd', 'p']);
+  });
+});
+
+describe('moving among open items', () => {
+  it('moves past done items so the visible order changes', () => {
+    const done = { ...t('b'), done: true, doneAt: 1 };
+    expect(moveAmongOpen([t('a'), done, t('c')], 'c', -1).map((x) => x.id)).toEqual(['c', 'a', 'b']);
+    expect(moveAmongOpen([t('a'), done, t('c')], 'a', 1).map((x) => x.id)).toEqual(['b', 'c', 'a']);
+    expect(moveAmongOpen([t('a'), t('c')], 'a', -1).map((x) => x.id)).toEqual(['a', 'c']);
+  });
+});
+
+describe('stored to-dos stay plain data', () => {
+  it('never writes reactive proxies, which Firefox storage cannot clone', async () => {
+    await updateTodos((list) => [...list, new Proxy(t('p'), {})]);
+    expect(() => structuredClone(fakeStore())).not.toThrow();
   });
 });

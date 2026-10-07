@@ -52,6 +52,13 @@ export function moveTodo(list: Todo[], id: string, toIndex: number): Todo[] {
   return next;
 }
 
+/** Move up or down among the open items only, so done items in between never swallow the move. */
+export function moveAmongOpen(list: Todo[], id: string, step: -1 | 1): Todo[] {
+  const open = list.filter((x) => !x.done);
+  const neighbour = open[open.findIndex((x) => x.id === id) + step];
+  return neighbour ? moveTodo(list, id, list.indexOf(neighbour)) : list;
+}
+
 export function removeTodo(list: Todo[], id: string): Todo[] {
   return list.filter((x) => x.id !== id);
 }
@@ -82,7 +89,8 @@ let queue: Promise<unknown> = Promise.resolve();
  */
 export function updateTodos(change: (list: Todo[]) => Todo[]): Promise<Todo[]> {
   const run = queue.then(async () => {
-    const next = change(normalizeTodos(await todosItem.getValue()));
+    // normalizeTodos rebuilds plain objects: a Svelte proxy would fail Firefox's structured clone.
+    const next = normalizeTodos(change(normalizeTodos(await todosItem.getValue())));
     await todosItem.setValue(next);
     return next;
   });

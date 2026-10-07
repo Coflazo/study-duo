@@ -6,7 +6,7 @@
   import { categoryFor, normalizeSites, siteOf, type SiteCategory, type Sites } from '@/core/sites';
   import { sitesItem } from '@/core/store';
   import { isBreak } from '@/core/timer';
-  import { boardLabel, plateNote, timetable } from '@/core/today-view';
+  import { boardLabel, defaultTask, plateNote, timetable } from '@/core/today-view';
   import { ICONS } from '@/ui/icons';
   import LedBoard from '@/ui/LedBoard.svelte';
   import { createLive, send } from '@/ui/live.svelte';
@@ -27,7 +27,7 @@
 
   const open = $derived(live.todos.filter((t) => !t.done));
   const shown = $derived(data.shown());
-  const toRate = $derived(pendingRating(live.today, live.now));
+  const toRate = $derived(pendingRating(live.today, live.now, timer));
   const blocksDone = $derived(live.today.filter((s) => s.phase === 'focus' && s.completed).length);
   const progress = $derived(timer.status !== 'stopped' && timer.plannedMs ? 1 - shown.ms / timer.plannedMs : 0);
   const rows = $derived(timetable({ timer, settings, sessions: live.today, todos: live.todos, now: live.now, chosen: chosen || null, keepDone: 2 }));
@@ -38,7 +38,7 @@
     unwatchSites = sitesItem.watch((v) => (sites = normalizeSites(v)));
     stop = await data.start();
     sites = normalizeSites(await sitesItem.getValue());
-    chosen = open[0]?.id ?? '';
+    chosen = defaultTask(open, live.timer);
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
     site = siteOf(tab?.url);
   });

@@ -69,11 +69,16 @@ test('pick a task, run a block, pause, and rate it afterwards', async () => {
 
   // Next block: Skip on the question is remembered too.
   await p.getByRole('button', { name: 'Skip break' }).click();
+  await expect(p.getByLabel('Work on')).toHaveValue('t1'); // keeps going with the last block's task
   await p.getByRole('button', { name: 'Start' }).click();
   await finishSoon(sw);
   await expect(p.getByRole('heading', { name: 'Block done.' })).toBeVisible({ timeout: 10_000 });
-  await p.getByRole('button', { name: 'Skip', exact: true }).click();
-  await expect.poll(async () => (await sessions(sw)).filter((s) => s.ratingSkipped).length).toBe(1);
+  // An unanswered question never covers the next running block.
+  await p.getByRole('button', { name: 'Skip break' }).click();
+  await p.getByRole('button', { name: 'Start' }).click();
+  await expect(p.getByRole('heading', { name: 'Block done.' })).toBeHidden();
+  await expect(p.getByText('Block 3 of 4')).toBeVisible();
+  expect((await sessions(sw)).filter((s) => s.phase === 'focus' && s.completed && s.rating === null).length).toBe(1);
 
   await ctx.close();
   fs.rmSync(profile, { recursive: true, force: true });

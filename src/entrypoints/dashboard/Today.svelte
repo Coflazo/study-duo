@@ -1,7 +1,7 @@
 <script lang="ts">
   import { capsuleText } from '@/core/capsule';
   import { isBreak } from '@/core/timer';
-  import { boardLabel, plateNote, timetable } from '@/core/today-view';
+  import { boardLabel, defaultTask, plateNote, timetable } from '@/core/today-view';
   import { toggleTodo, updateTodos } from '@/core/todos';
   import { ICONS } from '@/ui/icons';
   import LedBoard from '@/ui/LedBoard.svelte';
@@ -25,8 +25,12 @@
   const onNow = $derived(live.timer.status !== 'stopped' && live.timer.phase === 'focus' ? live.timer.taskId : null);
   const date = $derived(new Date(live.now).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }));
 
+  // Default once, after the data loads; afterwards the choice is the user's, including "No task".
+  let defaulted = false;
   $effect(() => {
-    if (!chosen && open[0]) chosen = open[0].id;
+    if (defaulted || !live.ready) return;
+    defaulted = true;
+    chosen = defaultTask(open, live.timer);
   });
 </script>
 

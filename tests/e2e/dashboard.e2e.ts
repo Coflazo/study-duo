@@ -22,6 +22,10 @@ test('dashboard: Today runs the timer, shows the plan, and navigates by keyboard
   await expect(p.getByRole('heading', { name: 'To-do' })).toBeVisible();
   await expect(p.getByText('1 left today')).toBeVisible();
 
+  // "No task" stays chosen; the default is set once, not forced back.
+  await p.getByLabel('Work on').selectOption('');
+  await p.waitForTimeout(400);
+  await expect(p.getByLabel('Work on')).toHaveValue('');
   await p.getByLabel('Work on').selectOption('t1');
   await p.getByRole('button', { name: 'Start' }).click();
   await expect(p.getByText('Block 1 of 4')).toBeVisible();

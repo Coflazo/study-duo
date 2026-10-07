@@ -45,19 +45,27 @@ test('to-do: add, plan, edit, reorder by keyboard, complete, delete and undo, st
   await p.getByRole('checkbox', { name: 'Read lecture 5 and 6 notes' }).check();
   await expect(p.getByRole('region', { name: 'Done today' })).toContainText('Read lecture 5 and 6 notes');
 
+  // Move up past a finished item still changes the visible order.
+  await p.getByLabel('Add something to work on').fill('Third task');
+  await p.getByRole('button', { name: 'Add', exact: true }).click();
+  await p.getByRole('button', { name: 'More for Third task' }).click();
+  await p.getByRole('menuitem', { name: 'Move up' }).click();
+  const openOrder = () => p.locator('main ul').first().getByRole('checkbox').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
+  await expect.poll(openOrder).toEqual(['Third task', 'Statistics problem set 4']);
+
   // Delete with undo
   await p.getByRole('button', { name: 'More for Statistics problem set 4' }).click();
   await p.getByRole('menuitem', { name: 'Delete' }).click();
   await expect(p.getByRole('status')).toContainText('Deleted');
   await p.getByRole('button', { name: 'Undo' }).click();
   await expect(p.getByRole('checkbox', { name: 'Statistics problem set 4' })).toBeVisible();
-  expect((await stored(sw)).map((t: any) => t[0])).toEqual(['Statistics problem set 4', 'Read lecture 5 and 6 notes']);
+  expect((await stored(sw)).map((t: any) => t[0])).toEqual(['Third task', 'Statistics problem set 4', 'Read lecture 5 and 6 notes']);
 
   // Start a block on a task
   await p.getByRole('button', { name: 'Start a study block on Statistics problem set 4' }).click();
   await expect.poll(() => sw.evaluate(async () => {
     const { timer, todos } = await chrome.storage.local.get(['timer', 'todos']);
-    return timer.status === 'running' && timer.taskId === todos[0].id;
+    return timer.status === 'running' && timer.taskId === todos.find((t: any) => t.text === 'Statistics problem set 4').id;
   })).toBe(true);
 
   await ctx.close();

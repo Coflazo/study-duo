@@ -55,3 +55,8 @@ export function timetable(input: {
     { key: 'next', state: 'planned', time: timer.endsAt ? clockTime(timer.endsAt) : '--:--', task: PHASE_NAME[after], duration: minutesText(phaseLengthMs(after, settings, timer)), isBreak: isBreak(after) },
   ];
 }
+
+/** The task offered under "Work on": the last block's task while it is still open, else the first open to-do. */
+export function defaultTask(open: Todo[], timer: Pick<TimerState, 'taskId'>): string {
+  return timer.taskId && open.some((t) => t.id === timer.taskId) ? timer.taskId : (open[0]?.id ?? '');
+}

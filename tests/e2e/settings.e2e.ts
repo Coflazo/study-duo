@@ -46,6 +46,10 @@ test('settings: lengths, validation, switches, appearance and the bell preview',
   await expect(p.locator('html')).toHaveAttribute('data-theme', 'dark');
   await p.reload();
   await expect(p.locator('html')).toHaveAttribute('data-theme', 'dark');
+  const blocked = await ctx.newPage();
+  await blocked.goto(`chrome-extension://${EXT_ID}/blocked.html#https://video.example/`);
+  await expect(blocked.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await blocked.close();
   await p.getByRole('radio', { name: 'System' }).click();
   await expect(p.locator('html')).not.toHaveAttribute('data-theme', /.+/);
 

@@ -67,3 +67,27 @@ describe('pendingRating', () => {
     expect(pendingRating([rec(at(8, 0, 10))], at(8, 3))).toBeNull();
   });
 });
+
+describe('pendingRating with a block running', () => {
+  const rec = (endedAt: number): SessionRecord => ({
+    id: String(endedAt), phase: 'focus', startedAt: endedAt - 25 * MIN, endedAt, plannedMs: 25 * MIN, activeMs: 25 * MIN, pausedMs: 0,
+    completed: true, taskId: null, rating: null, ratingSkipped: false,
+  });
+  it('stops asking once the next study block has started', () => {
+    const last = rec(at(7, 9, 25));
+    expect(pendingRating([last], at(7, 9, 40), { phase: 'shortBreak', status: 'running', startedAt: at(7, 9, 25) })).not.toBeNull();
+    expect(pendingRating([last], at(7, 9, 40), { phase: 'focus', status: 'running', startedAt: at(7, 9, 31) })).toBeNull();
+    expect(pendingRating([last], at(7, 9, 40), { phase: 'focus', status: 'stopped', startedAt: null })).not.toBeNull();
+  });
+});
+
+describe('schema version guard', () => {
+  it('refuses a database from a newer version instead of damaging it', async () => {
+    await new Promise<void>((resolve) => {
+      const req = indexedDB.open('study-duo', 99);
+      req.onupgradeneeded = () => req.result.createObjectStore('future');
+      req.onsuccess = () => { req.result.close(); resolve(); };
+    });
+    await expect(addSessions([seg(at(7, 9), at(7, 9, 25))])).rejects.toThrow();
+  });
+});

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { addTodo, editTodo, moveTodo, removeTodo, toggleTodo, updateTodos, type Todo } from '@/core/todos';
+  import { addTodo, editTodo, moveAmongOpen, removeTodo, toggleTodo, updateTodos, type Todo } from '@/core/todos';
   import { ICONS } from '@/ui/icons';
   import type { createLive } from '@/ui/live.svelte';
   import { send } from '@/ui/live.svelte';
@@ -69,7 +69,7 @@
     menuFor = null;
     const index = live.todos.findIndex((x) => x.id === t.id);
     await updateTodos((list) => removeTodo(list, t.id));
-    deleted = { todo: t, index };
+    deleted = { todo: $state.snapshot(t), index };
     clearTimeout(undoTimer);
     undoTimer = setTimeout(() => (deleted = null), 8_000);
   }
@@ -132,8 +132,8 @@
             <button class="small" data-more={t.id} aria-label="More for {t.text}" aria-haspopup="menu" aria-expanded={menuFor === t.id} onclick={() => openMenu(t.id)}>•••</button>
             {#if menuFor === t.id}
               <span class="menu" role="menu" aria-label="Actions for {t.text}">
-                <button role="menuitem" disabled={i === 0} onclick={() => act(t.id, () => updateTodos((list) => moveTodo(list, t.id, list.findIndex((x) => x.id === t.id) - 1)))}>Move up</button>
-                <button role="menuitem" disabled={i === open.length - 1} onclick={() => act(t.id, () => updateTodos((list) => moveTodo(list, t.id, list.findIndex((x) => x.id === t.id) + 1)))}>Move down</button>
+                <button role="menuitem" disabled={i === 0} onclick={() => act(t.id, () => updateTodos((list) => moveAmongOpen(list, t.id, -1)))}>Move up</button>
+                <button role="menuitem" disabled={i === open.length - 1} onclick={() => act(t.id, () => updateTodos((list) => moveAmongOpen(list, t.id, 1)))}>Move down</button>
                 <button role="menuitem" onclick={() => startEdit(t)}>Edit</button>
                 <button role="menuitem" onclick={() => remove(t)}>Delete</button>
               </span>

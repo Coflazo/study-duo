@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SessionRecord } from './sessions';
 import { DEFAULT_SETTINGS as S } from './settings';
 import { initialState, reduce } from './timer';
-import { boardLabel, plateNote, timetable } from './today-view';
+import { boardLabel, defaultTask, plateNote, timetable } from './today-view';
 import type { Todo } from './todos';
 
 const MIN = 60_000;
@@ -48,5 +48,14 @@ describe('timetable', () => {
     const rows = timetable({ timer: initialState(), settings: S, sessions: many, todos, now: at(11), chosen: 't1', keepDone: 2 });
     expect(rows.map((r) => r.state)).toEqual(['done', 'done', 'planned']);
     expect(rows.at(-1)!.task).toBe('Statistics problem set 4');
+  });
+});
+
+describe('defaultTask', () => {
+  const open = [todo('a', 'Alpha'), todo('b', 'Bravo')];
+  it('keeps going with the task of the last block when it is still open', () => {
+    expect(defaultTask(open, { ...initialState(), taskId: 'b' })).toBe('b');
+    expect(defaultTask(open, { ...initialState(), taskId: 'gone' })).toBe('a');
+    expect(defaultTask([], initialState())).toBe('');
   });
 });
