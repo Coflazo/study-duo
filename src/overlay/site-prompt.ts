@@ -38,7 +38,7 @@ export function createSitePrompt(answer: (category: SiteCategory | null) => void
   };
   const close = document.createElement('button');
   close.type = 'button';
-  close.className = 'close prompt-close';
+  close.className = 'prompt-close';
   close.tabIndex = -1;
   close.title = 'Do not ask about this site again';
   const x = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

@@ -93,7 +93,12 @@ export const CSS = `${hostTokens}
 .prompt-q { display: flex; flex: 1; flex-direction: column; gap: 2px; min-inline-size: 0; }
 .prompt-kicker { font-size: 11px; line-height: 15px; font-weight: 600; color: var(--neutral-400); }
 .prompt-domain { font-size: 14px; line-height: 19px; font-weight: 700; overflow-wrap: anywhere; }
-.prompt .prompt-close { display: grid; color: var(--neutral-400); }
+.prompt-close {
+  display: grid; place-items: center; flex: none; width: 24px; height: 24px; margin: 0; padding: 0;
+  border: 0; border-radius: 2px; background: none; color: var(--neutral-400); cursor: pointer;
+}
+.prompt-close:hover { background: rgb(255 255 255 / 0.08); }
+.prompt-close svg { width: 14px; height: 14px; fill: currentColor; }
 .prompt-choices { display: flex; flex-wrap: wrap; gap: 6px; }
 .choice {
   display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 6px 10px 6px 8px; border: 0; border-radius: 2px;
