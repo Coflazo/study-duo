@@ -213,7 +213,7 @@
   input[aria-invalid='true'] { border-color: var(--color-bg-plate-focus); }
   .error { margin: 0; font: 600 12px/16px var(--font-family-ui); color: var(--color-text-focus); }
   .hint { padding-block: 8px; }
-  .notice { margin: 4px 0 8px; padding: 8px 12px; border-inline-start: 3px solid var(--color-border-focus); background: var(--color-bg-sunken); font: 600 14px/20px var(--font-family-ui); }
+  .notice { margin: 4px 0 8px; padding: 8px 12px; border-radius: var(--radius-md); background: var(--color-bg-sunken); font: 600 14px/20px var(--font-family-ui); }
   button:disabled { color: var(--color-text-disabled); cursor: not-allowed; }
   button:focus-visible, input:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
 </style>
