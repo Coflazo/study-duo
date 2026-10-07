@@ -9,12 +9,18 @@ const CHROMIUM_PUBLIC_KEY =
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   srcDir: 'src',
+  manifestVersion: 3,
   modules: ['@wxt-dev/module-svelte'],
   manifest: ({ browser }) => ({
     name: 'Study Duo',
     description: 'Pomodoro timer, focus clock, tab locker and private study insights. Runs offline.',
     ...(browser === 'firefox'
-      ? { browser_specific_settings: { gecko: { id: 'study-duo@coflazo.github.io' } } }
+      ? {
+          browser_specific_settings: {
+            // Nothing leaves the browser, so Firefox's data-collection declaration is "none".
+            gecko: { id: 'study-duo@coflazo.github.io', data_collection_permissions: { required: ['none'] } },
+          },
+        }
       : { key: CHROMIUM_PUBLIC_KEY }),
     permissions: [
       'storage',
@@ -27,6 +33,16 @@ export default defineConfig({
     // No network by default: integrations add their own origins when they ship.
     content_security_policy: {
       extension_pages: "script-src 'self'; object-src 'self'; connect-src 'self';",
+    },
+    commands: {
+      'toggle-timer': {
+        suggested_key: { default: 'Alt+Shift+S' },
+        description: 'Start or pause the timer',
+      },
+      'skip-phase': {
+        suggested_key: { default: 'Alt+Shift+K' },
+        description: 'Skip to the next phase',
+      },
     },
   }),
 });

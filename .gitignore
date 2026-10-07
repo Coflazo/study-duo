@@ -30,3 +30,7 @@ web-ext.config.ts
 
 # Never commit extension signing keys
 *.pem
+
+# Playwright
+test-results/
+playwright-report/

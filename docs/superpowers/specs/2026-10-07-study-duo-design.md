@@ -31,7 +31,7 @@ Project folder `~/Desktop/Projects/study-duo` is empty (greenfield). GitHub: `Co
 ## Honest constraints (no way around these)
 
 1. **"100% secure" is not a promise anyone can keep.** What we can deliver: no server, no telemetry, no remote code, least-privilege permissions, local-only data, open source, verifiable builds, audits. Details in Security.
-2. **No Spotify API at all.** Spotify's Developer Policy (2025-05-15) forbids putting Spotify content into any ML model or building listener profiles, which is our core feature. Also: dev mode = 5 users max and the app owner needs Premium (not $0); Extended Quota needs a company with 250k MAU; recommendations / audio-features / related-artists removed (2024-11-27). Spotify listening still counts through (a) the Spotify Web Player tab, read locally like any music tab, and (b) Spotify's own built-in Last.fm connection for desktop and phone apps.
+2. **No Spotify API at all.** Spotify's Developer Policy (2025-05-15) forbids putting Spotify content into any ML model or building listener profiles, which is our core feature. Also: dev mode = 5 users max and the app owner needs Premium (not $0); Extended Quota needs a company with 250k MAU; recommendations / audio-features / related-artists removed (2024-11-27). Spotify's User Guidelines also ban scraping and "ingesting Spotify Content into a machine learning or AI model", so the Spotify Web Player tab is display and play/pause only and never reaches the model. Spotify listening reaches the model only through the user's own Last.fm or ListenBrainz scrobbles (they link Spotify there).
 3. **Phone apps cannot be read directly** by a browser extension (iOS forbids apps reading each other's now-playing). Route: phone app sends plays to a free listening account (Last.fm or ListenBrainz); the extension reads that account; a QR opens the setup on the phone.
 4. **Google Calendar, personal now:** free Google Cloud project (no billing), OAuth consent screen set to "In production" without verification: you click past "Google hasn't verified this app" once, tokens do not expire weekly (that 7-day limit only applies to "Testing" status), fine for up to 100 users. **At public release** Google verification is needed (free, privacy policy on `coflazo.github.io` verified in Search Console, days to weeks of review).
 5. **$0 rule consequences:** no Chrome Web Store ($5) → Chrome users install from GitHub Releases ("Load unpacked", Chrome shows a developer-mode notice). No Safari ($99/yr Apple program, and Safari has no `identity` API anyway) → Safari only as build-from-source for people with Xcode. Outlook sync ships only if a Microsoft app registration is possible without a card; otherwise Outlook users use `.ics`.
@@ -110,6 +110,16 @@ Core modules (`src/core/`, pure TS, unit-tested): `timer.ts` (state machine), `b
 7. Detection code adapted from **Web Scrobbler** (MIT, 375 site connectors incl. `youtube-music.ts`, `spotify.ts`, `soundcloud.ts`, `musickit.ts`), with its notice kept.
 
 Research defaults until the model has data: instrumental or no music for reading/writing tasks, low volume (Vasilev 2018, Cheah 2022, Perham & Currie 2014).
+
+## Music sources, verified 2026-10-07 (research agent report)
+
+- Rejected: theroyakash/music-api (no code in the repo, was a hosted Heroku proxy, now 404, shared one YouTube key, which YouTube's policy forbids); Odesli/song.link (public API retired 2026-07-31); YouTube IFrame player in extension pages (error 153, no Referer from `chrome-extension://`); ytmusicapi / YouTube.js / Invidious / Piped (YouTube ToS bans automated access); Spotify iFrame API and any Spotify data in the model (Developer Policy III.14 + User Guidelines); AcousticBrainz (frozen 2022); Essentia.js (AGPL, cannot ship in MIT).
+- Now playing: mediaSession content scripts adapted from Web Scrobbler's MIT connectors (isolated-world reads work, as Web Scrobbler's `tidal.ts` shows); own-file player; opt-in Last.fm `user.getRecentTracks` / ListenBrainz `playing-now` for desktop and phone apps.
+- Play/pause/skip: click the music site's own buttons from the content script, or call captured `mediaSession` action handlers from a MAIN-world shim; own files via `<audio>`. No embedded YouTube or Spotify players.
+- Metadata for the model: MusicBrainz MBID/ISRC as the anchor (1 req/s, CC0 core), Last.fm top tags (user's free key), Discogs genres and styles (keyless, 25/min), Deezer bpm and gain when non-zero (keyless, non-commercial), on-device BPM and audio features for the user's own files (web-audio-beat-detector, Meyda; both MIT). iTunes Search API only for display and store links (promotional-use terms).
+- Recommendations: Last.fm `track.getSimilar` / `artist.getSimilar`, ListenBrainz similar artists (keyless) and LB Radio (user token), Deezer related artists; results open as a search in the user's own service (match across services by ISRC).
+- Built-in focus music (online): radio-browser.info station directory (keyless); Jamendo or ccMixter optional with the user's own client id. Offline: bundled CC0 sounds, generated noise, the user's own files.
+- Not possible for free or legitimately: Apple Music app control or library (MusicKit needs the $99 program), Spotify data in the model, YouTube playback inside an extension page, tempo for arbitrary streamed tracks, a free cross-service link API, desktop or phone now-playing without scrobbles.
 
 ## Calendar
 
@@ -222,7 +232,9 @@ The promise is the GitHub repo, not a store listing. Every release is a GitHub R
 | Your computer | Paste this in any terminal |
 |---|---|
 | macOS / Linux (Terminal, iTerm, bash, zsh, fish) | `curl -fsSL https://raw.githubusercontent.com/Coflazo/study-duo/main/install.sh \| sh` |
-| Windows (PowerShell, Command Prompt, Windows Terminal) | `powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/Coflazo/study-duo/main/install.ps1 \| iex"` |
+| Windows (PowerShell, Command Prompt, Windows Terminal) | `powershell -c "irm https://raw.githubusercontent.com/Coflazo/study-duo/main/install.ps1 \| iex"` (no execution-policy flag needed: piped scripts are not subject to it) |
+
+**Install page (the README's first link):** `coflazo.github.io/study-duo`, a static GitHub Pages page (free, no server, no tracking) that detects the visitor's OS and shows the one matching line with a large copy button, plus "how to open a terminal" for that OS and a short GIF of the 3 browser clicks. No single command line works across bash/zsh/fish and Windows PowerShell 5.1 (different syntax, no `sh` on Windows), so OS detection on a page is how rustup, Bun and Deno solve the same problem. README written for non-technical readers: plain steps first, technical detail folded into `<details>` sections.
 
 What the installer does (and nothing else):
 1. Downloads the latest release zip + `SHA256SUMS` from `github.com/Coflazo/study-duo/releases/latest/download/` over HTTPS.
