@@ -1,0 +1,22 @@
+name: Feature idea
+description: Suggest something that would help you study
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would help you
+      description: Describe the situation and what gets in your way.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Study Duo's rules
+      options:
+        - label: Works offline and keeps data on the computer, or is an opt-in connection
+        - label: Costs nothing and needs no account

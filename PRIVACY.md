@@ -1,6 +1,6 @@
 # Privacy
 
-Study Duo has no server and collects nothing about you.
+Study Duo has no server and sends nothing about you anywhere. What it records stays in your browser, on your computer.
 
 ## What stays on your computer
 

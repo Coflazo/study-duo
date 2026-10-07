@@ -148,6 +148,27 @@ Grounding: Murphy, *PML: Advanced Topics* §3.5 hierarchical priors; Ruppert & M
 - **Validation:** walk-forward one-step-ahead MAE vs running-mean baseline (shown on a small "model health" line). Leakage rule: only features known at session start. Unit tests: synthetic users with known true effects; model must recover them inside its intervals.
 - Runs in the background after each session (incremental) and on dashboard open (full refit). No network, no WASM needed.
 
+## Implicit focus signals (research agent report, 2026-10-07)
+
+The 1-5 self-rating stays as the anchor label, and a behavioural focus index fills in and gradually replaces it. Ship first, in this order (none needs a new permission or install warning):
+
+1. Share of the block on sites filed as Study (strongest evidence: Ravizza et al. 2017, Psych Sci).
+2. Switches to Blocked, unfiled or leisure domains per hour.
+3. Blocked-site attempts and unlock requests (Mark, Iqbal & Czerwinski 2017).
+4. Longest unbroken on-study stretch (Meyer et al. 2017; Rosen et al. 2013).
+5. Block outcome: completed or abandoned, pauses, +5 extensions, delay before starting after a break.
+6. Idle, locked and other-app time, recorded as unobserved, never as distraction (PDFs in Chrome's viewer and paper notes look idle).
+7. Opt-in, off by default: share of active minutes with typing, clicking or scrolling, per activity type (counts per minute only, never which key, password fields skipped).
+8. Lecture video events: play, pause, seek back, playback rate.
+
+Index: per user and activity type (write, read, video, practice), log1p rates, robust z-scores over the last 50 blocks of the type, clipped to ±3. Calibrated against ratings with the same grouped Bayesian linear regression (activity-type deviations from shared weights; prior means positive for on-study share, negative for off-task switches and blocked attempts, zero for input volume). Unrated blocks are filled in only after 15 rated blocks and a leave-one-out correlation of at least 0.3, weighted by predictive variance. The rating prompt appears when the index is unsure, so it asks less over time. The index never uses hour or music features (the hour/music model must not learn from its own inputs). Component bars are shown, never a lone score, with a range and the number of rated blocks; busy is never treated as focused (volume capped and normalised within activity type).
+
+Never: camera, microphone, screenshots, raw key timings or mouse paths (they identify people), full URLs, titles or page text, input counting outside study blocks, the `tabs` or `webNavigation` permissions, or rewards built on the index. Counters live in memory, flush once a minute and on `pagehide`, and run only during study blocks.
+
+"What Study Duo measures" screen: during study blocks it notices how much time goes to Study sites, how often you switch to other sites or try a blocked one, whether you pause, finish or extend a block, how long the computer sits idle, and, only if you turn it on, how many keys you press and how much you scroll each minute. It counts; it never reads what you type, what pages say or full addresses (only the site name), and never uses camera, microphone or screenshots. Everything stays in this browser. Each item has its own switch, and you can see, export or delete all of it.
+
+Store wording: say "sends nothing anywhere", not "collects nothing" (Chrome counts on-device data as handled); Chrome dashboard: tick User activity and Web history; Firefox: `data_collection_permissions` `none` for local signals, Google Calendar sync declared as optional collection.
+
 ## Security & privacy (security-audit gate on every boundary stage)
 
 Assets: browsing-domain log, listening history, todos, OAuth tokens. Threats: hostile web pages (content-script surface), compromised npm dependency, other extensions, network attackers, the developer (us).
