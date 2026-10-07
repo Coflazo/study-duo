@@ -1,6 +1,6 @@
 import { localDayRange, sessionsBetween, type SessionRecord } from '@/core/sessions';
 import { DEFAULT_SETTINGS, normalizeSettings, type TimerSettings } from '@/core/settings';
-import { settingsItem, timerItem } from '@/core/store';
+import { logVersionItem, settingsItem, timerItem } from '@/core/store';
 import { displayMs, initialState, type TimerEvent, type TimerState } from '@/core/timer';
 import { normalizeTodos, todosItem, type Todo } from '@/core/todos';
 
@@ -25,10 +25,8 @@ export function createLive() {
 
   async function start(): Promise<() => void> {
     const unwatch = [
-      timerItem.watch((v) => {
-        live.timer = v ?? initialState();
-        setTimeout(loadToday, 300); // the background logs a finished block right after saving the timer
-      }),
+      timerItem.watch((v) => (live.timer = v ?? initialState())),
+      logVersionItem.watch(() => void loadToday()), // the background wrote sessions
       settingsItem.watch((v) => (live.settings = normalizeSettings(v))),
       todosItem.watch((v) => (live.todos = normalizeTodos(v))),
     ];
@@ -37,15 +35,18 @@ export function createLive() {
     ]);
     await loadToday();
     live.ready = true;
+    let tickedFor: number | null = null;
     const ticker = setInterval(() => {
       live.now = Date.now();
       const t = live.timer;
-      if (t.status === 'running' && t.endsAt !== null && live.now >= t.endsAt) void send({ type: 'tick' });
+      // An open page ends a late phase on time, once per phase end (the storage update follows a moment later).
+      if (t.status === 'running' && t.endsAt !== null && live.now >= t.endsAt && tickedFor !== t.endsAt) {
+        tickedFor = t.endsAt;
+        send({ type: 'tick' }).catch(() => undefined);
+      }
     }, 250);
-    const refresher = setInterval(loadToday, 5_000);
     return () => {
       clearInterval(ticker);
-      clearInterval(refresher);
       unwatch.forEach((u) => u());
     };
   }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import { capsuleText } from '@/core/capsule';
   import { pendingRating, rateSession } from '@/core/sessions';
   import { fileSite } from '@/core/site-store';
@@ -55,6 +55,9 @@
     if (!toRate) return;
     await rateSession(toRate.id, r);
     await data.loadToday();
+    // The card is gone; keep keyboard users in the popup on its next action.
+    await tick();
+    document.querySelector<HTMLElement>('.actions button')?.focus();
   }
 </script>
 

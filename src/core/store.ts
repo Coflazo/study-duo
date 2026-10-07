@@ -35,4 +35,6 @@ export const musicSeededItem = storage.defineItem<boolean>('local:musicSitesSeed
 export const listeningItem = storage.defineItem<Record<string, OpenListen>>('session:listening', { fallback: {} });
 /** The focus sound playing now, if any (session only). */
 export const soundItem = storage.defineItem<{ noise: NoiseKind; volume: number; startedAt: number; sessionId: string | null } | null>('session:focusSound', { fallback: null });
+/** Bumped after the background writes sessions, so open pages reload Today exactly then (no polling). */
+export const logVersionItem = storage.defineItem<number>('session:logVersion', { fallback: 0 });
 

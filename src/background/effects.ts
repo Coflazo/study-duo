@@ -7,6 +7,7 @@ import type { AnnounceMessage } from '@/core/messages';
 import { phaseTitle } from '@/core/phase-copy';
 import { drawLine, momentFor, subLine } from '@/core/phrases';
 import { addSessions } from '@/core/sessions';
+import { logVersionItem } from '@/core/store';
 import { lastFocusDayItem, phraseBagItem } from '@/core/store';
 import type { TimerSettings } from '@/core/settings';
 import type { TimerState } from '@/core/timer';
@@ -93,7 +94,9 @@ export async function applyEffects(input: EffectInput): Promise<void> {
   // A rule failure must not stop the bell or the phase words, and the other way round.
   await syncLockFromStorage(state, settings).catch(console.error);
   // The log comes after everything that keeps the timer running, and a database that never answers is abandoned.
-  await withTimeout(addSessions(segments), SESSION_WRITE_MS).catch(console.error);
+  if (segments.length > 0) {
+    await withTimeout(addSessions(segments).then(() => logVersionItem.setValue(Date.now())), SESSION_WRITE_MS).catch(console.error);
+  }
   const finishedOnItsOwn = event.type === 'tick' && segments.some((s) => s.completed);
   if (!finishedOnItsOwn) return;
   // A silent bell must not also hide the phase change.
