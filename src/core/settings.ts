@@ -1,5 +1,7 @@
 export type TimerMode = 'pomodoro' | 'flowtime';
 export type OverlayCorner = 'top-right' | 'bottom-right';
+/** How visible the corner clock is while the mouse is away: 15%, 40% or fully. */
+export type OverlayIdle = 'faint' | 'soft' | 'full';
 /** During study blocks: close Blocked sites, or close everything except Study and Not blocked sites. */
 export type SiteMode = 'closeBlocked' | 'allowOnlyStudy';
 export type Appearance = 'system' | 'light' | 'dark';
@@ -22,6 +24,7 @@ export interface TimerSettings {
   /** The clock in the corner of every page. */
   overlayEnabled: boolean;
   overlayCorner: OverlayCorner;
+  overlayIdle: OverlayIdle;
   siteMode: SiteMode;
   /** No "Open anyway" on the blocked page. */
   hardLock: boolean;
@@ -44,6 +47,7 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   bellVolume: 0.6,
   overlayEnabled: true,
   overlayCorner: 'top-right',
+  overlayIdle: 'soft',
   siteMode: 'closeBlocked',
   hardLock: false,
   appearance: 'system',
@@ -75,6 +79,7 @@ export function normalizeSettings(raw: unknown): TimerSettings {
     bellVolume: num(r.bellVolume, 0, 1, d.bellVolume),
     overlayEnabled: bool(r.overlayEnabled, d.overlayEnabled),
     overlayCorner: r.overlayCorner === 'bottom-right' ? 'bottom-right' : 'top-right',
+    overlayIdle: r.overlayIdle === 'faint' || r.overlayIdle === 'full' ? r.overlayIdle : 'soft',
     siteMode: r.siteMode === 'allowOnlyStudy' ? 'allowOnlyStudy' : 'closeBlocked',
     hardLock: bool(r.hardLock, d.hardLock),
     appearance: r.appearance === 'light' || r.appearance === 'dark' ? r.appearance : 'system',

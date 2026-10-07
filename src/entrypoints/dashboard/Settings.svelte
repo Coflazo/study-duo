@@ -1,6 +1,6 @@
 <script lang="ts">
   import { playBell } from '@/core/bell';
-  import { normalizeSettings, type Appearance, type OverlayCorner, type TimerMode, type TimerSettings } from '@/core/settings';
+  import { normalizeSettings, type Appearance, type OverlayCorner, type OverlayIdle, type TimerMode, type TimerSettings } from '@/core/settings';
   import { settingsItem } from '@/core/store';
   import type { createLive } from '@/ui/live.svelte';
   import NumberField from '@/ui/NumberField.svelte';
@@ -16,6 +16,7 @@
   const MODES: Array<[TimerMode, string]> = [['pomodoro', 'Pomodoro'], ['flowtime', 'Flowtime']];
   const CORNERS: Array<[OverlayCorner, string]> = [['top-right', 'Top right'], ['bottom-right', 'Bottom right']];
   const LOOKS: Array<[Appearance, string]> = [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']];
+  const IDLE: Array<[OverlayIdle, string]> = [['faint', 'Faint'], ['soft', 'Soft'], ['full', 'Full']];
 
   let audio: AudioContext | undefined;
   async function previewBell() {
@@ -70,6 +71,10 @@
     <div class="row">
       <div class="text"><p class="label">Corner</p></div>
       <Segmented options={CORNERS} value={s.overlayCorner} label="Corner" onchange={(overlayCorner) => save({ overlayCorner })} />
+    </div>
+    <div class="row">
+      <div class="text"><p class="label">Clock when your mouse is away</p><p class="help">Faint is barely there, Soft stays readable, Full never fades. It always lights up when your mouse comes near.</p></div>
+      <Segmented options={IDLE} value={s.overlayIdle} label="Clock when your mouse is away" onchange={(overlayIdle) => save({ overlayIdle })} />
     </div>
     <div class="row">
       <div class="text"><p class="label">Appearance</p><p class="help">System follows your computer. The corner clock stays dark either way.</p></div>

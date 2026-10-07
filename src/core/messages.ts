@@ -83,3 +83,9 @@ export function resolveSiteRequest(msg: SiteMessage, senderUrl: string | undefin
   if (domain === null) return null;
   return msg.op === 'file' ? { op: 'file', category: msg.category, domain } : { op: msg.op, domain };
 }
+
+/** The background asking a page whether its corner clock still works (see overlay-inject.ts). */
+export function isPing(raw: unknown): boolean {
+  return raw !== null && typeof raw === 'object' && (raw as Record<string, unknown>).kind === 'overlay' && (raw as Record<string, unknown>).op === 'ping';
+}
+

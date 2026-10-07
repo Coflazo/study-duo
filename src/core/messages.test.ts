@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedFromSender, isFromWebPage, parseAnnounce, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest } from './messages';
+import { allowedFromSender, isFromWebPage, parseAnnounce, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest, isPing } from './messages';
 
 describe('parseMessage', () => {
   it('accepts every plain timer event', () => {
@@ -94,5 +94,15 @@ describe('site messages from content scripts', () => {
     expect(resolveSiteRequest(file, 'file:///notes.pdf', base)).toBeNull();
     expect(resolveSiteRequest(file, 'http://localhost:5173/', base)).toBeNull();
     expect(resolveSiteRequest(file, undefined, base)).toBeNull();
+  });
+});
+
+describe('isPing', () => {
+  it('accepts only the exact clock check', () => {
+    expect(isPing({ kind: 'overlay', op: 'ping' })).toBe(true);
+    expect(isPing({ kind: 'overlay', op: 'pong' })).toBe(false);
+    expect(isPing({ kind: 'timer', op: 'ping' })).toBe(false);
+    expect(isPing(null)).toBe(false);
+    expect(isPing('ping')).toBe(false);
   });
 });

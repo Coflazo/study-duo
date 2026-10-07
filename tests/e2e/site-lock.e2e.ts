@@ -13,7 +13,7 @@ async function setup() {
   await ctx.route('**/*', (route) => {
     const url = new URL(route.request().url());
     if (url.protocol === 'chrome-extension:') return route.continue();
-    if (url.host.endsWith('study-duo.test') || url.host === 'intranet' || url.host.endsWith('youtube.com')) return route.fulfill({ contentType: 'text/html', body: page(url.host) });
+    if (['study-duo.test', 'youtube.com'].some((d) => url.host === d || url.host.endsWith(`.${d}`)) || url.host === 'intranet') return route.fulfill({ contentType: 'text/html', body: page(url.host) });
     offHost.push(url.href);
     return route.abort();
   });
