@@ -1,0 +1,38 @@
+import type { SiteMode } from './settings';
+import type { Sites } from './sites';
+
+/** The declarativeNetRequest rule shape this extension uses (a subset of chrome.declarativeNetRequest.Rule). */
+export interface DnrRule {
+  id: number;
+  priority: number;
+  action: { type: 'redirect'; redirect: { regexSubstitution: string } } | { type: 'allow' };
+  condition: { requestDomains?: string[]; regexFilter?: string; resourceTypes: ['main_frame'] };
+}
+
+const UNLOCKED_PRIORITY = 1000;
+const WEB_PAGE = '^https?://.*';
+
+/**
+ * Session rules for a study block. Each filed domain gets its own rule with priority = its label count + 1,
+ * so the most specific entry wins (music.youtube.com over youtube.com); unlocked sites beat everything.
+ * The blocked page receives the original address in its fragment.
+ */
+export function buildRules(input: { sites: Sites; mode: SiteMode; unlocked: string[]; blockedPage: string }): DnrRule[] {
+  const close = { type: 'redirect' as const, redirect: { regexSubstitution: `${input.blockedPage}#\\0` } };
+  const rules: Array<Omit<DnrRule, 'id'>> = [];
+  if (input.mode === 'allowOnlyStudy') rules.push({ priority: 1, action: close, condition: { regexFilter: WEB_PAGE, resourceTypes: ['main_frame'] } });
+  for (const domain of Object.keys(input.sites).sort()) {
+    const priority = domain.split('.').length + 1;
+    const condition = { requestDomains: [domain], resourceTypes: ['main_frame'] as ['main_frame'] };
+    rules.push(
+      input.sites[domain] === 'blocked'
+        ? { priority, action: close, condition: { ...condition, regexFilter: WEB_PAGE } }
+        : { priority, action: { type: 'allow' }, condition },
+    );
+  }
+  if (!rules.some((r) => r.action.type === 'redirect')) return [];
+  for (const domain of [...new Set(input.unlocked)].sort()) {
+    rules.push({ priority: UNLOCKED_PRIORITY, action: { type: 'allow' }, condition: { requestDomains: [domain], resourceTypes: ['main_frame'] } });
+  }
+  return rules.map((r, i) => ({ id: i + 1, ...r }));
+}
