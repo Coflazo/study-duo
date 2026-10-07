@@ -36,6 +36,22 @@ export interface FeatureSet {
   blocks: Array<{ id: string; startedAt: number; day: number; bin: number; rated: boolean }>;
 }
 
+/**
+ * The time columns for a block in this hour bin on this day. Cumulative coding ("this hour or later"): each weight is
+ * the step from one hour to the next, so the Gaussian prior on it is a random walk along the day and neighbouring hours
+ * share evidence. Global steps, plus steps that differ for weekdays or weekends, plus steps that differ for the day.
+ */
+export function cellWeights(day: number, bin: number): Record<string, number> {
+  const out: Record<string, number> = {};
+  const category = isWeekend(day) ? 'weekend' : 'weekday';
+  for (let h = 0; h <= bin; h++) {
+    if (h > 0) out[`hour:${h}`] = 1;
+    out[`${category}:${h}`] = 1;
+    out[`day:${day}:${h}`] = 1;
+  }
+  return out;
+}
+
 const key = (s: string) => s.trim().toLowerCase();
 const sourceOf = (l: ListenRecord): (typeof SOURCES)[number] => (l.host === 'file' ? 'file' : l.host === 'sound' ? 'focus sound' : 'music site');
 const trackOf = (l: ListenRecord) => (l.artist.trim() ? `${key(l.artist)} — ${key(l.title)}` : key(l.title));
@@ -86,7 +102,7 @@ export function buildFeatures(input: FeatureInput, cap: Vocabulary = DEFAULT_VOC
   };
   const bins = Array.from({ length: BINS }, (_, h) => h);
   group('intercept', ['intercept'], 1e-4);
-  group('hour', bins.map((h) => `hour:${h}`));
+  group('hour', bins.slice(1).map((h) => `hour:${h}`)); // the level is the intercept
   group('category', [...bins.map((h) => `weekday:${h}`), ...bins.map((h) => `weekend:${h}`)]);
   group('day', DAYS.flatMap((_, d) => bins.map((h) => `day:${d}:${h}`)));
   group('source', SOURCES.map((s) => `source:${s}`));
@@ -109,9 +125,7 @@ export function buildFeatures(input: FeatureInput, cap: Vocabulary = DEFAULT_VOC
     const day = dayOf(b.startedAt);
     const bin = binOf(b.startedAt);
     set('intercept', 1);
-    set(`hour:${bin}`, 1);
-    set(`${isWeekend(day) ? 'weekend' : 'weekday'}:${bin}`, 1);
-    set(`day:${day}:${bin}`, 1);
+    for (const [name, v] of Object.entries(cellWeights(day, bin))) set(name, v);
 
     const minutes = Math.max(1, (b.endedAt - b.startedAt) / MIN);
     const mix = mixes[r]!;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ActivityRecord, ListenRecord } from '@/core/db';
 import type { SessionRecord } from '@/core/sessions';
-import { buildFeatures, BINS, binOf, dayOf } from './features';
+import { buildFeatures, BINS, binOf, cellWeights, dayOf } from './features';
 
 const MIN = 60_000;
 /** Tuesday 6 October 2026, 09:30 local time. */
@@ -32,11 +32,11 @@ describe('buildFeatures', () => {
     expect(f.design.rows).toBe(1);
     expect(f.design.y[0]).toBe(1);
     const row = (name: string) => f.design.x[f.columns.indexOf(name)];
-    expect(row('hour:3')).toBe(1);
-    expect(row('weekday:3')).toBe(1);
-    expect(row('weekend:3')).toBe(0);
-    expect(row('day:1:3')).toBe(1);
+    // "this hour or later": 09:30 sets the steps up to its bin, nothing after it
+    for (const name of ['hour:1', 'hour:3', 'weekday:0', 'weekday:3', 'day:1:0', 'day:1:3']) expect(row(name)).toBe(1);
+    for (const name of ['hour:4', 'weekday:4', 'weekend:0', 'day:1:4', 'day:2:0']) expect(row(name)).toBe(0);
     expect(row('source:silence')).toBe(1);
+    expect(cellWeights(1, 3)).toEqual({ 'hour:1': 1, 'hour:2': 1, 'hour:3': 1, 'weekday:0': 1, 'weekday:1': 1, 'weekday:2': 1, 'weekday:3': 1, 'day:1:0': 1, 'day:1:1': 1, 'day:1:2': 1, 'day:1:3': 1 });
   });
 
   it('turns songs during a block into time shares, the rest is silence', () => {
