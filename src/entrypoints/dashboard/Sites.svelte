@@ -1,9 +1,12 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte';
   import { DEFAULT_SETTINGS, normalizeSettings, type SiteMode, type TimerSettings } from '@/core/settings';
-  import { fileSite, removeSite } from '@/core/site-store';
+  import { lockActive } from '@/core/blocking';
+  import { loosens } from '@/core/hard-lock';
+  import { fileSite, HardLockError, removeSite, updateSiteSettings } from '@/core/site-store';
   import { normalizeDomain, normalizeSites, type SiteCategory, type Sites } from '@/core/sites';
-  import { settingsItem, sitesItem } from '@/core/store';
+  import { settingsItem, sitesItem, timerItem } from '@/core/store';
+  import { initialState } from '@/core/timer';
   import { ICONS } from '@/ui/icons';
   import Segmented from '@/ui/Segmented.svelte';
   import Toggle from '@/ui/Toggle.svelte';
@@ -21,22 +24,40 @@
   let adding = $state<SiteCategory | null>(null);
   let draft = $state('');
   let error = $state('');
+  let timer = $state(initialState());
+  let notice = $state('');
 
   const lists = $derived(
     Object.fromEntries(CATEGORIES.map(({ cat }) => [cat, Object.keys(sites).filter((d) => sites[d] === cat).sort()])) as Record<SiteCategory, string[]>,
   );
   const count = (n: number) => (n === 0 ? 'No sites yet' : n === 1 ? '1 site' : `${n} sites`);
 
+  // During a hard-locked block, anything that would open a closed site is refused (the data layer enforces it too).
+  const locked = $derived(lockActive(timer) && settings.hardLock);
+  const refused = (next: { sites?: Sites; mode?: SiteMode }) =>
+    locked && loosens({ sites, mode: settings.siteMode }, { sites: next.sites ?? sites, mode: next.mode ?? settings.siteMode });
+  const without = (domain: string) => Object.fromEntries(Object.entries(sites).filter(([d]) => d !== domain)) as Sites;
+  async function attempt(change: () => Promise<void>) {
+    try {
+      await change();
+      notice = '';
+    } catch (e) {
+      if (e instanceof HardLockError) notice = e.message;
+      else throw e;
+    }
+  }
+
   const unwatch: Array<() => void> = [];
   onMount(async () => {
     unwatch.push(sitesItem.watch((v) => (sites = normalizeSites(v))));
     unwatch.push(settingsItem.watch((v) => (settings = normalizeSettings(v))));
+    unwatch.push(timerItem.watch((v) => (timer = v ?? initialState())));
+    timer = await timerItem.getValue();
     sites = normalizeSites(await sitesItem.getValue());
     settings = normalizeSettings(await settingsItem.getValue());
   });
   onDestroy(() => unwatch.forEach((u) => u()));
 
-  const saveSettings = (patch: Partial<TimerSettings>) => settingsItem.setValue(normalizeSettings({ ...settings, ...patch }));
 
   async function openMenu(domain: string) {
     menuFor = menuFor === domain ? null : domain;
@@ -61,8 +82,13 @@
       error = n.error;
       return;
     }
-    await fileSite(n.domain, cat);
-    adding = null;
+    try {
+      await fileSite(n.domain, cat);
+      adding = null;
+    } catch (e) {
+      if (!(e instanceof HardLockError)) throw e;
+      error = e.message;
+    }
   }
   const focusOnMount = (el: HTMLElement) => el.focus();
 </script>
@@ -71,13 +97,21 @@
 
 <section aria-labelledby="sites-title">
   <h2 id="sites-title">Sites</h2>
+  {#if locked}<p class="notice" role="status">Hard lock is on until this study block ends. You can still close more sites.</p>{/if}
+  {#if notice && !locked}<p class="notice" role="status">{notice}</p>{/if}
 
   <div class="row">
     <div class="text">
       <p class="label">During study blocks</p>
       <p class="help">Allow only Study also closes sites you have not filed yet.</p>
     </div>
-    <Segmented options={MODES} value={settings.siteMode} label="During study blocks" onchange={(siteMode) => saveSettings({ siteMode })} />
+    <Segmented
+      options={MODES}
+      value={settings.siteMode}
+      label="During study blocks"
+      disabled={MODES.map(([m]) => m).filter((m) => refused({ mode: m }))}
+      onchange={(siteMode) => attempt(() => updateSiteSettings({ siteMode }))}
+    />
   </div>
 
   {#each CATEGORIES as { cat, name, desc } (cat)}
@@ -88,15 +122,15 @@
         {#each lists[cat] as domain (domain)}
           <li class="chip">
             <button class="name" aria-haspopup="menu" aria-expanded={menuFor === domain} onclick={() => openMenu(domain)}>{domain}</button>
-            <button class="x" aria-label="Remove {domain}" onclick={() => removeSite(domain)}>
+            <button class="x" aria-label="Remove {domain}" disabled={refused({ sites: without(domain) })} onclick={() => attempt(() => removeSite(domain))}>
               <svg viewBox="0 0 20 20" aria-hidden="true"><path d={ICONS.x} /></svg>
             </button>
             {#if menuFor === domain}
               <div class="menu" role="menu" aria-label="Move {domain}">
                 {#each CATEGORIES.filter((c) => c.cat !== cat) as other (other.cat)}
-                  <button role="menuitem" onclick={() => { fileSite(domain, other.cat); menuFor = null; }}>Move to {other.name}</button>
+                  <button role="menuitem" disabled={refused({ sites: { ...sites, [domain]: other.cat } })} onclick={() => { attempt(() => fileSite(domain, other.cat)); menuFor = null; }}>Move to {other.name}</button>
                 {/each}
-                <button role="menuitem" onclick={() => { removeSite(domain); menuFor = null; }}>Remove</button>
+                <button role="menuitem" disabled={refused({ sites: without(domain) })} onclick={() => { attempt(() => removeSite(domain)); menuFor = null; }}>Remove</button>
               </div>
             {/if}
           </li>
@@ -133,9 +167,9 @@
   <div class="row">
     <div class="text">
       <p class="label" id="hard-lock">Opening a closed site</p>
-      <p class="help">Wait 10 seconds and say why. Turn on a hard lock if you want no way around it.</p>
+      <p class="help">Wait 10 seconds and say why. A hard lock removes that, and keeps these lists from opening anything, until the block ends.</p>
     </div>
-    <Toggle checked={settings.hardLock} label="Hard lock" onchange={(hardLock) => saveSettings({ hardLock })} />
+    <Toggle checked={settings.hardLock} label="Hard lock" disabled={locked} onchange={(hardLock) => attempt(() => updateSiteSettings({ hardLock }))} />
   </div>
 </section>
 
@@ -179,5 +213,7 @@
   input[aria-invalid='true'] { border-color: var(--color-bg-plate-focus); }
   .error { margin: 0; font: 600 12px/16px var(--font-family-ui); color: var(--color-text-focus); }
   .hint { padding-block: 8px; }
+  .notice { margin: 4px 0 8px; padding: 8px 12px; border-inline-start: 3px solid var(--color-border-focus); background: var(--color-bg-sunken); font: 600 14px/20px var(--font-family-ui); }
+  button:disabled { color: var(--color-text-disabled); cursor: not-allowed; }
   button:focus-visible, input:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
 </style>

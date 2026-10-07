@@ -1,4 +1,4 @@
-import { buildRules, wouldClose, type DnrRule } from '@/core/blocking';
+import { buildRules, lockActive, wouldClose, type DnrRule } from '@/core/blocking';
 import type { TimerSettings } from '@/core/settings';
 import { normalizeSites, type Sites } from '@/core/sites';
 import { sitesItem } from '@/core/store';
@@ -11,10 +11,7 @@ const ruleSigItem = storage.defineItem<string>('session:lockRules', { fallback: 
 
 export const blockedPage = () => browser.runtime.getURL('/blocked.html');
 
-/** Sites stay closed while a study block runs or is paused; breaks and a stopped timer open everything. */
-export function lockActive(state: TimerState): boolean {
-  return state.phase === 'focus' && state.status !== 'stopped';
-}
+export { lockActive } from '@/core/blocking';
 
 export async function syncLock(state: TimerState, settings: TimerSettings, sites: Sites, unlocked: string[]): Promise<void> {
   const active = lockActive(state);

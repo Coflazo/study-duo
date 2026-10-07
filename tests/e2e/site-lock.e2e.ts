@@ -201,3 +201,32 @@ test('Open anyway waits 10 seconds and a reason, lasts for this block only, and 
   await ctx.close();
   fs.rmSync(profile, { recursive: true, force: true });
 });
+
+test('a hard lock keeps the lists from opening anything until the block ends', async () => {
+  const { profile, ctx, sw } = await setup();
+  await sw.evaluate(async () => {
+    const { settings } = await chrome.storage.local.get('settings');
+    await chrome.storage.local.set({ sites: { 'video.study-duo.test': 'blocked' }, settings: { ...(settings ?? {}), hardLock: true } });
+  });
+  await startBlock(ctx, sw);
+  const s = await ctx.newPage();
+  await s.goto(`chrome-extension://${EXT_ID}/dashboard.html`);
+  await expect(s.getByRole('status')).toHaveText('Hard lock is on until this study block ends. You can still close more sites.');
+  await expect(s.getByRole('switch', { name: 'Hard lock' })).toBeDisabled();
+  await expect(s.getByRole('button', { name: 'Remove video.study-duo.test' })).toBeDisabled();
+  await s.getByRole('button', { name: 'video.study-duo.test', exact: true }).click();
+  await expect(s.getByRole('menuitem', { name: 'Move to Study' })).toBeDisabled();
+  await s.keyboard.press('Escape');
+  // Closing more is still fine.
+  await s.getByRole('button', { name: 'Add' }).first().click();
+  await s.keyboard.type('more.study-duo.test');
+  await s.keyboard.press('Enter');
+  await expect.poll(() => sitesIn(sw)).toEqual({ 'video.study-duo.test': 'blocked', 'more.study-duo.test': 'blocked' });
+  // Adding an exception would open part of a closed site: refused with a reason.
+  await s.getByRole('button', { name: 'Add' }).nth(2).click();
+  await s.keyboard.type('music.video.study-duo.test');
+  await s.keyboard.press('Enter');
+  await expect(s.getByRole('alert')).toHaveText('Hard lock is on until this study block ends.');
+  await ctx.close();
+  fs.rmSync(profile, { recursive: true, force: true });
+});

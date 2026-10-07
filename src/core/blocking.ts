@@ -1,4 +1,5 @@
 import type { SiteMode } from './settings';
+import type { TimerState } from './timer';
 import type { Sites } from './sites';
 
 /** The declarativeNetRequest rule shape this extension uses (a subset of chrome.declarativeNetRequest.Rule). */
@@ -57,4 +58,9 @@ export function wouldClose(rules: DnrRule[], url: string | undefined): boolean {
   );
   hits.sort((a, b) => b.priority - a.priority || (a.action.type === 'allow' ? -1 : 1));
   return hits[0]?.action.type === 'redirect';
+}
+
+/** Sites stay closed while a study block runs or is paused; breaks and a stopped timer open everything. */
+export function lockActive(state: TimerState): boolean {
+  return state.phase === 'focus' && state.status !== 'stopped';
 }

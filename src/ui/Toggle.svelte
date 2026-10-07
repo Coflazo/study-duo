@@ -1,9 +1,9 @@
 <script lang="ts">
   /** Figma Control/Toggle: square-cornered switch, ink track with the knob right when on. */
-  let { checked, label, onchange }: { checked: boolean; label: string; onchange: (v: boolean) => void } = $props();
+  let { checked, label, onchange, disabled = false }: { checked: boolean; label: string; onchange: (v: boolean) => void; disabled?: boolean } = $props();
 </script>
 
-<button type="button" role="switch" aria-checked={checked} aria-label={label} onclick={() => onchange(!checked)}><span></span></button>
+<button type="button" role="switch" aria-checked={checked} aria-label={label} {disabled} onclick={() => onchange(!checked)}><span></span></button>
 
 <style>
   button {
@@ -16,6 +16,7 @@
   }
   button[aria-checked='true'] { background: var(--color-bg-action); border-color: var(--color-bg-action); }
   button[aria-checked='true'] span { transform: translateX(14px); border-color: var(--color-bg-action); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
   button:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { span { transition: none; } }
 </style>
