@@ -76,8 +76,9 @@ test('corner clock and phase words survive a hostile page and never touch the ne
   await popup.close();
   await page.bringToFront();
 
-  // Dim, click-through, 16 px from the top right corner.
-  await expect.poll(() => dom.style('clock')).toEqual({ opacity: '0.15', pointerEvents: 'none', display: 'flex' });
+  // Bright for the first seconds of the block, then dim, click-through, 16 px from the top right corner.
+  await expect.poll(async () => (await dom.style('clock'))?.opacity).toBe('1');
+  await expect.poll(() => dom.style('clock'), { timeout: 8_000 }).toEqual({ opacity: '0.15', pointerEvents: 'none', display: 'flex' });
   const box = (await dom.rect('clock'))!;
   expect(Math.round(1280 - (box.x + box.w))).toBe(16);
   expect(Math.round(box.y)).toBe(16);

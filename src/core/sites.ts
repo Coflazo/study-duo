@@ -65,3 +65,12 @@ export function normalizeSites(raw: unknown): Sites {
   }
   return out;
 }
+
+/** Music players stay open during study blocks unless the user files them otherwise, even when their parent site is Blocked. */
+export const MUSIC_SITES = ['music.youtube.com', 'open.spotify.com', 'music.apple.com', 'soundcloud.com', 'listen.tidal.com', 'deezer.com', 'music.amazon.com'];
+
+export function seedMusicSites(sites: Sites): Sites {
+  const out = { ...sites };
+  for (const d of MUSIC_SITES) out[d] ??= 'neutral';
+  return out;
+}

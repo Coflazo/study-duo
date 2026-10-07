@@ -32,6 +32,7 @@ export default defineConfig({
       'idle',
       'declarativeNetRequestWithHostAccess',
       'contextMenus',
+      'scripting',
       ...(browser === 'firefox' ? [] : ['offscreen']),
     ],
     // Redirects and reading an open tab's address need host access; the corner clock already asks for every site.

@@ -40,6 +40,7 @@ export const CSS = `${hostTokens}
 .clock[hidden] { display: none; }
 .clock[data-corner="bottom-right"] { top: auto; bottom: 16px; }
 .clock[data-near] { opacity: 1; padding-right: 6px; }
+.clock[data-fresh] { opacity: 1; }
 .lamp { flex: none; width: 6px; height: 6px; background: var(--color-bg-plate-focus); }
 .clock[data-phase="break"] .lamp { background: var(--color-bg-plate-break); }
 .digits { display: block; flex: none; width: 86px; height: 29px; }
