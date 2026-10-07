@@ -1,7 +1,8 @@
-import { expect, test, type CDPSession, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import phrases from '../../src/locales/en/phrases.json' with { type: 'json' };
 import { EXT_ID, launch, tempProfile } from './extension';
+import { shadow } from './shadow';
 
 declare const chrome: any;
 
@@ -10,40 +11,6 @@ declare const chrome: any;
 const HOSTILE = `<!doctype html><html><head><style>* { all: unset !important; }</style></head><body>
 <button id="under" style="display:block!important;position:fixed!important;top:0!important;right:0!important;width:260px!important;height:120px!important">under the clock</button>
 </body></html>`;
-
-/** The overlay lives in a closed shadow root; DevTools protocol can still see it. */
-async function shadow(page: Page) {
-  const cdp: CDPSession = await page.context().newCDPSession(page);
-  await cdp.send('DOM.enable');
-  await cdp.send('CSS.enable');
-  const find = async (cls: string): Promise<number | null> => {
-    const { root } = await cdp.send('DOM.getDocument', { depth: -1, pierce: true });
-    const stack: any[] = [root];
-    while (stack.length) {
-      const n = stack.pop();
-      const attrs: string[] = n.attributes ?? [];
-      const i = attrs.indexOf('class');
-      if (i >= 0 && attrs[i + 1]!.split(' ').includes(cls)) return n.nodeId;
-      stack.push(...(n.children ?? []), ...(n.shadowRoots ?? []));
-    }
-    return null;
-  };
-  const call = async (cls: string, fn: string) => {
-    const nodeId = await find(cls);
-    if (nodeId === null) return null;
-    const { object } = await cdp.send('DOM.resolveNode', { nodeId });
-    const { result } = await cdp.send('Runtime.callFunctionOn', { objectId: object.objectId!, functionDeclaration: fn, returnByValue: true });
-    return result.value;
-  };
-  return {
-    style: (cls: string) =>
-      call(cls, 'function () { const s = getComputedStyle(this); return { opacity: s.opacity, pointerEvents: s.pointerEvents, display: s.display }; }'),
-    rect: (cls: string) => call(cls, 'function () { const r = this.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }'),
-    text: (cls: string) => call(cls, 'function () { return this.textContent; }'),
-    prop: (cls: string, js: string) => call(cls, `function () { return ${js}; }`),
-    color: (cls: string) => call(cls, 'function () { return getComputedStyle(this).color; }'),
-  };
-}
 
 test('corner clock and phase words survive a hostile page and never touch the network', async () => {
   const profile = tempProfile();

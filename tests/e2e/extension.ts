@@ -1,4 +1,5 @@
-import { chromium, type BrowserContext, type Worker } from '@playwright/test';
+import { chromium, type Browser, type BrowserContext, type CDPSession, type Worker } from '@playwright/test';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -56,5 +57,31 @@ export function holdSessionLog(sw: Worker, ms: number): Promise<void> {
     req.onerror = () => resolve();
     req.onsuccess = () => { req.result.close(); resolve(); };
   }), ms);
+}
+
+/**
+ * A running browser without the extension, so a test can install and reload it the way a person does on
+ * chrome://extensions, with tabs already open. Playwright cannot reload an extension it loaded itself.
+ */
+export async function launchBare(): Promise<{ browser: Browser; ctx: BrowserContext; install: () => Promise<void>; close: () => Promise<void> }> {
+  const profile = tempProfile();
+  const exe = chromePath() ?? chromium.executablePath();
+  const proc = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--enable-unsafe-extension-debugging', '--no-first-run', '--no-default-browser-check', '--no-sandbox', 'about:blank'], { stdio: 'ignore' });
+  const portFile = path.join(profile, 'DevToolsActivePort');
+  for (let i = 0; i < 100 && !fs.existsSync(portFile); i++) await new Promise((r) => setTimeout(r, 100));
+  const port = fs.readFileSync(portFile, 'utf8').split('\n')[0];
+  const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
+  const cdp: CDPSession = await browser.newBrowserCDPSession();
+  return {
+    browser,
+    ctx: browser.contexts()[0]!,
+    install: async () => void (await cdp.send('Extensions.loadUnpacked' as any, { path: EXT_DIR })),
+    close: async () => {
+      await browser.close().catch(() => undefined);
+      proc.kill();
+      await new Promise((r) => setTimeout(r, 500));
+      fs.rmSync(profile, { recursive: true, force: true });
+    },
+  };
 }
 

@@ -5,6 +5,7 @@ import { createSiteMenu, handleSiteRequest, onSiteMenuClick } from '@/background
 import { loadSettings, loadState, musicSeededItem, settingsItem, sitesItem, timerItem } from '@/core/store';
 import { normalizeSites, seedMusicSites } from '@/core/sites';
 import { unlockedItem } from '@/background/site-lock';
+import { ensureOverlay, keepClocksOnOpenTabs } from '@/background/overlay-inject';
 
 export default defineBackground(() => {
   const timer = createTimerService({
@@ -47,10 +48,9 @@ export default defineBackground(() => {
     // Chrome adds content scripts only to pages loaded after an install or update; give open tabs the clock now.
     if (import.meta.env.BROWSER === 'firefox') return; // Firefox already does
     const tabs = await browser.tabs.query({ url: ['http://*/*', 'https://*/*'] });
-    await Promise.all(
-      tabs.map((t) => t.id === undefined ? undefined : browser.scripting.executeScript({ target: { tabId: t.id }, files: ['/content-scripts/overlay.js'] }).catch(() => undefined)),
-    );
+    await Promise.all(tabs.map((t) => (t.id === undefined ? undefined : ensureOverlay(t.id))));
   }
+  keepClocksOnOpenTabs();
 
   browser.commands.onCommand.addListener((command) => {
     if (command === 'toggle-timer') void timer.dispatch({ type: 'toggle' }).catch(console.error);
