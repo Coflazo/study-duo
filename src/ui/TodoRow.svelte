@@ -3,12 +3,12 @@
   import type { Todo } from '@/core/todos';
 
   /** Figma List/Todo Row: a checkbox, the task, its course tag; the task of the running block carries the red rail and "On now". */
-  let { todo, onNow = false, ontoggle, actions }: { todo: Todo; onNow?: boolean; ontoggle: () => void; actions?: Snippet } = $props();
+  let { todo, onNow = false, ontoggle, actions, content }: { todo: Todo; onNow?: boolean; ontoggle: () => void; actions?: Snippet; content?: Snippet } = $props();
 </script>
 
 <li class="row" class:now={onNow} class:done={todo.done}>
   <input type="checkbox" checked={todo.done} aria-label={todo.text} onchange={ontoggle} />
-  <span class="text">{todo.text}</span>
+  {#if content}{@render content()}{:else}<span class="text">{todo.text}{#if todo.ifThen}<small>If I get stuck, I will {todo.ifThen}</small>{/if}</span>{/if}
   {#if onNow}<span class="now-label">On now</span>{/if}
   {#if todo.course}<span class="course">{todo.course}</span>{/if}
   {#if actions}{@render actions()}{/if}
@@ -29,6 +29,7 @@
   input:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
   .text { flex: 1; min-inline-size: 0; overflow-wrap: anywhere; font: 400 14px/20px var(--font-family-ui); }
   .now .text { font-weight: 600; }
+  small { display: block; font: 400 12px/16px var(--font-family-ui); color: var(--color-text-secondary); }
   .done .text { color: var(--color-text-secondary); }
   .now-label { font: 400 12px/16px var(--font-family-ui); color: var(--color-text-focus); white-space: nowrap; }
   .course { padding: 2px 6px; border-radius: 2px; background: var(--color-bg-sunken); font: 500 12px/16px var(--font-family-mono); white-space: nowrap; }

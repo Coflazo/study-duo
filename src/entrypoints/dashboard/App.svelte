@@ -4,6 +4,7 @@
   import Nav from './Nav.svelte';
   import Sites from './Sites.svelte';
   import Today from './Today.svelte';
+  import Todo from './Todo.svelte';
 
   const ROUTES = ['today', 'todo', 'sites', 'settings'] as const;
   type Route = (typeof ROUTES)[number];
@@ -35,7 +36,7 @@
       <h1>Site lock</h1>
       <Sites />
     {:else if route === 'todo'}
-      <h1>To-do</h1>
+      <Todo {data} />
     {:else}
       <h1>Settings</h1>
     {/if}
