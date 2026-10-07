@@ -28,9 +28,8 @@ test('tabs that were open before an install or a reload get one working clock, w
     const again = await b.ctx.newPage();
     await again.goto(`chrome-extension://${EXT_ID}/popup.html`);
     await again.getByRole('button', { name: 'Resume' }).click();
-    const sw = b.ctx.serviceWorkers().find((w) => w.url().startsWith(`chrome-extension://${EXT_ID}/`))!;
     // The Resume reached the timer (separates a lost click from a clock that did not follow).
-    await expect.poll(() => sw.evaluate(async () => (await (globalThis as any).chrome.storage.local.get('timer')).timer?.status)).toBe('running');
+    await expect.poll(() => again.evaluate(async () => (await (globalThis as any).chrome.storage.local.get('timer')).timer?.status)).toBe('running');
     await again.close();
     await page.bringToFront();
     const live = await shadow(page);
