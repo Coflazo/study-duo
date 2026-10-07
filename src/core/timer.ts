@@ -80,8 +80,12 @@ export function isBreak(phase: Phase): boolean {
 
 export function phaseLengthMs(phase: Phase, settings: TimerSettings, state: TimerState): number | null {
   if (phase === 'focus') return settings.mode === 'flowtime' ? null : settings.focusMin * 60_000;
-  if (settings.mode === 'flowtime' && state.nextBreakMs !== null) return state.nextBreakMs;
-  return (phase === 'shortBreak' ? settings.shortBreakMin : settings.longBreakMin) * 60_000;
+  const fixed = (phase === 'shortBreak' ? settings.shortBreakMin : settings.longBreakMin) * 60_000;
+  if (settings.mode === 'flowtime' && state.nextBreakMs !== null) {
+    // A long break is a promise of real rest, so the earned length never shortens it.
+    return phase === 'longBreak' ? Math.max(state.nextBreakMs, fixed) : state.nextBreakMs;
+  }
+  return fixed;
 }
 
 export function remainingMs(state: TimerState, now: number): number | null {
@@ -168,6 +172,11 @@ function endPhase(state: TimerState, endedAt: number, completed: boolean, settin
 }
 
 export function reduce(state: TimerState, event: TimerEvent, settings: TimerSettings, now: number): ReduceResult {
+  // A command that arrives after the running block already ended (laptop woke, alarm not yet delivered)
+  // targets a phase that is over: close it at its real end time and drop the stale command.
+  if (event.type !== 'tick' && state.status === 'running' && state.endsAt !== null && now >= state.endsAt) {
+    return reduce(state, { type: 'tick' }, settings, now);
+  }
   const same: ReduceResult = { state, segments: [] };
   const countUp = state.plannedMs === null;
 

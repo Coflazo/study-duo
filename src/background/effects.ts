@@ -78,7 +78,8 @@ export async function applyEffects({ event, state, settings, segments, now }: Ef
   await syncAction(state, now);
   const finishedOnItsOwn = event.type === 'tick' && segments.some((s) => s.completed);
   if (!finishedOnItsOwn) return;
-  await ringBell(bellKindFor(state.phase), settings.bellVolume);
+  // A silent bell must not also hide the phase change, so the notification goes out regardless.
+  await ringBell(bellKindFor(state.phase), settings.bellVolume).catch(console.error);
   await browser.notifications.create('phase', {
     type: 'basic',
     iconUrl: browser.runtime.getURL('/icon/128.png'),

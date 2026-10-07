@@ -42,6 +42,16 @@ describe('applyEffects', () => {
     expect(fakeBrowser.notifications.create).toHaveBeenCalledTimes(1);
   });
 
+  it('still notifies when the bell cannot play', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    Object.assign(fakeBrowser.offscreen, { createDocument: vi.fn(async () => { throw new Error('no audio'); }) });
+    const prev = reduce(initialState(), { type: 'start' }, DEFAULT_SETTINGS, T0).state;
+    const r = reduce(prev, { type: 'tick' }, DEFAULT_SETTINGS, T0 + 25 * MIN);
+    await applyEffects({ event: { type: 'tick' }, prev, state: r.state, settings: DEFAULT_SETTINGS, segments: r.segments, now: T0 + 25 * MIN });
+    expect(fakeBrowser.notifications.create).toHaveBeenCalledTimes(1);
+    expect(logged).toHaveBeenCalledTimes(1);
+  });
+
   it('stays quiet when the user skipped', async () => {
     const prev = reduce(initialState(), { type: 'start' }, DEFAULT_SETTINGS, T0).state;
     const r = reduce(prev, { type: 'skip' }, DEFAULT_SETTINGS, T0 + MIN);

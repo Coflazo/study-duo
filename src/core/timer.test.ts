@@ -163,9 +163,29 @@ describe('flowtime', () => {
     expect(displayMs(play([[{ type: 'start' }, T0]], F).state, F, T0 + 3 * MIN)).toEqual({ ms: 3 * MIN, countsUp: true });
   });
 
+  it('a Flowtime long break lasts at least the long break setting', () => {
+    const F4 = { ...F, longBreakEvery: 1 };
+    const r = play([[{ type: 'start' }, T0], [{ type: 'finish' }, T0 + 10 * MIN]], F4);
+    expect(r.state).toMatchObject({ phase: 'longBreak', status: 'running', endsAt: T0 + 10 * MIN + 15 * MIN });
+  });
+
   it('the earned break has a one minute floor and is cleared after the break', () => {
     const r = play([[{ type: 'start' }, T0], [{ type: 'finish' }, T0 + 2 * MIN], [{ type: 'tick' }, T0 + 3 * MIN]], F);
     expect(r.segments[1]).toMatchObject({ phase: 'shortBreak', plannedMs: MIN });
     expect(r.state).toMatchObject({ phase: 'focus', status: 'stopped', nextBreakMs: null });
   });
+});
+
+describe('commands after a missed phase end', () => {
+  const lateBy = 3 * 60 * MIN;
+  const started = () => play([[{ type: 'start' }, T0]]).state;
+
+  for (const event of [{ type: 'pause' }, { type: 'skip' }, { type: 'reset' }, { type: 'toggle' }, { type: 'extend', ms: 5 * MIN }] as TimerEvent[]) {
+    it(`${event.type} first closes the block that already ended, without fake active time`, () => {
+      const r = reduce(started(), event, S, T0 + 25 * MIN + lateBy);
+      expect(r.segments).toHaveLength(1);
+      expect(r.segments[0]).toMatchObject({ phase: 'focus', endedAt: T0 + 25 * MIN, activeMs: 25 * MIN, completed: true });
+      expect(r.state).toMatchObject({ phase: 'shortBreak', status: 'stopped', cycle: 1 });
+    });
+  }
 });

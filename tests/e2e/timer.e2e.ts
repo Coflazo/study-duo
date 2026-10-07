@@ -17,7 +17,7 @@ test('start, badge, alarm, completion with bell, pause, and badge restored after
   await popup.goto(`chrome-extension://${EXT_ID}/popup.html`);
   await popup.getByRole('button', { name: 'Start' }).click();
   await expect.poll(() => timerField(sw, 'status')).toBe('running');
-  expect(await sw.evaluate(() => chrome.action.getBadgeText({}))).toBe('25');
+  await expect.poll(() => sw.evaluate(() => chrome.action.getBadgeText({}))).toBe('25');
 
   const endsAt = await timerField(sw, 'endsAt');
   const alarm = await sw.evaluate(() => chrome.alarms.get('phase-end'));
@@ -29,9 +29,10 @@ test('start, badge, alarm, completion with bell, pause, and badge restored after
     await chrome.storage.local.set({ timer: { ...timer, endsAt: Date.now() + 1500 } });
   });
   await expect.poll(() => timerField(sw, 'phase'), { timeout: 10_000 }).toBe('shortBreak');
-  expect(await sw.evaluate(() => chrome.action.getBadgeText({}))).toBe('5');
-  const offscreenDocs = await sw.evaluate(async () => (await chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] })).length);
-  expect(offscreenDocs).toBe(1);
+  await expect.poll(() => sw.evaluate(() => chrome.action.getBadgeText({}))).toBe('5');
+  await expect
+    .poll(() => sw.evaluate(async () => (await chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] })).length))
+    .toBe(1);
 
   await popup.getByRole('button', { name: 'Pause' }).click();
   await expect.poll(() => sw.evaluate(() => chrome.action.getBadgeBackgroundColor({}))).toEqual([138, 138, 132, 255]);
