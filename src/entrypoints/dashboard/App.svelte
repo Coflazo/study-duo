@@ -6,6 +6,7 @@
   import Sites from './Sites.svelte';
   import Today from './Today.svelte';
   import Todo from './Todo.svelte';
+  import UpdateNotice from '@/ui/UpdateNotice.svelte';
 
   const ROUTES = ['today', 'todo', 'sites', 'settings'] as const;
   type Route = (typeof ROUTES)[number];
@@ -31,6 +32,7 @@
 <div class="shell">
   <Nav {route} />
   <main id="main" tabindex="-1">
+    <UpdateNotice />
     {#if route === 'today'}
       <Today {data} />
     {:else if route === 'sites'}

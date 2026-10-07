@@ -12,13 +12,17 @@ const asking = new Set<number>();
 export async function ensureOverlay(tabId: number): Promise<void> {
   if (asking.has(tabId)) return;
   asking.add(tabId);
+  let site: string | null = null;
   try {
-    const tab = await browser.tabs.get(tabId);
-    if (tab.status !== 'complete') return;
+    const tab = await browser.tabs.get(tabId).catch(() => null); // closed meanwhile
+    // Without a web address Chrome lets no extension in (chrome://, the PDF viewer, the new tab page).
+    if (!tab || tab.status !== 'complete' || !tab.url || !/^https?:/.test(tab.url)) return;
+    site = new URL(tab.url).host;
     const answered = await browser.tabs.sendMessage(tabId, { kind: 'overlay', op: 'ping' }).catch(() => false);
     if (answered !== true) await browser.scripting.executeScript({ target: { tabId }, files: [OVERLAY] });
-  } catch {
-    // chrome:// pages, the Web Store, PDFs and closed tabs cannot have a clock
+  } catch (e) {
+    // Shown on the extension's Errors page: a missing permission (an old copy still running) or a site the user blocked.
+    console.warn(`Study Duo could not add the corner clock to ${site}:`, e);
   } finally {
     asking.delete(tabId);
   }

@@ -14,6 +14,7 @@
   import SignButton from '@/ui/SignButton.svelte';
   import TimetableRow from '@/ui/TimetableRow.svelte';
   import RatingCard from './RatingCard.svelte';
+  import UpdateNotice from '@/ui/UpdateNotice.svelte';
 
   const SITE_CHOICES: Array<[SiteCategory, string]> = [['study', 'Study'], ['neutral', 'Not blocked'], ['blocked', 'Blocked']];
 
@@ -58,6 +59,7 @@
 </script>
 
 <main>
+  <UpdateNotice />
   <PhasePlate phase={timer.phase} status={timer.status} note={plateNote(timer, settings)} />
 
   {#if defaulted && timer.status === 'stopped' && timer.phase === 'focus' && open.length > 0}

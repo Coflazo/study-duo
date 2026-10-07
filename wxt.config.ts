@@ -1,4 +1,19 @@
+import { execSync } from 'node:child_process';
 import { defineConfig } from 'wxt';
+
+/**
+ * Which build this is (manifest version_name), so a running copy can tell newer files are on disk (UpdateNotice).
+ * Clean builds stay reproducible; builds of an edited tree add the build time.
+ */
+function buildStamp(): string {
+  try {
+    const rev = execSync('git describe --always --dirty', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return rev.endsWith('-dirty') ? `${rev}.${Date.now().toString(36)}` : rev;
+  } catch {
+    return 'source';
+  }
+}
+const BUILD = buildStamp();
 
 // Public half of the key that pins the Chromium extension ID to
 // bcggiingdefmehpjcalkfpdnehpcieon (needed for a stable Google OAuth client).
@@ -15,6 +30,7 @@ export default defineConfig({
   modules: ['@wxt-dev/module-svelte'],
   manifest: ({ browser }) => ({
     name: 'Study Duo',
+    version_name: `${process.env.npm_package_version ?? '0.0.0'} ${BUILD}`,
     description: 'Pomodoro timer, focus clock, tab locker and private study insights. Runs offline.',
     ...(browser === 'firefox'
       ? {
