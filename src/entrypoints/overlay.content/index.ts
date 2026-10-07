@@ -92,6 +92,7 @@ export default defineContentScript({
       clock.el.dataset.phase = isBreak(state.phase) ? 'break' : 'focus';
       clock.el.dataset.status = state.status;
       clock.el.dataset.corner = settings.overlayCorner;
+      clock.el.dataset.idle = settings.overlayIdle;
       // Full brightness for the first seconds of a block so it gets noticed, then as quiet as the user asked.
       clock.el.toggleAttribute('data-fresh', state.status === 'running' && state.startedAt !== null && Date.now() - state.startedAt < FRESH_MS);
       const now = Date.now();

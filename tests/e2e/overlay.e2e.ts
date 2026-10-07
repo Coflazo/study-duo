@@ -78,7 +78,7 @@ test('corner clock and phase words survive a hostile page and never touch the ne
 
   // Bright for the first seconds of the block, then dim, click-through, 16 px from the top right corner.
   await expect.poll(async () => (await dom.style('clock'))?.opacity).toBe('1');
-  await expect.poll(() => dom.style('clock'), { timeout: 8_000 }).toEqual({ opacity: '0.15', pointerEvents: 'none', display: 'flex' });
+  await expect.poll(() => dom.style('clock'), { timeout: 8_000 }).toEqual({ opacity: '0.4', pointerEvents: 'none', display: 'flex' });
   const box = (await dom.rect('clock'))!;
   expect(Math.round(1280 - (box.x + box.w))).toBe(16);
   expect(Math.round(box.y)).toBe(16);
@@ -88,7 +88,7 @@ test('corner clock and phase words survive a hostile page and never touch the ne
     document.querySelector('study-duo-overlay')!.remove();
     document.dispatchEvent(new CustomEvent(`${id}:overlay:wxt:content-script-started`, { detail: { contentScriptName: 'overlay', messageId: 'spoof' } }));
   }, EXT_ID);
-  await expect.poll(() => dom.style('clock'), { timeout: 4_000 }).toEqual({ opacity: '0.15', pointerEvents: 'none', display: 'flex' });
+  await expect.poll(() => dom.style('clock'), { timeout: 4_000 }).toEqual({ opacity: '0.4', pointerEvents: 'none', display: 'flex' });
   // The clock is aria-hidden, so its close button must stay out of the keyboard order.
   expect(await dom.prop('close', 'this.tabIndex')).toBe(-1);
 

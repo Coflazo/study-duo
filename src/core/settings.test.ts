@@ -40,4 +40,11 @@ describe('normalizeSettings', () => {
     expect(normalizeSettings({ appearance: 'sepia', dailyGoal: 400 })).toMatchObject({ appearance: 'system', dailyGoal: 24 });
     expect(normalizeSettings({ dailyGoal: 0 }).dailyGoal).toBe(1);
   });
+
+  it('shows the corner clock softly by default when the mouse is away', () => {
+    expect(DEFAULT_SETTINGS.overlayIdle).toBe('soft');
+    expect(normalizeSettings({ overlayIdle: 'faint' }).overlayIdle).toBe('faint');
+    expect(normalizeSettings({ overlayIdle: 'full' }).overlayIdle).toBe('full');
+    expect(normalizeSettings({ overlayIdle: 'invisible' }).overlayIdle).toBe('soft');
+  });
 });
