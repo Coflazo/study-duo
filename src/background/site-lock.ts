@@ -18,9 +18,10 @@ export async function syncLock(state: TimerState, settings: TimerSettings, sites
   const rules: DnrRule[] = active ? buildRules({ sites, mode: settings.siteMode, unlocked, blockedPage: blockedPage() }) : [];
   const sig = JSON.stringify(rules);
   if (!active && unlocked.length > 0) await unlockedItem.setValue([]);
-  if (sig === (await ruleSigItem.getValue())) return;
-
+  // The fingerprint alone could survive rules that vanished (extension disabled and enabled again), so count them too.
   const existing = await browser.declarativeNetRequest.getSessionRules();
+  if (sig === (await ruleSigItem.getValue()) && existing.length === rules.length) return;
+
   await browser.declarativeNetRequest.updateSessionRules({ removeRuleIds: existing.map((r) => r.id), addRules: rules });
   await ruleSigItem.setValue(sig);
   if (rules.length === 0) return;

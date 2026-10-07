@@ -60,6 +60,13 @@ describe('site lock', () => {
     expect(session.length).toBeGreaterThan(0);
   });
 
+  it('re-applies when the session rules vanish but the fingerprint survives', async () => {
+    await syncLock(study, S, { ...sites }, []);
+    session = [];
+    await syncLock(study, S, { ...sites }, []);
+    expect(session.length).toBeGreaterThan(0);
+  });
+
   it('opens everything in the break and forgets unlocked sites', async () => {
     await unlockedItem.setValue(['youtube.com']);
     await syncLock(study, S, { ...sites }, ['youtube.com']);

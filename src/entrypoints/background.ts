@@ -52,6 +52,9 @@ export default defineBackground(() => {
   sitesItem.watch(tick);
   unlockedItem.watch(tick);
 
+  // Every time the worker starts: rebuild badge, alarms and site rules from storage.
+  tick();
+
   browser.idle.onStateChanged.addListener(async (idle) => {
     if (idle === 'active') return;
     const [settings, state] = await Promise.all([loadSettings(), loadState()]);
