@@ -25,12 +25,12 @@
   const onNow = $derived(live.timer.status !== 'stopped' && live.timer.phase === 'focus' ? live.timer.taskId : null);
   const date = $derived(new Date(live.now).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }));
 
-  // Default once, after the data loads; afterwards the choice is the user's, including "No task".
-  let defaulted = false;
+  // Default once, after all the data loads; the picker appears only then, so the default never lands on top of a choice.
+  let defaulted = $state(false);
   $effect(() => {
     if (defaulted || !live.ready) return;
-    defaulted = true;
     chosen = defaultTask(open, live.timer);
+    defaulted = true;
   });
 </script>
 
@@ -39,7 +39,7 @@
 <div class="grid">
   <section class="clock" aria-label="Timer">
     <PhasePlate phase={live.timer.phase} status={live.timer.status} note={plateNote(live.timer, live.settings)} />
-    {#if live.timer.status === 'stopped' && live.timer.phase === 'focus' && open.length > 0}
+    {#if defaulted && live.timer.status === 'stopped' && live.timer.phase === 'focus' && open.length > 0}
       <label class="field">
         <span>Work on</span>
         <select bind:value={chosen}>

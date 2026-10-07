@@ -41,3 +41,20 @@ export async function launch(userDataDir: string): Promise<{ ctx: BrowserContext
 export function tempProfile(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'study-duo-e2e-'));
 }
+
+/** Holds the session log for `ms` (an upgrade that keeps reading, then aborts), like a slow disk, so to-dos and settings arrive first. */
+export function holdSessionLog(sw: Worker, ms: number): Promise<void> {
+  return sw.evaluate((ms) => new Promise<void>((resolve) => {
+    const req = indexedDB.open('study-duo', 99);
+    req.onupgradeneeded = () => {
+      const tx = req.transaction!;
+      req.result.createObjectStore('hold');
+      const until = Date.now() + ms;
+      const spin = () => (Date.now() > until ? tx.abort() : (tx.objectStore('hold').count().onsuccess = spin));
+      spin();
+    };
+    req.onerror = () => resolve();
+    req.onsuccess = () => { req.result.close(); resolve(); };
+  }), ms);
+}
+
