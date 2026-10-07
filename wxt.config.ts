@@ -31,7 +31,7 @@ export default defineConfig({
       ...(browser === 'firefox' ? [] : ['offscreen']),
     ],
     // No network by default: integrations add their own origins when they ship.
-    // Only the phase-word font, behind a per-session URL so pages cannot probe for the extension.
+    // Only the phase-word font, behind a per-session URL so pages cannot fetch it by a fixed address.
     web_accessible_resources: [
       {
         resources: ['fonts/atkinson-next-latin.woff2', 'fonts/atkinson-next-latin-ext.woff2'],

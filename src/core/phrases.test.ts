@@ -63,10 +63,16 @@ describe('drawing lines', () => {
   });
 
   it('writes the sub line from the settings', () => {
-    expect(subLine('focus', DEFAULT_SETTINGS, initialState())).toBe('Study time, 25 minutes.');
-    expect(subLine('shortBreak', DEFAULT_SETTINGS, initialState())).toBe('Short break, 5 minutes.');
-    expect(subLine('longBreak', DEFAULT_SETTINGS, initialState())).toBe('Long break, 15 minutes.');
-    expect(subLine('focus', { ...DEFAULT_SETTINGS, mode: 'flowtime' }, initialState())).toBe('Study time. Stop when you are ready.');
-    expect(subLine('shortBreak', { ...DEFAULT_SETTINGS, mode: 'flowtime' }, { ...initialState(), nextBreakMs: 7 * 60_000 })).toBe('Short break, 7 minutes.');
+    const running = { ...initialState(), status: 'running' as const };
+    expect(subLine('focus', DEFAULT_SETTINGS, running)).toBe('Study time, 25 minutes.');
+    expect(subLine('shortBreak', DEFAULT_SETTINGS, running)).toBe('Short break, 5 minutes.');
+    expect(subLine('longBreak', DEFAULT_SETTINGS, running)).toBe('Long break, 15 minutes.');
+    expect(subLine('focus', { ...DEFAULT_SETTINGS, mode: 'flowtime' }, running)).toBe('Study time. Stop when you are ready.');
+    expect(subLine('shortBreak', { ...DEFAULT_SETTINGS, mode: 'flowtime' }, { ...running, nextBreakMs: 7 * 60_000 })).toBe('Short break, 7 minutes.');
+  });
+
+  it('never claims a block started when the next phase waits for the start button', () => {
+    expect(subLine('focus', DEFAULT_SETTINGS, initialState())).toBe('Study time. Press start when you are ready.');
+    expect(subLine('shortBreak', DEFAULT_SETTINGS, { ...initialState(), phase: 'shortBreak' })).toBe('Short break. Press start when you are ready.');
   });
 });

@@ -54,6 +54,7 @@ export function createClock(): Clock {
   close.type = 'button';
   close.className = 'close';
   close.title = 'Hide the clock on this page';
+  close.tabIndex = -1; // inside an aria-hidden clock; keyboard users turn it off in settings
   const icon = svg('svg', { viewBox: '0 0 20 20' });
   icon.append(svg('path', { d: ICONS.x }));
   close.append(icon);

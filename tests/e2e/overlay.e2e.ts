@@ -40,6 +40,7 @@ async function shadow(page: Page) {
       call(cls, 'function () { const s = getComputedStyle(this); return { opacity: s.opacity, pointerEvents: s.pointerEvents, display: s.display }; }'),
     rect: (cls: string) => call(cls, 'function () { const r = this.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }'),
     text: (cls: string) => call(cls, 'function () { return this.textContent; }'),
+    prop: (cls: string, js: string) => call(cls, `function () { return ${js}; }`),
     color: (cls: string) => call(cls, 'function () { return getComputedStyle(this).color; }'),
   };
 }
@@ -81,6 +82,15 @@ test('corner clock and phase words survive a hostile page and never touch the ne
   expect(Math.round(1280 - (box.x + box.w))).toBe(16);
   expect(Math.round(box.y)).toBe(16);
 
+  // A page that deletes unknown nodes under <html>, or fakes WXT's "newer script started" event, must not kill the clock.
+  await page.evaluate((id) => {
+    document.querySelector('study-duo-overlay')!.remove();
+    document.dispatchEvent(new CustomEvent(`${id}:overlay:wxt:content-script-started`, { detail: { contentScriptName: 'overlay', messageId: 'spoof' } }));
+  }, EXT_ID);
+  await expect.poll(() => dom.style('clock'), { timeout: 4_000 }).toEqual({ opacity: '0.15', pointerEvents: 'none', display: 'flex' });
+  // The clock is aria-hidden, so its close button must stay out of the keyboard order.
+  expect(await dom.prop('close', 'this.tabIndex')).toBe(-1);
+
   // The cursor 10 px away brings it up; a click on its body still reaches the page beneath.
   await page.mouse.move(box.x - 10, box.y + box.h / 2);
   await expect.poll(async () => (await dom.style('clock'))!.opacity).toBe('1');
@@ -98,6 +108,8 @@ test('corner clock and phase words survive a hostile page and never touch the ne
   await expect.poll(() => dom.text('line'), { timeout: 10_000 }).not.toBe('');
   expect(phrases.shortBreak).toContain(await dom.text('line'));
   expect(await dom.text('sub')).toBe('Short break, 5 minutes.');
+  // The bundled font loads through its per-session URL, even under the page's font-src 'none'.
+  await expect.poll(() => page.evaluate(() => [...document.fonts].filter((f) => f.family.includes('Study Duo')).map((f) => f.status))).toEqual(['loaded', 'loaded']);
   expect((await dom.style('words'))!.pointerEvents).toBe('none');
   expect(await dom.color('words-inner')).toBe('rgb(123, 197, 154)');
   await page.emulateMedia({ colorScheme: 'light' });

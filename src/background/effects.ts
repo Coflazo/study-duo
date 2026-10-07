@@ -76,6 +76,12 @@ async function ringBell(kind: BellKind, volume: number): Promise<void> {
   await browser.runtime.sendMessage({ target: 'offscreen', kind: 'bell', bell: kind, volume });
 }
 
+/** A tab frozen by alert() or print() never answers; the timer queue must not wait on it. */
+const ANNOUNCE_WAIT_MS = 1_500;
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | undefined> {
+  return Promise.race([p, new Promise<undefined>((resolve) => setTimeout(resolve, ms))]);
+}
+
 /** Shows the phase words in the active tab of every window. Returns how many pages confirmed they showed them. */
 export async function announce({ prev, state, settings, now }: EffectInput): Promise<number> {
   const next = state.phase;
@@ -88,7 +94,7 @@ export async function announce({ prev, state, settings, now }: EffectInput): Pro
   const message: AnnounceMessage = { kind: 'announce', line, sub: subLine(next, settings, state), phase: next };
   const tabs = await browser.tabs.query({ active: true, windowType: 'normal' });
   const delivered = await Promise.all(
-    tabs.map((t) => (t.id === undefined ? 0 : browser.tabs.sendMessage(t.id, message).then((shown) => (shown === true ? 1 : 0), () => 0))),
+    tabs.map((t) => (t.id === undefined ? 0 : withTimeout(browser.tabs.sendMessage(t.id, message), ANNOUNCE_WAIT_MS).then((shown) => (shown === true ? 1 : 0), () => 0))),
   );
   return delivered.reduce<number>((a, b) => a + b, 0);
 }

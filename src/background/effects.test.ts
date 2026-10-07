@@ -95,6 +95,27 @@ describe('phase words', () => {
     expect(fakeBrowser.notifications.create).toHaveBeenCalledTimes(1);
   });
 
+  it('with default settings, a finished break says the next block waits for start', async () => {
+    const prev = { ...initialState(), phase: 'shortBreak' as const, status: 'running' as const, startedAt: at(10), endsAt: at(10, 5), plannedMs: 5 * MIN };
+    const r = reduce(prev, { type: 'tick' }, DEFAULT_SETTINGS, prev.endsAt);
+    expect(r.state.status).toBe('stopped');
+    await applyEffects({ event: { type: 'tick' }, prev, state: r.state, settings: DEFAULT_SETTINGS, segments: r.segments, now: prev.endsAt });
+    expect(sent()[0]).toMatchObject({ phase: 'focus', sub: 'Study time. Press start when you are ready.' });
+  });
+
+  it('does not let a page stuck in a dialog hold up the timer', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    try {
+      Object.assign(fakeBrowser.tabs, { query: vi.fn(async () => [{ id: 1 }]), sendMessage: vi.fn(() => new Promise(() => {})) });
+      const done = finishFocus(at(9));
+      await vi.advanceTimersByTimeAsync(2_000);
+      await done;
+      expect(fakeBrowser.notifications.create).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('falls back to a notification when no page can show it', async () => {
     Object.assign(fakeBrowser.tabs, { query: vi.fn(async () => []) });
     await finishFocus(at(9));

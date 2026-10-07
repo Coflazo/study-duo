@@ -25,7 +25,9 @@ const HOST_STYLE: Array<[string, string]> = [
 export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_idle',
-  async main(ctx) {
+  // WXT's content script context is not used: any page can invalidate it with one DOM event, and its setTimeout wrapper leaks a listener per call.
+  async main() {
+    if (!(document.documentElement instanceof HTMLElement)) return; // raw SVG or XML documents
     const host = document.createElement('study-duo-overlay');
     for (const [k, v] of HOST_STYLE) host.style.setProperty(k, v, 'important');
     const root = host.attachShadow({ mode: 'closed' });
@@ -43,19 +45,31 @@ export default defineContentScript({
     const words = createAnnouncer();
     root.append(clock.el, words.el);
     document.documentElement.append(host);
-    ctx.onInvalidated(() => host.remove());
+
+    const life = new AbortController();
+    const on = { capture: true, passive: true, signal: life.signal };
+    /** After an extension reload or update this copy is orphaned: runtime.id disappears. */
+    const alive = () => !life.signal.aborted && browser.runtime?.id !== undefined;
+    function teardown() {
+      life.abort();
+      clearTimeout(next);
+      host.remove();
+    }
 
     let state = await timerItem.getValue();
     let settings = normalizeSettings(await settingsItem.getValue());
     let closed = false;
     let near = false;
-    let next: number | undefined;
+    let next: ReturnType<typeof setTimeout> | undefined;
     let tickedFor: number | null = null;
 
     const showing = () => !closed && settings.overlayEnabled && state.status !== 'stopped' && !document.fullscreenElement;
 
     function render() {
       clearTimeout(next);
+      if (!alive()) return teardown();
+      // Pages that rebuild <html> (hydration, document.open) drop unknown nodes; put the clock back.
+      if (!host.isConnected) document.documentElement.append(host);
       clock.el.hidden = !showing();
       if (clock.el.hidden) return;
       clock.el.dataset.phase = isBreak(state.phase) ? 'break' : 'focus';
@@ -75,7 +89,7 @@ export default defineContentScript({
       }
       // Wake once per displayed second, right after the digits change.
       const wait = countsUp ? 1000 - (ms % 1000) : ms % 1000 || 1000;
-      next = ctx.setTimeout(render, wait + 20);
+      next = setTimeout(render, wait + 20);
     }
 
     function setNear(value: boolean) {
@@ -86,26 +100,26 @@ export default defineContentScript({
 
     let pointer: PointerEvent | undefined;
     let frame = 0;
-    ctx.addEventListener(document, 'pointermove', (e) => {
+    document.addEventListener('pointermove', (e) => {
       pointer = e;
       frame ||= requestAnimationFrame(() => {
         frame = 0;
         if (pointer && !clock.el.hidden) setNear(isNear(clock.el.getBoundingClientRect(), pointer.clientX, pointer.clientY));
       });
-    }, { capture: true, passive: true });
-    ctx.addEventListener(document, 'pointerout', (e) => {
+    }, on);
+    document.addEventListener('pointerout', (e) => {
       if (!e.relatedTarget) setNear(false);
-    }, { capture: true, passive: true });
+    }, on);
 
     clock.close.addEventListener('click', (e) => {
       e.stopPropagation();
       closed = true;
       setNear(false);
       render();
-    });
+    }, { signal: life.signal });
 
-    ctx.addEventListener(document, 'visibilitychange', render);
-    ctx.addEventListener(document, 'fullscreenchange', render);
+    document.addEventListener('visibilitychange', render, { signal: life.signal });
+    document.addEventListener('fullscreenchange', render, { signal: life.signal });
     const unwatch = [
       timerItem.watch((v) => {
         state = v ?? initialState();
@@ -116,16 +130,20 @@ export default defineContentScript({
         render();
       }),
     ];
-    ctx.onInvalidated(() => unwatch.forEach((u) => u()));
+    life.signal.addEventListener('abort', () => unwatch.forEach((u) => u()));
 
-    browser.runtime.onMessage.addListener((raw, sender, sendResponse) => {
+    const onMessage = (raw: unknown, sender: { id?: string }, sendResponse: (shown: boolean) => void) => {
       if (sender.id !== browser.runtime.id) return;
       const msg = parseAnnounce(raw);
       if (!msg) return;
+      if (!alive()) return teardown();
+      if (!host.isConnected) document.documentElement.append(host);
       const canShow = document.visibilityState === 'visible' && !document.fullscreenElement;
       if (canShow) words.show(msg);
       sendResponse(canShow);
-    });
+    };
+    browser.runtime.onMessage.addListener(onMessage);
+    life.signal.addEventListener('abort', () => browser.runtime.onMessage?.removeListener(onMessage));
 
     render();
   },

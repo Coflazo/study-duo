@@ -32,10 +32,12 @@ export function drawLine(moment: Moment, bag: Bag, random: () => number = Math.r
   return { line: lines[index!]!, bag: { ...bag, [moment]: left } };
 }
 
+/** `state` is the timer after the phase change; a phase that waits for the start button must not sound started. */
 export function subLine(next: Phase, settings: TimerSettings, state: TimerState): string {
+  const label = next === 'focus' ? 'Study time' : next === 'shortBreak' ? 'Short break' : 'Long break';
+  if (state.status !== 'running') return `${label}. Press start when you are ready.`;
   const ms = phaseLengthMs(next, settings, state);
   if (ms === null) return 'Study time. Stop when you are ready.';
   const minutes = Math.round(ms / 60_000);
-  const label = next === 'focus' ? 'Study time' : next === 'shortBreak' ? 'Short break' : 'Long break';
   return `${label}, ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`;
 }
