@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-export const EXT_DIR = path.resolve('.output/chrome-mv3');
+export const EXT_DIR = path.resolve('build/chrome-mv3');
 export const EXT_ID = 'bcggiingdefmehpjcalkfpdnehpcieon';
 
 /**

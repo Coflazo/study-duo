@@ -264,7 +264,7 @@ The promise is the GitHub repo, not a store listing. Every release is a GitHub R
 What the installer does (and nothing else):
 1. Downloads the latest release zip + `SHA256SUMS` from `github.com/Coflazo/study-duo/releases/latest/download/` over HTTPS.
 2. Checks the SHA-256; stops if it does not match.
-3. Unzips to a fixed folder in your user directory: `~/.study-duo/chromium` (Windows: `%LOCALAPPDATA%\StudyDuo\chromium`). No sudo, no admin rights.
+3. Unzips to a fixed, visible folder in your home folder: `~/Study Duo/chromium` (Windows: `%USERPROFILE%\Study Duo\chromium`), never a dot-folder, because Finder and the browser's Load unpacked window hide those. No sudo, no admin rights.
 4. Copies that folder path to the clipboard and opens your browser's extensions page (finds Chrome, Edge, Brave, Arc, Opera, Vivaldi, Chromium).
 5. Prints the 3 clicks left: Developer mode on → Load unpacked → paste the path.
 
