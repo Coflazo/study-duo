@@ -8,6 +8,8 @@ import { normalizeSites, seedMusicSites } from '@/core/sites';
 import { unlockedItem } from '@/background/site-lock';
 import { ensureOverlay, keepClocksOnOpenTabs } from '@/background/overlay-inject';
 import { acceptCounts, trackActivity } from '@/background/activity';
+import { hearTab, trackMusic } from '@/background/music';
+import { isMusicStop, parseNowPlaying } from '@/core/music';
 
 export default defineBackground(() => {
   const timer = createTimerService({
@@ -24,6 +26,8 @@ export default defineBackground(() => {
     const base = browser.runtime.getURL('/');
     const msg = parseMessage(raw);
     if (msg && allowedFromSender(msg, isFromWebPage(sender.url, base))) void timer.dispatch(msg.event).catch(console.error);
+    const song = parseNowPlaying(raw);
+    if ((song || isMusicStop(raw)) && sender.tab?.id !== undefined && isFromWebPage(sender.url, base)) void hearTab(sender.tab.id, sender.url, song);
     const counts = parseCounts(raw);
     if (counts && sender.tab?.id !== undefined && isFromWebPage(sender.url, base)) void acceptCounts(sender.tab.id, sender.url, counts);
     const pos = parseMove(raw);
@@ -58,6 +62,7 @@ export default defineBackground(() => {
   }
   keepClocksOnOpenTabs();
   trackActivity();
+  trackMusic();
 
   browser.commands.onCommand.addListener((command) => {
     if (command === 'toggle-timer') void timer.dispatch({ type: 'toggle' }).catch(console.error);

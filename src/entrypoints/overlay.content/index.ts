@@ -10,6 +10,9 @@ import type { SiteStatus } from '@/background/site-requests';
 import { isNear } from '@/overlay/proximity';
 import { dropPos, placement } from '@/overlay/position';
 import { createInputCounter } from '@/overlay/input-counter';
+import { changes, pageMedia, readNowPlaying } from '@/overlay/music-probe';
+import { isMusicHost } from '@/core/music';
+import { hostOf } from '@/core/sites';
 import { CSS, ensureFont } from '@/overlay/styles';
 
 const FRESH_MS = 4_000;
@@ -265,6 +268,31 @@ export default defineContentScript({
     life.signal.addEventListener('abort', () => clearInterval(minute));
     unwatch.push(timerItem.watch(() => syncCounting()), settingsItem.watch(() => syncCounting()));
     syncCounting();
+
+    // Now playing, on music sites only: read on media events and on a slow beat, report only changes.
+    if (isMusicHost(hostOf(location.href))) {
+      const media = pageMedia();
+      const changed = changes();
+      let beat: ReturnType<typeof setTimeout> | undefined;
+      const read = () => {
+        clearTimeout(beat);
+        if (!alive()) return;
+        if (!settings.measure.music) return void (beat = setTimeout(read, 60_000));
+        const now = readNowPlaying(media);
+        const news = changed(now);
+        if (news !== undefined) browser.runtime.sendMessage(news ? { kind: 'music', op: 'now', ...news } : { kind: 'music', op: 'none' }).catch(() => undefined);
+        beat = setTimeout(read, now?.playing ? 15_000 : 60_000);
+      };
+      let soon: ReturnType<typeof setTimeout> | undefined;
+      const readSoon = () => {
+        clearTimeout(soon);
+        soon = setTimeout(read, 500); // let the page update its metadata first
+      };
+      for (const type of ['play', 'pause', 'ended', 'loadedmetadata']) document.addEventListener(type, readSoon, { capture: true, signal: life.signal });
+      window.addEventListener('pagehide', () => browser.runtime.sendMessage({ kind: 'music', op: 'none' }).catch(() => undefined), { signal: life.signal });
+      life.signal.addEventListener('abort', () => (clearTimeout(beat), clearTimeout(soon)));
+      readSoon();
+    }
 
     render();
   },
