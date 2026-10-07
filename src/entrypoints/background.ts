@@ -1,6 +1,6 @@
 import { ALARM_PHASE_END, ALARM_REFRESH, applyEffects } from '@/background/effects';
 import { createTimerService } from '@/background/timer-service';
-import { parseMessage } from '@/core/messages';
+import { allowedFromSender, isFromWebPage, parseMessage } from '@/core/messages';
 import { loadSettings, loadState, settingsItem, timerItem } from '@/core/store';
 
 export default defineBackground(() => {
@@ -16,7 +16,7 @@ export default defineBackground(() => {
   browser.runtime.onMessage.addListener((raw, sender) => {
     if (sender.id !== browser.runtime.id) return;
     const msg = parseMessage(raw);
-    if (msg) void timer.dispatch(msg.event).catch(console.error);
+    if (msg && allowedFromSender(msg, isFromWebPage(sender.url, browser.runtime.getURL('/')))) void timer.dispatch(msg.event).catch(console.error);
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {

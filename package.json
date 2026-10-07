@@ -15,7 +15,8 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json",
-    "test:e2e": "wxt build && playwright test"
+    "test:e2e": "wxt build && playwright test",
+    "tokens": "node scripts/tokens-to-css.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

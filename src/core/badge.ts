@@ -1,10 +1,10 @@
 import { elapsedMs, remainingMs, type TimerState } from './timer';
 
-/** Provisional; S2 (Figma) finalizes the palette in src/ui/tokens.css. */
+/** Badge backgrounds behind white digits: red-500, green-500 and neutral-600 from src/ui/tokens.css (5:1, 5:1 and 7.9:1). */
 export const PHASE_COLORS = {
-  focus: '#E3A13B',
-  break: '#7FB38E',
-  paused: '#8A8A84',
+  focus: '#D52B1E',
+  break: '#2E7D4F',
+  paused: '#4E524E',
 } as const;
 
 export function badgeText(state: TimerState, now: number): string {

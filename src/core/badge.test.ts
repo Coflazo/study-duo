@@ -32,4 +32,8 @@ describe('badge', () => {
     expect(badgeColor(reduce(run, { type: 'pause' }, S, T0 + 1).state)).toBe(PHASE_COLORS.paused);
     expect(badgeColor({ ...run, phase: 'shortBreak' })).toBe(PHASE_COLORS.break);
   });
+
+  it('uses the brand signal colours, which keep white digits at 4.5:1 or better', () => {
+    expect(PHASE_COLORS).toEqual({ focus: '#D52B1E', break: '#2E7D4F', paused: '#4E524E' });
+  });
 });

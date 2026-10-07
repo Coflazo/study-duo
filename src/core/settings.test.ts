@@ -21,4 +21,10 @@ describe('normalizeSettings', () => {
     expect(s).toMatchObject({ mode: 'flowtime', focusMin: 50, autoStartFocus: true });
     expect(normalizeSettings({ mode: 'evil' }).mode).toBe('pomodoro');
   });
+
+  it('defaults the corner clock on, top right, and rejects unknown corners', () => {
+    expect(DEFAULT_SETTINGS).toMatchObject({ overlayEnabled: true, overlayCorner: 'top-right' });
+    expect(normalizeSettings({ overlayEnabled: false, overlayCorner: 'bottom-right' })).toMatchObject({ overlayEnabled: false, overlayCorner: 'bottom-right' });
+    expect(normalizeSettings({ overlayCorner: 'middle' }).overlayCorner).toBe('top-right');
+  });
 });

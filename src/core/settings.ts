@@ -1,4 +1,5 @@
 export type TimerMode = 'pomodoro' | 'flowtime';
+export type OverlayCorner = 'top-right' | 'bottom-right';
 
 export interface TimerSettings {
   mode: TimerMode;
@@ -15,6 +16,9 @@ export interface TimerSettings {
   idlePauseMin: number;
   /** 0..1 */
   bellVolume: number;
+  /** The clock in the corner of every page. */
+  overlayEnabled: boolean;
+  overlayCorner: OverlayCorner;
 }
 
 export const DEFAULT_SETTINGS: TimerSettings = {
@@ -28,6 +32,8 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   flowBreakRatio: 5,
   idlePauseMin: 0,
   bellVolume: 0.6,
+  overlayEnabled: true,
+  overlayCorner: 'top-right',
 };
 
 function num(v: unknown, min: number, max: number, fallback: number): number {
@@ -53,5 +59,7 @@ export function normalizeSettings(raw: unknown): TimerSettings {
     flowBreakRatio: num(r.flowBreakRatio, 2, 10, d.flowBreakRatio),
     idlePauseMin: num(r.idlePauseMin, 0, 60, d.idlePauseMin),
     bellVolume: num(r.bellVolume, 0, 1, d.bellVolume),
+    overlayEnabled: bool(r.overlayEnabled, d.overlayEnabled),
+    overlayCorner: r.overlayCorner === 'bottom-right' ? 'bottom-right' : 'top-right',
   };
 }
