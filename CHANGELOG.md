@@ -26,6 +26,8 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ### Fixed
 
+- When newer Study Duo files are on disk than the copy Chrome is running (no reload after an update), the popup and dashboard say "Study Duo has an update waiting." with a Reload button. A copy that missed a reload had kept the corner clock off tabs that were already open.
+- A page that cannot get its corner clock is now reported on the extension's Errors page instead of failing silently.
 - Tabs that were open across an install, an update or switching the extension off and on now get one working clock, without reloading the page.
 - A quick "No task" in the Work on picker is never overwritten by the default.
 

@@ -63,7 +63,7 @@ export function holdSessionLog(sw: Worker, ms: number): Promise<void> {
  * A running browser without the extension, so a test can install and reload it the way a person does on
  * chrome://extensions, with tabs already open. Playwright cannot reload an extension it loaded itself.
  */
-export async function launchBare(): Promise<{ browser: Browser; ctx: BrowserContext; install: () => Promise<void>; close: () => Promise<void> }> {
+export async function launchBare(): Promise<{ browser: Browser; ctx: BrowserContext; install: (dir?: string) => Promise<void>; close: () => Promise<void> }> {
   const profile = tempProfile();
   const exe = chromePath() ?? chromium.executablePath();
   const proc = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--enable-unsafe-extension-debugging', '--no-first-run', '--no-default-browser-check', '--no-sandbox', 'about:blank'], { stdio: 'ignore' });
@@ -88,7 +88,7 @@ export async function launchBare(): Promise<{ browser: Browser; ctx: BrowserCont
   return {
     browser,
     ctx: browser.contexts()[0]!,
-    install: async () => void (await cdp.send('Extensions.loadUnpacked' as any, { path: EXT_DIR })),
+    install: async (dir = EXT_DIR) => void (await cdp.send('Extensions.loadUnpacked' as any, { path: dir })),
     close: async () => {
       await browser.close().catch(() => undefined);
       proc.kill();

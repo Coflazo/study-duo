@@ -33,7 +33,7 @@ describe('ensureOverlay', () => {
   });
 
   it('leaves a loading page alone, since Chrome adds the clock when it finishes', async () => {
-    get.mockResolvedValueOnce({ id: 3, status: 'loading' });
+    get.mockResolvedValueOnce({ id: 3, status: 'loading', url: 'https://example.test/' });
     await ensureOverlay(3);
     expect(sendMessage).not.toHaveBeenCalled();
     expect(executeScript).not.toHaveBeenCalled();
