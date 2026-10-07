@@ -1,12 +1,10 @@
 import { addRecords } from '@/core/log';
-import { foldListen, isMusicHost, type NowPlaying, type OpenListen } from '@/core/music';
+import { foldListen, isMusicHost, type NowPlaying } from '@/core/music';
 import { sessionId } from '@/core/sessions';
 import { normalizeSettings } from '@/core/settings';
 import { hostOf } from '@/core/sites';
-import { settingsItem, timerItem } from '@/core/store';
+import { listeningItem, settingsItem, timerItem } from '@/core/store';
 
-/** Open listens by tab, for the session: what is playing now (the Music screen reads it too). */
-export const listeningItem = storage.defineItem<Record<string, OpenListen>>('session:listening', { fallback: {} });
 
 let queue: Promise<void> = Promise.resolve();
 const lastReport = new Map<number, number>();

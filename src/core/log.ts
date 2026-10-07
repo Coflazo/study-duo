@@ -58,3 +58,13 @@ export function deleteAll(): Promise<void> {
     for (const store of STORES) await db.clear(store);
   });
 }
+
+/** How many rows each store holds, for Your data. */
+export function countAll(): Promise<Record<StoreName, number>> {
+  return withDb(async (db) => {
+    const out = {} as Record<StoreName, number>;
+    for (const store of STORES) out[store] = await db.count(store);
+    return out;
+  });
+}
+

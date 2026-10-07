@@ -6,8 +6,10 @@
   const ITEMS = [
     ['today', 'Today', ICONS.clock],
     ['todo', 'To-do', ICONS.listChecks],
+    ['music', 'Music', ICONS.musicNotes],
     ['sites', 'Site lock', ICONS.lock],
     ['settings', 'Settings', ICONS.gear],
+    ['data', 'Your data', ICONS.shieldCheck],
   ] as const;
 </script>
 

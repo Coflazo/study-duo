@@ -7,8 +7,10 @@
   import Today from './Today.svelte';
   import Todo from './Todo.svelte';
   import UpdateNotice from '@/ui/UpdateNotice.svelte';
+  import Music from './Music.svelte';
+  import Data from './Data.svelte';
 
-  const ROUTES = ['today', 'todo', 'sites', 'settings'] as const;
+  const ROUTES = ['today', 'todo', 'music', 'sites', 'settings', 'data'] as const;
   type Route = (typeof ROUTES)[number];
   const routeOf = (hash: string): Route => (ROUTES as readonly string[]).includes(hash.slice(1)) ? (hash.slice(1) as Route) : 'today';
 
@@ -35,6 +37,10 @@
     <UpdateNotice />
     {#if route === 'today'}
       <Today {data} />
+    {:else if route === 'music'}
+      <Music {data} />
+    {:else if route === 'data'}
+      <Data {data} />
     {:else if route === 'sites'}
       <h1>Site lock</h1>
       <Sites />

@@ -3,6 +3,7 @@ import { createTimerService } from '@/background/timer-service';
 import { allowedFromSender, isFromWebPage, parseCounts, parseMessage, parseMove, parseSiteMessage, parseSound, resolveSiteRequest } from '@/core/messages';
 import { focusSound } from '@/background/sound';
 import { normalizeSettings } from '@/core/settings';
+import { purgeOlderThan } from '@/core/log';
 import { createSiteMenu, handleSiteRequest, onSiteMenuClick } from '@/background/site-requests';
 import { loadSettings, loadState, musicSeededItem, settingsItem, sitesItem, timerItem } from '@/core/store';
 import { normalizeSites, seedMusicSites } from '@/core/sites';
@@ -66,6 +67,13 @@ export default defineBackground(() => {
   keepClocksOnOpenTabs();
   trackActivity();
   trackMusic();
+
+  // Retention (Your data): drop history older than the kept period, at every worker start and when it changes.
+  const purge = () => void loadSettings().then((s) => purgeOlderThan(s.retentionDays, Date.now())).catch(console.error);
+  purge();
+  settingsItem.watch((now, before) => {
+    if (now?.retentionDays !== before?.retentionDays) purge();
+  });
 
   browser.commands.onCommand.addListener((command) => {
     if (command === 'toggle-timer') void timer.dispatch({ type: 'toggle' }).catch(console.error);

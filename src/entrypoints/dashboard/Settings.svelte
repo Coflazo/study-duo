@@ -27,11 +27,11 @@
   }
 </script>
 
-<h1>Settings</h1>
+<h1 class="screen-title">Settings</h1>
 
 <div class="columns">
   <section aria-labelledby="timer-title">
-    <h2 id="timer-title">Timer</h2>
+    <h2 class="section-title" id="timer-title">Timer</h2>
     <div class="row">
       <div class="text"><p class="label">Mode</p><p class="help">Flowtime counts up and gives a break a fifth as long.</p></div>
       <Segmented options={MODES} value={s.mode} label="Mode" onchange={(mode) => save({ mode })} />
@@ -59,7 +59,7 @@
   </section>
 
   <section aria-labelledby="bell-title">
-    <h2 id="bell-title">Bell and clock</h2>
+    <h2 class="section-title" id="bell-title">Bell and clock</h2>
     <div class="row">
       <label class="text label" for="f-bell">Bell volume</label>
       <NumberField id="f-bell" value={Math.round(s.bellVolume * 100)} min={0} max={100} unit="%" word="percent" onsave={(v) => save({ bellVolume: v / 100 })} />
@@ -85,13 +85,6 @@
 </div>
 
 <style>
-  h1 { margin: 0 0 24px; font: 800 28px/32px var(--font-family-ui); }
-  .columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 32px 48px; align-items: start; }
-  h2 { margin: 0 0 4px; font: 700 20px/24px var(--font-family-ui); }
-  .row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding-block: 12px; border-block-end: 1px solid var(--color-border-subtle); }
-  .text { flex: 1 1 180px; display: flex; flex-direction: column; gap: 2px; }
-  .label { margin: 0; font: 600 14px/20px var(--font-family-ui); }
-  .help { margin: 0; font: 400 12px/16px var(--font-family-ui); color: var(--color-text-secondary); }
   .play {
     padding: 6px 10px; border: 1px solid var(--color-border-control); border-radius: 2px; background: none; color: var(--color-text-primary);
     font: 600 12px/16px var(--font-family-ui); cursor: pointer;

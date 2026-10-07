@@ -12,6 +12,8 @@ export interface ListenRecord {
   startedAt: number;
   endedAt: number;
   sessionId: string | null;
+  /** From the file's tags, for your own files. */
+  genre?: string;
 }
 
 export type ActivityCategory = 'study' | 'blocked' | 'neutral' | 'unfiled' | 'unobserved';
