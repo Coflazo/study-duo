@@ -1,15 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildRules, type DnrRule } from './blocking';
+import { buildRules, wouldClose, type DnrRule } from './blocking';
 import type { Sites } from './sites';
 
 const PAGE = 'chrome-extension://bcggiingdefmehpjcalkfpdnehpcieon/blocked.html';
 
-/** What Chrome does with these rules for a page on `host`: the highest priority wins, allow beats redirect on a tie. */
-function winner(rules: DnrRule[], host: string): 'closed' | 'open' {
-  const hits = rules.filter((r) => !r.condition.requestDomains || r.condition.requestDomains.some((d) => host === d || host.endsWith(`.${d}`)));
-  hits.sort((a, b) => b.priority - a.priority || (a.action.type === 'allow' ? -1 : 1));
-  return hits[0]?.action.type === 'redirect' ? 'closed' : 'open';
-}
+const winner = (rules: DnrRule[], host: string) => (wouldClose(rules, host) ? 'closed' : 'open');
 
 const sites: Sites = { 'youtube.com': 'blocked', 'music.youtube.com': 'neutral', 'google.com': 'study', 'mail.google.com': 'blocked', 'khanacademy.org': 'study' };
 

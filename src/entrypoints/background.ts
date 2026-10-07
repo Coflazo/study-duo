@@ -1,7 +1,8 @@
 import { ALARM_PHASE_END, ALARM_REFRESH, applyEffects } from '@/background/effects';
 import { createTimerService } from '@/background/timer-service';
 import { allowedFromSender, isFromWebPage, parseMessage } from '@/core/messages';
-import { loadSettings, loadState, settingsItem, timerItem } from '@/core/store';
+import { loadSettings, loadState, settingsItem, sitesItem, timerItem } from '@/core/store';
+import { unlockedItem } from '@/background/site-lock';
 
 export default defineBackground(() => {
   const timer = createTimerService({
@@ -36,6 +37,10 @@ export default defineBackground(() => {
   }
   void syncIdle();
   settingsItem.watch(() => void syncIdle());
+  // Site lists, mode and unlocks change the rules; a tick re-runs the effects inside the timer queue.
+  settingsItem.watch(tick);
+  sitesItem.watch(tick);
+  unlockedItem.watch(tick);
 
   browser.idle.onStateChanged.addListener(async (idle) => {
     if (idle === 'active') return;

@@ -2,6 +2,7 @@ import { badgeColor, badgeText } from '@/core/badge';
 import { bellKindFor, playBell, type BellKind } from '@/core/bell';
 import { actionTitle, dial } from '@/core/dial';
 import { drawDial } from './dial-canvas';
+import { syncLockFromStorage } from './site-lock';
 import type { AnnounceMessage } from '@/core/messages';
 import { phaseTitle } from '@/core/phase-copy';
 import { drawLine, momentFor, subLine } from '@/core/phrases';
@@ -87,6 +88,8 @@ export async function applyEffects(input: EffectInput): Promise<void> {
   const { event, state, settings, segments, now } = input;
   await syncAlarms(state);
   await syncAction(state, settings, now);
+  // A rule failure must not stop the bell or the phase words, and the other way round.
+  await syncLockFromStorage(state, settings).catch(console.error);
   const finishedOnItsOwn = event.type === 'tick' && segments.some((s) => s.completed);
   if (!finishedOnItsOwn) return;
   // A silent bell must not also hide the phase change.

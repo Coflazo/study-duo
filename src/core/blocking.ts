@@ -36,3 +36,11 @@ export function buildRules(input: { sites: Sites; mode: SiteMode; unlocked: stri
   }
   return rules.map((r, i) => ({ id: i + 1, ...r }));
 }
+
+/** Whether these rules send a top-level page on `host` to the blocked page: highest priority wins, allow beats redirect on a tie. */
+export function wouldClose(rules: DnrRule[], host: string | null): boolean {
+  if (host === null) return false;
+  const hits = rules.filter((r) => !r.condition.requestDomains || r.condition.requestDomains.some((d) => host === d || host.endsWith(`.${d}`)));
+  hits.sort((a, b) => b.priority - a.priority || (a.action.type === 'allow' ? -1 : 1));
+  return hits[0]?.action.type === 'redirect';
+}
