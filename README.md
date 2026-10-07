@@ -6,14 +6,21 @@ A study timer for your browser. It puts a small digital clock in the corner of e
 
 ## Install
 
-Paste one line into a terminal. That's it.
+Paste one line into a terminal. Click the copy icon on the right of the box, paste, press Enter.
 
-| Your computer | Paste this |
-|---|---|
-| macOS or Linux (Terminal, iTerm, bash, zsh, fish) | `curl -fsSL https://raw.githubusercontent.com/Coflazo/study-duo/main/install.sh \| sh` |
-| Windows (PowerShell, Command Prompt or Windows Terminal) | `powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/Coflazo/study-duo/main/install.ps1 \| iex"` |
+**macOS or Linux** (Terminal, iTerm, bash, zsh, fish):
 
-The installer:
+```sh
+curl -fsSL https://raw.githubusercontent.com/Coflazo/study-duo/main/install.sh | sh
+```
+
+**Windows** (PowerShell, Command Prompt or Windows Terminal):
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/Coflazo/study-duo/main/install.ps1 | iex"
+```
+
+What the installer does:
 
 1. downloads the latest release from this repo's GitHub Releases page,
 2. checks its SHA-256 checksum and stops if it doesn't match,

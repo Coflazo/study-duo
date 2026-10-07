@@ -252,6 +252,20 @@ Firefox: unsigned add-ons only load temporarily, so Firefox gets a signed `.xpi`
 
 S13 changes from "stores" to "OSS release": release workflow, install scripts tested on macOS + Windows (GitHub Actions runners) + Linux, README final, AMO unlisted signing for Firefox. Stores only if you ask later.
 
+## S14: Brag GIF and product demo (last stage)
+
+Runs only after the product is finished. Two deliverables, both from real footage and real numbers:
+
+1. **README hero GIF** (`/brag --tone chaotic`, Hyperframes, landscape): fast cuts, loud kinetic type, every important feature on screen: clock fading in on a page, the bell + phase text, a blocked site bouncing, music detected, todo to calendar, the insights heatmap. Then a comparison beat and a "how smart" beat. Target 25-35 s, 800x500, 12 fps, palette-optimized, under 10 MB so GitHub loads it fast; if it runs over, the GIF keeps the hero cut and links the full video. Lives at `docs/media/demo.gif`, first thing in the README.
+2. **Full product demo video** (`product-demo` pipeline, Remotion, standalone, up to 90 s, sound on, optional narration with local Kokoro voice `bm_lewis`), linked under the GIF.
+
+Numbers come from a benchmark harness (`bench/`, Playwright + CDP, fixed page set, documented method, dated):
+- install size, script injected per page (KB), memory of the extension processes, CPU wakeups per minute while a timer runs, network requests during a 1-hour session with connections off (Study Duo: target 0),
+- the same measurements for every competitor with a free installable version (Forest, BlockSite free tier, LeechBlock NG and others found then),
+- paid competitors (Session, Freedom, Opal, Brain.fm, Forest Premium): price, account requirement, offline support, permissions and privacy from their official pages, with the date checked; their performance is not measured because buying them breaks the $0 rule,
+- "how smart": on simulated students, how many sessions until the model finds each student's true best hours and music, and its forecast error versus a plain average (labeled as simulated); real figures from your own data added only if you agree.
+Competitors appear by name only, no logos. Every number in the video traces to a file in `bench/results/`.
+
 ## Repo & tooling
 
 `Coflazo/study-duo`, public, MIT. Commits as Coflazo (git config already correct). Layout:
@@ -275,6 +289,7 @@ S13 changes from "stores" to "OSS release": release workflow, install scripts te
 | S11 Google sync, Outlook (if card-free), Last.fm/ListenBrainz, phone QR, deadline feed import | S9, S10 | you: free Last.fm key |
 | S12 device QR transfer, desktop helper | S11 | none |
 | S13 OSS launch (on your say): final README + GIFs, Firefox signed `.xpi` (free AMO account), privacy page, Google verification for >100 users; stores only if you ask | S9-S11 + your go | Google review wait (external) |
+| S14 brag GIF + product demo video (runs last, once the product is finished) | S13 + benchmark harness | your real study data for the "smart" numbers |
 
 Critical path: S0 → S1 → S2 (your Figma review) → S3/S5 → S9 audit + install. Everything else runs in parallel around it. Logging ships in v0.1 so your real study data accumulates while S7 is built; the insights need a few weeks of your sessions, which is the real limiting resource for the ML.
 
