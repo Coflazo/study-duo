@@ -24,6 +24,8 @@ export interface BlockSignals {
   completed?: number;
   /** Minutes between the end of the last break and the start of this block. */
   startDelayMin?: number;
+  /** Opt-in: share of active minutes with any typing, clicking or scrolling. */
+  inputShare?: number;
 }
 
 export interface BlockInput {
@@ -66,6 +68,10 @@ export function blockSignals({ block, activity, blocks, previous, measure }: Blo
     const tried = blocks.filter((b) => b.at >= from && b.at < to);
     out.blockedAttempts = tried.length;
     out.unlocks = tried.filter((b) => b.unlocked).length;
+  }
+  const counted = inBlock.filter((r) => r.inputMinutes !== undefined);
+  if (measure.input && counted.length > 0 && block.activeMs >= MIN) {
+    out.inputShare = Math.min(1, counted.reduce((sum, r) => sum + (r.inputMinutes ?? 0), 0) / (block.activeMs / MIN));
   }
   if (measure.away) out.unobservedMin = ms(inBlock.filter((r) => r.category === 'unobserved')) / MIN;
   if (measure.outcome) {

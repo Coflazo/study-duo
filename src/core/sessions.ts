@@ -10,6 +10,8 @@ export interface SessionRecord {
   plannedMs: number | null;
   activeMs: number;
   pausedMs: number;
+  /** Time added with +5 (absent in blocks logged before it existed). */
+  extendedMs?: number;
   completed: boolean;
   taskId: string | null;
   /** The focus rating, the label the insights learn from. */

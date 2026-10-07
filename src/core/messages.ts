@@ -97,3 +97,12 @@ export function parseMove(raw: unknown): OverlayPos | null {
   return r.kind === 'overlay' && r.op === 'move' ? strictPos(r.pos) : null;
 }
 
+/** One minute of opt-in input counts from a page: three whole numbers up to 10 000, nothing else. */
+export function parseCounts(raw: unknown): { keys: number; clicks: number; scrolls: number } | null {
+  if (raw === null || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  if (r.kind !== 'activity' || r.op !== 'counts') return null;
+  const ok = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 10_000;
+  return ok(r.keys) && ok(r.clicks) && ok(r.scrolls) ? { keys: r.keys, clicks: r.clicks, scrolls: r.scrolls } : null;
+}
+

@@ -33,15 +33,24 @@ async function setAway(reason: 'window' | 'idle', value: boolean): Promise<void>
   const before = await awayItem.getValue();
   const after = { ...before, [reason]: value };
   await awayItem.setValue(after);
-  const was = before.window || before.idle;
-  const is = after.window || after.idle;
-  if (was !== is) await feed({ type: is ? 'away' : 'back' });
+  await syncAway(before.window || before.idle);
+}
+
+/** With "time away" switched off, nothing counts as away: that time stays with the site in front. */
+async function syncAway(was: boolean | null = null): Promise<void> {
+  const { window, idle } = await awayItem.getValue();
+  const watching = normalizeSettings(await settingsItem.getValue()).measure.away;
+  const is = watching && (window || idle);
+  const tracked = (await trackerItem.getValue()).away;
+  if ((was ?? tracked) !== is || tracked !== is) await feed({ type: is ? 'away' : 'back' });
 }
 
 /** Event-driven: no timers or polling. Time counts only while the timer runs (see track). */
 export function trackActivity(): void {
   const refocus = () => frontHost().then((host) => feed({ type: 'focus', host }), console.error);
-  browser.tabs.onActivated.addListener(() => void refocus());
+  // Switching tabs means the user is in the browser, even if a focus-lost event (some systems send one when an
+  // extension popup opens) was never followed by a focus-gained one.
+  browser.tabs.onActivated.addListener(() => void setAway('window', false).then(refocus));
   browser.tabs.onUpdated.addListener((_id, change, tab) => {
     if (change.url && tab.active) void refocus();
   });
@@ -55,4 +64,16 @@ export function trackActivity(): void {
     void refocus().then(() => feed({ type: 'timer', phase: t?.status === 'running' ? t.phase : null }));
   });
   sitesItem.watch(() => void feed({ type: 'sites' }));
+  settingsItem.watch(() => void syncAway());
 }
+
+const lastCounts = new Map<number, number>();
+
+/** One report per tab per minute (a page could send more), and only while the user has input counting on. */
+export async function acceptCounts(tabId: number, url: string | undefined, counts: { keys: number; clicks: number; scrolls: number }, now = Date.now()): Promise<void> {
+  if (now - (lastCounts.get(tabId) ?? 0) < 50_000) return;
+  lastCounts.set(tabId, now);
+  if (!normalizeSettings(await settingsItem.getValue()).measure.input) return;
+  await feed({ type: 'input', host: hostOf(url), ...counts }, now);
+}
+

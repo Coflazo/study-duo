@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedFromSender, isFromWebPage, parseAnnounce, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest, isPing, parseMove } from './messages';
+import { allowedFromSender, isFromWebPage, parseAnnounce, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest, isPing, parseMove, parseCounts } from './messages';
 
 describe('parseMessage', () => {
   it('accepts every plain timer event', () => {
@@ -114,5 +114,16 @@ describe('parseMove', () => {
     expect(parseMove({ kind: 'overlay', op: 'move', pos: { h: 'up', v: 'top', x: 1, y: 1 } })).toBeNull();
     expect(parseMove({ kind: 'overlay', op: 'move' })).toBeNull();
     expect(parseMove({ kind: 'overlay', op: 'ping' })).toBeNull();
+  });
+});
+
+describe('parseCounts', () => {
+  it('accepts one minute of whole, bounded counts', () => {
+    expect(parseCounts({ kind: 'activity', op: 'counts', keys: 12, clicks: 3, scrolls: 0 })).toEqual({ keys: 12, clicks: 3, scrolls: 0 });
+    expect(parseCounts({ kind: 'activity', op: 'counts', keys: 1.5, clicks: 3, scrolls: 0 })).toBeNull();
+    expect(parseCounts({ kind: 'activity', op: 'counts', keys: 10_001, clicks: 0, scrolls: 0 })).toBeNull();
+    expect(parseCounts({ kind: 'activity', op: 'counts', keys: -1, clicks: 0, scrolls: 0 })).toBeNull();
+    expect(parseCounts({ kind: 'activity', op: 'counts', keys: 1 })).toBeNull();
+    expect(parseCounts({ kind: 'activity', op: 'counts', keys: 'a', clicks: 0, scrolls: 0, which: 'KeyA' })).toBeNull();
   });
 });

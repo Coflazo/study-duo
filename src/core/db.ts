@@ -24,9 +24,11 @@ export interface ActivityRecord {
   category: ActivityCategory;
   domain: string | null;
   phase: Phase;
+  /** Opt-in input counts (Settings), study blocks only: totals, and minutes that had any input. */
   keys?: number;
   clicks?: number;
   scrolls?: number;
+  inputMinutes?: number;
 }
 
 /** One visit to the blocked page. The typed reason itself is never kept. */

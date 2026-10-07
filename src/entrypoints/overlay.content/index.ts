@@ -9,6 +9,7 @@ import { createSitePrompt } from '@/overlay/site-prompt';
 import type { SiteStatus } from '@/background/site-requests';
 import { isNear } from '@/overlay/proximity';
 import { dropPos, placement } from '@/overlay/position';
+import { createInputCounter } from '@/overlay/input-counter';
 import { CSS, ensureFont } from '@/overlay/styles';
 
 const FRESH_MS = 4_000;
@@ -239,6 +240,31 @@ export default defineContentScript({
     const [storedTimer, storedSettings] = await Promise.all([timerItem.getValue(), settingsItem.getValue()]);
     if (!heardTimer) state = storedTimer;
     if (!heardSettings) settings = normalizeSettings(storedSettings);
+
+    // Opt-in input counts (off by default): during running study blocks only, sent once a minute and when the page goes.
+    const counter = createInputCounter();
+    const counting = () => settings.measure.input && state.phase === 'focus' && state.status === 'running';
+    const send = () => {
+      const c = counter.take();
+      if (c && alive()) browser.runtime.sendMessage({ kind: 'activity', op: 'counts', ...c }).catch(() => undefined);
+    };
+    const onInput = (e: Event) => {
+      if (counting()) counter.count(e);
+    };
+    for (const type of ['keydown', 'pointerdown', 'wheel']) document.addEventListener(type, onInput, on);
+    let minute: ReturnType<typeof setInterval> | undefined;
+    const syncCounting = () => {
+      if (counting() && minute === undefined) minute = setInterval(send, 60_000);
+      if (!counting() && minute !== undefined) {
+        clearInterval(minute);
+        minute = undefined;
+        send();
+      }
+    };
+    window.addEventListener('pagehide', send, { signal: life.signal });
+    life.signal.addEventListener('abort', () => clearInterval(minute));
+    unwatch.push(timerItem.watch(() => syncCounting()), settingsItem.watch(() => syncCounting()));
+    syncCounting();
 
     render();
   },

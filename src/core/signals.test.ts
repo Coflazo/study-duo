@@ -61,3 +61,13 @@ describe('blockSignals', () => {
     expect(blockSignals({ block, activity, blocks, previous: lastFocus, measure: DEFAULT_SETTINGS.measure }).startDelayMin).toBeUndefined();
   });
 });
+
+describe('input share', () => {
+  it('is the share of active minutes with any input, only when counting was on', () => {
+    const withInput = activity.map((r) => (r.category === 'study' && r.startedAt >= T ? { ...r, keys: 10, clicks: 1, scrolls: 0, inputMinutes: 7 } : r));
+    const on = { ...DEFAULT_SETTINGS.measure, input: true };
+    expect(blockSignals({ block, activity: withInput, blocks, previous: null, measure: on }).inputShare).toBe(21 / 28);
+    expect(blockSignals({ block, activity, blocks, previous: null, measure: on }).inputShare).toBeUndefined();
+    expect(blockSignals({ block, activity: withInput, blocks, previous: null, measure: DEFAULT_SETTINGS.measure }).inputShare).toBeUndefined();
+  });
+});

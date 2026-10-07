@@ -7,6 +7,10 @@ interface Open {
   category: ActivityCategory;
   domain: string | null;
   phase: Phase;
+  keys?: number;
+  clicks?: number;
+  scrolls?: number;
+  inputMinutes?: number;
 }
 
 /** What the activity tracker knows between events. Small, so the background can keep it in storage.session. */
@@ -18,9 +22,13 @@ export interface TrackerState {
   /** The browser lost focus, or the computer is idle or locked. */
   away: boolean;
   open: Open | null;
+  /** The record that closed last, kept briefly: a page's final counts can arrive just after it closed. */
+  last?: ActivityRecord | null;
 }
 
 export const IDLE_TRACKER: TrackerState = { phase: null, host: null, away: false, open: null };
+/** How long after a record closes its page's last counts still belong to it. */
+const LATE_COUNTS_MS = 10_000;
 
 export type TrackerEvent =
   | { type: 'timer'; phase: Phase | null }
@@ -28,7 +36,9 @@ export type TrackerEvent =
   | { type: 'away' }
   | { type: 'back' }
   /** The site lists changed: the open record may now belong to another category. */
-  | { type: 'sites' };
+  | { type: 'sites' }
+  /** Opt-in input counts from one page (host from the sender's address): at most a minute's worth. */
+  | { type: 'input'; host: string | null; keys: number; clicks: number; scrolls: number };
 
 function current(s: TrackerState, sites: Sites): Omit<Open, 'startedAt'> | null {
   if (s.phase === null) return null;
@@ -42,6 +52,23 @@ function current(s: TrackerState, sites: Sites): Omit<Open, 'startedAt'> | null 
  * category, the phase or presence changes. Returns the records that closed at `at`.
  */
 export function track(state: TrackerState, event: TrackerEvent, at: number, sites: Sites): { state: TrackerState; closed: ActivityRecord[] } {
+  if (event.type === 'input') {
+    const add = <T extends Open | ActivityRecord>(r: T): T => ({
+      ...r,
+      keys: (r.keys ?? 0) + event.keys,
+      clicks: (r.clicks ?? 0) + event.clicks,
+      scrolls: (r.scrolls ?? 0) + event.scrolls,
+      inputMinutes: (r.inputMinutes ?? 0) + (event.keys + event.clicks + event.scrolls > 0 ? 1 : 0),
+    });
+    const counts = (r: { phase: Phase; category: ActivityCategory; domain: string | null }) => r.phase === 'focus' && r.category !== 'unobserved' && r.domain === event.host;
+    if (state.open && counts(state.open)) return { state: { ...state, open: add(state.open) }, closed: [] };
+    const last = state.last;
+    if (last && counts(last) && at - last.endedAt <= LATE_COUNTS_MS) {
+      const updated = add(last);
+      return { state: { ...state, last: updated }, closed: [updated] }; // saved again over the stored record
+    }
+    return { state, closed: [] }; // study blocks only, and only for the page they came from
+  }
   const next: TrackerState = { ...state };
   if (event.type === 'timer') next.phase = event.phase;
   else if (event.type === 'focus') next.host = event.host;
@@ -55,7 +82,7 @@ export function track(state: TrackerState, event: TrackerEvent, at: number, site
   }
   const closed: ActivityRecord[] =
     open && at > open.startedAt
-      ? [{ id: `${open.startedAt}-${open.phase}-${open.domain ?? open.category}`, startedAt: open.startedAt, endedAt: at, category: open.category, domain: open.domain, phase: open.phase }]
+      ? [{ id: `${open.startedAt}-${open.phase}-${open.domain ?? open.category}`, ...open, endedAt: at }]
       : [];
-  return { state: { ...next, open: want ? { ...want, startedAt: at } : null }, closed };
+  return { state: { ...next, open: want ? { ...want, startedAt: at } : null, last: closed[0] ?? state.last ?? null }, closed };
 }

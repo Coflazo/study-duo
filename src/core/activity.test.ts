@@ -88,3 +88,37 @@ describe('track', () => {
     expect(done.id).toBe('0-focus-youtube.com');
   });
 });
+
+describe('input counts', () => {
+  it('adds counts to the open study record, one active minute per report with input', () => {
+    let s = track(IDLE_TRACKER, { type: 'focus', host: 'khanacademy.org' }, 0, SITES).state;
+    s = track(s, { type: 'timer', phase: 'focus' }, 0, SITES).state;
+    s = track(s, { type: 'input', host: 'khanacademy.org', keys: 40, clicks: 2, scrolls: 0 }, MIN, SITES).state;
+    s = track(s, { type: 'input', host: 'khanacademy.org', keys: 10, clicks: 0, scrolls: 5 }, 2 * MIN, SITES).state;
+    const [r] = track(s, { type: 'timer', phase: null }, 3 * MIN, SITES).closed;
+    expect(r).toMatchObject({ keys: 50, clicks: 2, scrolls: 5, inputMinutes: 2 });
+  });
+
+  it('ignores counts outside study blocks', () => {
+    let s = track(IDLE_TRACKER, { type: 'timer', phase: 'shortBreak' }, 0, SITES).state;
+    s = track(s, { type: 'input', host: null, keys: 40, clicks: 2, scrolls: 0 }, MIN, SITES).state;
+    const [r] = track(s, { type: 'timer', phase: null }, 2 * MIN, SITES).closed;
+    expect(r!.keys).toBeUndefined();
+    expect(track(IDLE_TRACKER, { type: 'input', host: 'khanacademy.org', keys: 1, clicks: 0, scrolls: 0 }, 0, SITES).state).toEqual(IDLE_TRACKER);
+  });
+});
+
+describe('late input counts', () => {
+  it('adds counts that arrive just after leaving a page to the record of that page, and saves it again', () => {
+    let s = track(IDLE_TRACKER, { type: 'focus', host: 'khanacademy.org' }, 0, SITES).state;
+    s = track(s, { type: 'timer', phase: 'focus' }, 0, SITES).state;
+    const left = track(s, { type: 'focus', host: 'news.example' }, 5 * MIN, SITES);
+    expect(left.closed).toHaveLength(1);
+    const late = track(left.state, { type: 'input', host: 'khanacademy.org', keys: 5, clicks: 2, scrolls: 1 }, 5 * MIN + 800, SITES);
+    expect(late.closed).toEqual([{ ...left.closed[0], keys: 5, clicks: 2, scrolls: 1, inputMinutes: 1 }]);
+    expect(late.state.open).toMatchObject({ domain: 'news.example' }); // the open record is untouched
+    expect(track(left.state, { type: 'input', host: 'khanacademy.org', keys: 5, clicks: 0, scrolls: 0 }, 5 * MIN + 30_000, SITES).closed).toEqual([]); // too late
+    expect(track(left.state, { type: 'input', host: 'reddit.com', keys: 5, clicks: 0, scrolls: 0 }, 5 * MIN + 800, SITES).closed).toEqual([]); // another site
+  });
+});
+
