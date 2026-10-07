@@ -2,6 +2,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { createLive } from '@/ui/live.svelte';
   import Nav from './Nav.svelte';
+  import Settings from './Settings.svelte';
   import Sites from './Sites.svelte';
   import Today from './Today.svelte';
   import Todo from './Todo.svelte';
@@ -38,7 +39,7 @@
     {:else if route === 'todo'}
       <Todo {data} />
     {:else}
-      <h1>Settings</h1>
+      <Settings {data} />
     {/if}
   </main>
 </div>
