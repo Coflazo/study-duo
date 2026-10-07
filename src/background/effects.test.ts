@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { DEFAULT_SETTINGS } from '@/core/settings';
-import { initialState, reduce } from '@/core/timer';
+import phrases from '@/locales/en/phrases.json';
+import { lastFocusDayItem, phraseBagItem } from '@/core/store';
+import { initialState, reduce, type TimerState } from '@/core/timer';
 import { ALARM_PHASE_END, ALARM_REFRESH, applyEffects, syncAlarms } from './effects';
 
 const MIN = 60_000;
@@ -58,5 +60,58 @@ describe('applyEffects', () => {
     await applyEffects({ event: { type: 'skip' }, prev, state: r.state, settings: DEFAULT_SETTINGS, segments: r.segments, now: T0 + MIN });
     expect(fakeBrowser.runtime.sendMessage).not.toHaveBeenCalled();
     expect(fakeBrowser.notifications.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('phase words', () => {
+  const at = (h: number, m = 0) => new Date(2026, 9, 7, h, m).getTime();
+  const sent = () => (fakeBrowser.tabs.sendMessage as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[1]);
+  const finishFocus = async (startedAt: number, extra: Partial<TimerState> = {}) => {
+    const prev = { ...reduce(initialState(), { type: 'start' }, DEFAULT_SETTINGS, startedAt).state, ...extra };
+    const end = prev.endsAt!;
+    const r = reduce(prev, { type: 'tick' }, DEFAULT_SETTINGS, end);
+    await applyEffects({ event: { type: 'tick' }, prev, state: r.state, settings: DEFAULT_SETTINGS, segments: r.segments, now: end });
+    return r.state;
+  };
+
+  beforeEach(() => {
+    Object.assign(fakeBrowser.tabs, {
+      query: vi.fn(async () => [{ id: 1 }, { id: 2 }]),
+      sendMessage: vi.fn(async (id: number) => { if (id === 2) throw new Error('no receiver'); }),
+    });
+  });
+
+  it('sends the line to the active tabs and skips the notification when a page showed it', async () => {
+    await finishFocus(at(9));
+    expect(sent()).toHaveLength(2);
+    expect(sent()[0]).toMatchObject({ kind: 'announce', phase: 'shortBreak', sub: 'Short break, 5 minutes.' });
+    expect(phrases.shortBreak).toContain(sent()[0].line);
+    expect(fakeBrowser.notifications.create).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a notification when no page can show it', async () => {
+    Object.assign(fakeBrowser.tabs, { query: vi.fn(async () => []) });
+    await finishFocus(at(9));
+    expect(fakeBrowser.notifications.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('greets the first study block of the day and then uses the usual lines', async () => {
+    const shortBreak = { ...initialState(), phase: 'shortBreak' as const, status: 'running' as const, startedAt: at(8, 0), endsAt: at(8, 5), plannedMs: 5 * MIN };
+    const settings = { ...DEFAULT_SETTINGS, autoStartFocus: true };
+    for (const [i, expected] of [[0, 'focusFirstMorning'], [1, 'focusStart']] as const) {
+      const prev = { ...shortBreak, startedAt: at(8 + i, 0), endsAt: at(8 + i, 5) };
+      const r = reduce(prev, { type: 'tick' }, settings, prev.endsAt);
+      await applyEffects({ event: { type: 'tick' }, prev, state: r.state, settings, segments: r.segments, now: prev.endsAt });
+      expect(phrases[expected], `call ${i}`).toContain(sent()[sent().length - 2].line);
+    }
+  });
+
+  it('uses the after-long-break lines and remembers which lines were shown', async () => {
+    await lastFocusDayItem.setValue(new Date(at(9)).toDateString());
+    const prev = { ...initialState(), phase: 'longBreak' as const, status: 'running' as const, startedAt: at(11), endsAt: at(11, 15), plannedMs: 15 * MIN, cycle: 4 };
+    const r = reduce(prev, { type: 'tick' }, DEFAULT_SETTINGS, prev.endsAt);
+    await applyEffects({ event: { type: 'tick' }, prev, state: r.state, settings: DEFAULT_SETTINGS, segments: r.segments, now: prev.endsAt });
+    expect(phrases.focusAfterLong).toContain(sent()[0].line);
+    expect((await phraseBagItem.getValue()).focusAfterLong).toHaveLength(phrases.focusAfterLong.length - 1);
   });
 });

@@ -1,6 +1,9 @@
 import { badgeColor, badgeText } from '@/core/badge';
 import { bellKindFor, playBell, type BellKind } from '@/core/bell';
+import type { AnnounceMessage } from '@/core/messages';
 import { phaseTitle } from '@/core/phase-copy';
+import { drawLine, momentFor, subLine } from '@/core/phrases';
+import { lastFocusDayItem, phraseBagItem } from '@/core/store';
 import { remainingMs, type TimerState } from '@/core/timer';
 import type { EffectInput } from './timer-service';
 
@@ -73,13 +76,33 @@ async function ringBell(kind: BellKind, volume: number): Promise<void> {
   await browser.runtime.sendMessage({ target: 'offscreen', kind: 'bell', bell: kind, volume });
 }
 
-export async function applyEffects({ event, state, settings, segments, now }: EffectInput): Promise<void> {
+/** Shows the phase words in the active tab of every window. Returns how many pages showed them. */
+export async function announce({ prev, state, settings, now }: EffectInput): Promise<number> {
+  const next = state.phase;
+  const today = new Date(now).toDateString();
+  const firstOfDay = next === 'focus' && (await lastFocusDayItem.getValue()) !== today;
+  if (next === 'focus') await lastFocusDayItem.setValue(today);
+  const moment = momentFor(next, { hour: new Date(now).getHours(), firstOfDay, afterLong: prev.phase === 'longBreak' });
+  const { line, bag } = drawLine(moment, await phraseBagItem.getValue());
+  await phraseBagItem.setValue(bag);
+  const message: AnnounceMessage = { kind: 'announce', line, sub: subLine(next, settings, state), phase: next };
+  const tabs = await browser.tabs.query({ active: true, windowType: 'normal' });
+  const delivered = await Promise.all(
+    tabs.map((t) => (t.id === undefined ? 0 : browser.tabs.sendMessage(t.id, message).then(() => 1, () => 0))),
+  );
+  return delivered.reduce<number>((a, b) => a + b, 0);
+}
+
+export async function applyEffects(input: EffectInput): Promise<void> {
+  const { event, state, settings, segments, now } = input;
   await syncAlarms(state);
   await syncAction(state, now);
   const finishedOnItsOwn = event.type === 'tick' && segments.some((s) => s.completed);
   if (!finishedOnItsOwn) return;
-  // A silent bell must not also hide the phase change, so the notification goes out regardless.
+  // A silent bell must not also hide the phase change.
   await ringBell(bellKindFor(state.phase), settings.bellVolume).catch(console.error);
+  const shown = await announce(input).catch((e) => (console.error(e), 0));
+  if (shown > 0) return;
   await browser.notifications.create('phase', {
     type: 'basic',
     iconUrl: browser.runtime.getURL('/icon/128.png'),
