@@ -18,6 +18,7 @@ test('start, badge, alarm, completion with bell, pause, and badge restored after
   await popup.getByRole('button', { name: 'Start' }).click();
   await expect.poll(() => timerField(sw, 'status')).toBe('running');
   await expect.poll(() => sw.evaluate(() => chrome.action.getBadgeText({}))).toBe('25');
+  expect(await sw.evaluate(() => chrome.action.getTitle({}))).toBe('Study Duo: study block, 25 min left');
 
   const endsAt = await timerField(sw, 'endsAt');
   const alarm = await sw.evaluate(() => chrome.alarms.get('phase-end'));
@@ -30,12 +31,13 @@ test('start, badge, alarm, completion with bell, pause, and badge restored after
   });
   await expect.poll(() => timerField(sw, 'phase'), { timeout: 10_000 }).toBe('shortBreak');
   await expect.poll(() => sw.evaluate(() => chrome.action.getBadgeText({}))).toBe('5');
+  expect(await sw.evaluate(() => chrome.action.getBadgeBackgroundColor({}))).toEqual([46, 125, 79, 255]);
   await expect
     .poll(() => sw.evaluate(async () => (await chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] })).length))
     .toBe(1);
 
   await popup.getByRole('button', { name: 'Pause' }).click();
-  await expect.poll(() => sw.evaluate(() => chrome.action.getBadgeBackgroundColor({}))).toEqual([138, 138, 132, 255]);
+  await expect.poll(() => sw.evaluate(() => chrome.action.getBadgeBackgroundColor({}))).toEqual([78, 82, 78, 255]);
 
   // Badges do not survive a browser restart on their own; the startup tick must rebuild it.
   await ctx.close();

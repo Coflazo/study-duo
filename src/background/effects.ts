@@ -1,10 +1,13 @@
 import { badgeColor, badgeText } from '@/core/badge';
 import { bellKindFor, playBell, type BellKind } from '@/core/bell';
+import { actionTitle, dial } from '@/core/dial';
+import { drawDial } from './dial-canvas';
 import type { AnnounceMessage } from '@/core/messages';
 import { phaseTitle } from '@/core/phase-copy';
 import { drawLine, momentFor, subLine } from '@/core/phrases';
 import { lastFocusDayItem, phraseBagItem } from '@/core/store';
-import { remainingMs, type TimerState } from '@/core/timer';
+import type { TimerSettings } from '@/core/settings';
+import type { TimerState } from '@/core/timer';
 import type { EffectInput } from './timer-service';
 
 export const ALARM_PHASE_END = 'phase-end';
@@ -17,37 +20,18 @@ export async function syncAlarms(state: TimerState): Promise<void> {
   await browser.alarms.create(ALARM_REFRESH, { periodInMinutes: 0.5 });
 }
 
-function ring(size: number, fraction: number, color: string): ImageData {
-  const canvas = new OffscreenCanvas(size, size);
-  const g = canvas.getContext('2d')!;
-  const c = size / 2;
-  const w = Math.max(2, Math.round(size * 0.16));
-  const r = c - w / 2 - 0.5;
-  g.lineWidth = w;
-  g.lineCap = 'round';
-  g.strokeStyle = 'rgba(138,138,132,0.35)';
-  g.beginPath();
-  g.arc(c, c, r, 0, Math.PI * 2);
-  g.stroke();
-  g.strokeStyle = color;
-  g.beginPath();
-  g.arc(c, c, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0.02, fraction));
-  g.stroke();
-  return g.getImageData(0, 0, size, size);
-}
-
-export async function syncAction(state: TimerState, now: number): Promise<void> {
+export async function syncAction(state: TimerState, settings: TimerSettings, now: number): Promise<void> {
   await browser.action.setBadgeText({ text: badgeText(state, now) });
-  if (state.status === 'stopped') {
+  await browser.action.setTitle({ title: actionTitle(state, settings, now) });
+  const d = dial(state, settings, now);
+  if (d === null) {
     await browser.action.setIcon({ path: { 16: '/icon/16.png', 32: '/icon/32.png' } });
     return;
   }
-  const color = badgeColor(state);
-  await browser.action.setBadgeBackgroundColor({ color });
+  await browser.action.setBadgeBackgroundColor({ color: badgeColor(state) });
+  await browser.action.setBadgeTextColor?.({ color: '#FFFFFF' });
   if (typeof OffscreenCanvas === 'undefined') return;
-  const left = remainingMs(state, now);
-  const fraction = left === null || !state.plannedMs ? 1 : left / state.plannedMs;
-  await browser.action.setIcon({ imageData: { 16: ring(16, fraction, color), 32: ring(32, fraction, color) } });
+  await browser.action.setIcon({ imageData: { 16: drawDial(16, d), 32: drawDial(32, d) } });
 }
 
 let creating: Promise<void> | null = null;
@@ -102,7 +86,7 @@ export async function announce({ prev, state, settings, now }: EffectInput): Pro
 export async function applyEffects(input: EffectInput): Promise<void> {
   const { event, state, settings, segments, now } = input;
   await syncAlarms(state);
-  await syncAction(state, now);
+  await syncAction(state, settings, now);
   const finishedOnItsOwn = event.type === 'tick' && segments.some((s) => s.completed);
   if (!finishedOnItsOwn) return;
   // A silent bell must not also hide the phase change.
