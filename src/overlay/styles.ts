@@ -77,8 +77,35 @@ export const CSS = `${hostTokens}
   margin: 0; font-size: 14px; line-height: 20px; color: var(--color-text-primary);
   text-shadow: 0 0 16px var(--color-bg-canvas), 0 0 4px var(--color-bg-canvas);
 }
+
+.prompt {
+  position: fixed; top: 69px; right: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px;
+  max-inline-size: min(320px, calc(100vw - 32px)); padding: 10px 8px 10px 12px; direction: ltr;
+  background: var(--color-bg-board); border-radius: 4px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+  font-family: '${FONT_FAMILY}', var(--font-family-ui); color: var(--neutral-50);
+  opacity: 0.15; pointer-events: none; transition: opacity 180ms ease;
+}
+.prompt[hidden] { display: none; }
+.prompt[data-corner="bottom-right"] { top: auto; bottom: 69px; }
+.prompt[data-near], .prompt[data-fresh] { opacity: 1; }
+.prompt[data-near] { pointer-events: auto; }
+.prompt-head { display: flex; align-items: center; gap: 8px; }
+.prompt-q { display: flex; flex: 1; flex-direction: column; gap: 2px; min-inline-size: 0; }
+.prompt-kicker { font-size: 11px; line-height: 15px; font-weight: 600; color: var(--neutral-400); }
+.prompt-domain { font-size: 14px; line-height: 19px; font-weight: 700; overflow-wrap: anywhere; }
+.prompt .prompt-close { display: grid; color: var(--neutral-400); }
+.prompt-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.choice {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 6px 10px 6px 8px; border: 0; border-radius: 2px;
+  background: var(--neutral-800); color: var(--neutral-50); font: 600 13px/18px '${FONT_FAMILY}', var(--font-family-ui); cursor: pointer;
+}
+.choice:hover { background: var(--neutral-700); }
+.mark { inline-size: 6px; block-size: 6px; }
+.mark-study { background: var(--green-400); }
+.mark-neutral { background: var(--neutral-400); }
+.mark-blocked { background: var(--red-400); }
 @media (prefers-reduced-motion: reduce) {
-  .clock { transition: none; }
+  .clock, .prompt { transition: none; }
   .clock[data-status="paused"] .colon { animation: none; }
 }
 `;

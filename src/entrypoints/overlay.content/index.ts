@@ -5,8 +5,10 @@ import { settingsItem, timerItem } from '@/core/store';
 import { displayMs, initialState, isBreak } from '@/core/timer';
 import { createAnnouncer } from '@/overlay/announce';
 import { createClock } from '@/overlay/clock';
+import { createSitePrompt } from '@/overlay/site-prompt';
+import type { SiteStatus } from '@/background/site-requests';
 import { isNear } from '@/overlay/proximity';
-import { CSS } from '@/overlay/styles';
+import { CSS, ensureFont } from '@/overlay/styles';
 
 /** Inline !important beats any page rule, including `* { all: unset !important }`. */
 const HOST_STYLE: Array<[string, string]> = [
@@ -43,7 +45,13 @@ export default defineContentScript({
     }
     const clock = createClock();
     const words = createAnnouncer();
-    root.append(clock.el, words.el);
+    const prompt = createSitePrompt((category) => {
+      promptDone = true;
+      prompt.hide();
+      setNear(false);
+      browser.runtime.sendMessage(category ? { kind: 'site', op: 'file', category } : { kind: 'site', op: 'dismiss' }).catch(() => undefined);
+    });
+    root.append(clock.el, prompt.el, words.el);
     document.documentElement.append(host);
 
     const life = new AbortController();
@@ -53,6 +61,7 @@ export default defineContentScript({
     function teardown() {
       life.abort();
       clearTimeout(next);
+      clearTimeout(freshTimer);
       host.remove();
     }
 
@@ -62,6 +71,11 @@ export default defineContentScript({
     let near = false;
     let next: ReturnType<typeof setTimeout> | undefined;
     let tickedFor: number | null = null;
+    // The site prompt: asked once per page load, shown for unfiled sites during a running block.
+    let site: SiteStatus | null = null;
+    let asked = false;
+    let promptDone = false;
+    let freshTimer: ReturnType<typeof setTimeout> | undefined;
 
     const showing = () => !closed && settings.overlayEnabled && state.status !== 'stopped' && !document.fullscreenElement;
 
@@ -71,6 +85,7 @@ export default defineContentScript({
       // Pages that rebuild <html> (hydration, document.open) drop unknown nodes; put the clock back.
       if (!host.isConnected) document.documentElement.append(host);
       clock.el.hidden = !showing();
+      renderPrompt();
       if (clock.el.hidden) return;
       clock.el.dataset.phase = isBreak(state.phase) ? 'break' : 'focus';
       clock.el.dataset.status = state.status;
@@ -92,10 +107,32 @@ export default defineContentScript({
       next = setTimeout(render, wait + 20);
     }
 
+    function renderPrompt() {
+      const running = !clock.el.hidden && state.phase === 'focus' && state.status === 'running';
+      if (running && !asked && !promptDone) {
+        asked = true;
+        browser.runtime.sendMessage({ kind: 'site', op: 'status' }).then((s: SiteStatus | null) => {
+          site = s;
+          render();
+        }, () => undefined);
+      }
+      const ask = running && !promptDone && site !== null && site.category === null && !site.dismissed && site.mode === 'closeBlocked';
+      if (!ask) return prompt.hide();
+      if (prompt.el.hidden) {
+        ensureFont();
+        prompt.el.dataset.corner = settings.overlayCorner;
+        prompt.show(site!.domain);
+        // Bright for a moment so it gets noticed, then as quiet as the clock.
+        prompt.el.toggleAttribute('data-fresh', true);
+        freshTimer = setTimeout(() => prompt.el.toggleAttribute('data-fresh', false), 8_000);
+      }
+    }
+
     function setNear(value: boolean) {
       if (value === near) return;
       near = value;
       clock.el.toggleAttribute('data-near', near);
+      prompt.el.toggleAttribute('data-near', near);
     }
 
     let pointer: PointerEvent | undefined;
@@ -104,7 +141,9 @@ export default defineContentScript({
       pointer = e;
       frame ||= requestAnimationFrame(() => {
         frame = 0;
-        if (pointer && !clock.el.hidden) setNear(isNear(clock.el.getBoundingClientRect(), pointer.clientX, pointer.clientY));
+        if (!pointer || clock.el.hidden) return;
+        const { clientX: x, clientY: y } = pointer;
+        setNear(isNear(clock.el.getBoundingClientRect(), x, y) || (!prompt.el.hidden && isNear(prompt.el.getBoundingClientRect(), x, y)));
       });
     }, on);
     document.addEventListener('pointerout', (e) => {
@@ -123,6 +162,7 @@ export default defineContentScript({
     const unwatch = [
       timerItem.watch((v) => {
         state = v ?? initialState();
+        asked = false; // the lock or the mode may have changed with the phase
         render();
       }),
       settingsItem.watch((v) => {
