@@ -20,6 +20,14 @@ export function hostOf(url: string | undefined): string | null {
   }
 }
 
+/** The site a page can be filed under, or null for pages that cannot be filed (localhost, IP addresses, intranet names, file:). */
+export function siteOf(url: string | undefined): string | null {
+  const host = hostOf(url);
+  if (host === null) return null;
+  const n = normalizeDomain(host);
+  return 'domain' in n && n.domain === host ? host : null;
+}
+
 /** Turns whatever someone typed or pasted into a domain, or says plainly why it cannot. */
 export function normalizeDomain(input: string): { domain: string } | { error: string } {
   const raw = input.trim();
@@ -34,7 +42,7 @@ export function normalizeDomain(input: string): { domain: string } | { error: st
     return { error: NOT_A_SITE };
   }
   const ip = /^\d+(\.\d+){3}$/.test(host) || host.includes('[') || host.includes(':');
-  if (ip || host.length > 253 || !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(host)) return { error: NOT_A_SITE };
+  if (ip || host.length > 253 || !/^[a-z0-9_-]+(\.[a-z0-9_-]+)+$/.test(host)) return { error: NOT_A_SITE };
   return { domain: host };
 }
 

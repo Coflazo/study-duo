@@ -111,8 +111,8 @@ export default defineContentScript({
       const running = !clock.el.hidden && state.phase === 'focus' && state.status === 'running';
       if (running && !asked && !promptDone) {
         asked = true;
-        browser.runtime.sendMessage({ kind: 'site', op: 'status' }).then((s: SiteStatus | null) => {
-          site = s;
+        browser.runtime.sendMessage({ kind: 'site', op: 'status' }).then((s: SiteStatus | null | undefined) => {
+          site = s ?? null; // pages that cannot be filed get no answer at all
           render();
         }, () => undefined);
       }

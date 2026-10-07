@@ -13,7 +13,7 @@ async function setup() {
   await ctx.route('**/*', (route) => {
     const url = new URL(route.request().url());
     if (url.protocol === 'chrome-extension:') return route.continue();
-    if (url.host.endsWith('study-duo.test')) return route.fulfill({ contentType: 'text/html', body: page(url.host) });
+    if (url.host.endsWith('study-duo.test') || url.host === 'intranet') return route.fulfill({ contentType: 'text/html', body: page(url.host) });
     offHost.push(url.href);
     return route.abort();
   });
@@ -136,6 +136,9 @@ test('closes Blocked sites during a block, keeps exceptions open, and opens ever
   await expect.poll(() => p.url()).toContain(`${BLOCKED}https://other.study-duo.test/`);
   await p.goto('https://learn.study-duo.test/');
   expect(p.url()).toBe('https://learn.study-duo.test/');
+  // Intranet names, localhost and IP addresses cannot be filed, so Allow only Study leaves them open.
+  await p.goto('http://intranet/wiki');
+  expect(p.url()).toBe('http://intranet/wiki');
 
   // Framed inside someone else's page, the blocked page shows no buttons at all.
   await p.setContent(`<iframe src="${BLOCKED}https://video.study-duo.test/"></iframe>`);

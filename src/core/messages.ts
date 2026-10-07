@@ -1,5 +1,5 @@
 import type { BellKind } from './bell';
-import { hostOf, type SiteCategory } from './sites';
+import { siteOf, type SiteCategory } from './sites';
 import type { Phase, TimerEvent } from './timer';
 
 export type TimerMessage = { kind: 'timer'; event: TimerEvent };
@@ -79,7 +79,7 @@ export function parseSiteMessage(raw: unknown): SiteMessage | null {
  */
 export function resolveSiteRequest(msg: SiteMessage, senderUrl: string | undefined, extensionBase: string): SiteRequest | null {
   if (!isFromWebPage(senderUrl, extensionBase)) return null;
-  const domain = hostOf(senderUrl);
+  const domain = siteOf(senderUrl);
   if (domain === null) return null;
   return msg.op === 'file' ? { op: 'file', category: msg.category, domain } : { op: msg.op, domain };
 }

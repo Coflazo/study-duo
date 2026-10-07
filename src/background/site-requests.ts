@@ -1,7 +1,7 @@
 import type { SiteRequest } from '@/core/messages';
 import type { SiteMode } from '@/core/settings';
 import { dismissPrompt, fileSite } from '@/core/site-store';
-import { categoryFor, hostOf, normalizeSites, type SiteCategory } from '@/core/sites';
+import { categoryFor, normalizeSites, siteOf, type SiteCategory } from '@/core/sites';
 import { loadSettings, loadState, promptDismissedItem, sitesItem } from '@/core/store';
 import { lockActive } from './site-lock';
 
@@ -51,6 +51,6 @@ export async function createSiteMenu(): Promise<void> {
 
 export async function onSiteMenuClick(info: { menuItemId: string | number; pageUrl?: string }, tab: { url?: string } | undefined): Promise<void> {
   const category = menuCategory(info.menuItemId);
-  const domain = hostOf(info.pageUrl ?? tab?.url);
+  const domain = siteOf(info.pageUrl ?? tab?.url);
   if (category && domain) await fileSite(domain, category);
 }

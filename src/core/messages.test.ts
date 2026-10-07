@@ -92,6 +92,7 @@ describe('site messages from content scripts', () => {
     expect(resolveSiteRequest(file, 'https://www.khanacademy.org/math', base)).toEqual({ op: 'file', category: 'study', domain: 'khanacademy.org' });
     expect(resolveSiteRequest(file, `${base}popup.html`, base)).toBeNull();
     expect(resolveSiteRequest(file, 'file:///notes.pdf', base)).toBeNull();
+    expect(resolveSiteRequest(file, 'http://localhost:5173/', base)).toBeNull();
     expect(resolveSiteRequest(file, undefined, base)).toBeNull();
   });
 });

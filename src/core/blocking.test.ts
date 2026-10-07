@@ -4,7 +4,7 @@ import type { Sites } from './sites';
 
 const PAGE = 'chrome-extension://bcggiingdefmehpjcalkfpdnehpcieon/blocked.html';
 
-const winner = (rules: DnrRule[], host: string) => (wouldClose(rules, host) ? 'closed' : 'open');
+const winner = (rules: DnrRule[], host: string) => (wouldClose(rules, `https://${host}/path`) ? 'closed' : 'open');
 
 const sites: Sites = { 'youtube.com': 'blocked', 'music.youtube.com': 'neutral', 'google.com': 'study', 'mail.google.com': 'blocked', 'khanacademy.org': 'study' };
 
@@ -25,6 +25,14 @@ describe('buildRules', () => {
     expect(winner(rules, 'khanacademy.org')).toBe('open');
     expect(winner(rules, 'music.youtube.com')).toBe('open');
     expect(winner(rules, 'youtube.com')).toBe('closed');
+  });
+
+  it('never closes pages that cannot be filed (local servers, router pages, intranet names) in Allow only Study', () => {
+    const rules = buildRules({ sites, mode: 'allowOnlyStudy', unlocked: [], blockedPage: PAGE });
+    for (const url of ['http://localhost:5173/app', 'http://127.0.0.1:8080/', 'http://192.168.1.1/', 'http://[::1]:3000/', 'http://intranet/wiki', 'http://user@printer/']) {
+      expect(wouldClose(rules, url), url).toBe(false);
+    }
+    expect(wouldClose(rules, 'https://unfiled.example/')).toBe(true);
   });
 
   it('lets an unlocked site through until the block ends', () => {

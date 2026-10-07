@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { categoryFor, hostOf, normalizeDomain, normalizeSites } from './sites';
+import { categoryFor, hostOf, normalizeDomain, normalizeSites, siteOf } from './sites';
 
 describe('hostOf', () => {
   it('reads the site from web addresses only', () => {
@@ -22,6 +22,7 @@ describe('normalizeDomain', () => {
     ok('music.youtube.com', 'music.youtube.com');
     ok('bücher.de', 'xn--bcher-kva.de');
     ok('reddit.com.', 'reddit.com');
+    ok('my_host.example.com', 'my_host.example.com');
   });
 
   it('rejects input that is not a website name, with a plain reason', () => {
@@ -58,5 +59,15 @@ describe('normalizeSites', () => {
     });
     expect(normalizeSites(null)).toEqual({});
     expect(normalizeSites(['youtube.com'])).toEqual({});
+  });
+});
+
+describe('siteOf', () => {
+  it('is the fileable site of a page, or null for pages that cannot be filed', () => {
+    expect(siteOf('https://www.khanacademy.org/x')).toBe('khanacademy.org');
+    expect(siteOf('http://my_host.example.com/')).toBe('my_host.example.com');
+    for (const url of ['http://localhost:5173/', 'http://192.168.1.1/', 'http://[::1]/', 'http://intranet/', 'file:///a.html', undefined]) {
+      expect(siteOf(url), String(url)).toBeNull();
+    }
   });
 });

@@ -1,6 +1,6 @@
 import { buildRules, wouldClose, type DnrRule } from '@/core/blocking';
 import type { TimerSettings } from '@/core/settings';
-import { hostOf, normalizeSites, type Sites } from '@/core/sites';
+import { normalizeSites, type Sites } from '@/core/sites';
 import { sitesItem } from '@/core/store';
 import type { TimerState } from '@/core/timer';
 
@@ -32,7 +32,7 @@ export async function syncLock(state: TimerState, settings: TimerSettings, sites
   const tabs = await browser.tabs.query({ url: ['http://*/*', 'https://*/*'] });
   await Promise.all(
     tabs
-      .filter((t) => t.id !== undefined && wouldClose(rules, hostOf(t.url)))
+      .filter((t) => t.id !== undefined && wouldClose(rules, t.url))
       .map((t) => browser.tabs.update(t.id!, { url: `${blockedPage()}#${t.url}` }).catch(() => undefined)),
   );
 }

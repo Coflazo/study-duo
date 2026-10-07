@@ -4,7 +4,7 @@
   import { DEFAULT_SETTINGS, normalizeSettings } from '@/core/settings';
   import { settingsItem, sitesItem, timerItem } from '@/core/store';
   import { fileSite } from '@/core/site-store';
-  import { categoryFor, hostOf, normalizeSites, type SiteCategory, type Sites } from '@/core/sites';
+  import { categoryFor, normalizeSites, siteOf, type SiteCategory, type Sites } from '@/core/sites';
   import { displayMs, initialState, type TimerEvent } from '@/core/timer';
 
   const LABELS = { focus: 'Focus', shortBreak: 'Short break', longBreak: 'Long break' } as const;
@@ -29,7 +29,7 @@
     unwatch.push(timerItem.watch((v) => (timer = v ?? initialState())));
     unwatch.push(settingsItem.watch((v) => (settings = normalizeSettings(v))));
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    site = hostOf(tab?.url);
+    site = siteOf(tab?.url);
     sites = normalizeSites(await sitesItem.getValue());
     unwatch.push(sitesItem.watch((v) => (sites = normalizeSites(v))));
     ticker = setInterval(() => {

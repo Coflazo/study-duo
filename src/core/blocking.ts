@@ -11,6 +11,8 @@ export interface DnrRule {
 
 const UNLOCKED_PRIORITY = 1000;
 const WEB_PAGE = '^https?://.*';
+/** localhost, IP addresses and single-label intranet names: they cannot be filed, so Allow only Study must not close them. */
+const LOCAL_PAGE = '^https?://([^/?#@]*@)?(\\[[^\\]/]*\\]|[^./?#:@]+|[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)(:[0-9]+)?([/?#]|$)';
 
 /**
  * Session rules for a study block. Each filed domain gets its own rule with priority = its label count + 1,
@@ -20,7 +22,10 @@ const WEB_PAGE = '^https?://.*';
 export function buildRules(input: { sites: Sites; mode: SiteMode; unlocked: string[]; blockedPage: string }): DnrRule[] {
   const close = { type: 'redirect' as const, redirect: { regexSubstitution: `${input.blockedPage}#\\0` } };
   const rules: Array<Omit<DnrRule, 'id'>> = [];
-  if (input.mode === 'allowOnlyStudy') rules.push({ priority: 1, action: close, condition: { regexFilter: WEB_PAGE, resourceTypes: ['main_frame'] } });
+  if (input.mode === 'allowOnlyStudy') {
+    rules.push({ priority: 1, action: close, condition: { regexFilter: WEB_PAGE, resourceTypes: ['main_frame'] } });
+    rules.push({ priority: 2, action: { type: 'allow' }, condition: { regexFilter: LOCAL_PAGE, resourceTypes: ['main_frame'] } });
+  }
   for (const domain of Object.keys(input.sites).sort()) {
     const priority = domain.split('.').length + 1;
     const condition = { requestDomains: [domain], resourceTypes: ['main_frame'] as ['main_frame'] };
@@ -37,10 +42,19 @@ export function buildRules(input: { sites: Sites; mode: SiteMode; unlocked: stri
   return rules.map((r, i) => ({ id: i + 1, ...r }));
 }
 
-/** Whether these rules send a top-level page on `host` to the blocked page: highest priority wins, allow beats redirect on a tie. */
-export function wouldClose(rules: DnrRule[], host: string | null): boolean {
-  if (host === null) return false;
-  const hits = rules.filter((r) => !r.condition.requestDomains || r.condition.requestDomains.some((d) => host === d || host.endsWith(`.${d}`)));
+/** Whether these rules send a top-level page at `url` to the blocked page: highest priority wins, allow beats redirect on a tie. */
+export function wouldClose(rules: DnrRule[], url: string | undefined): boolean {
+  let host: string;
+  try {
+    host = new URL(url ?? '').hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  const hits = rules.filter(
+    (r) =>
+      (!r.condition.requestDomains || r.condition.requestDomains.some((d) => host === d || host.endsWith(`.${d}`))) &&
+      (!r.condition.regexFilter || new RegExp(r.condition.regexFilter).test(url!)),
+  );
   hits.sort((a, b) => b.priority - a.priority || (a.action.type === 'allow' ? -1 : 1));
   return hits[0]?.action.type === 'redirect';
 }
