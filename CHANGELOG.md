@@ -13,6 +13,11 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ### Added
 
+- Popup from the Figma screens: the phase sign, the amber board, Today as a timetable, and Start, Pause, Resume, Skip. Pick a to-do to work on before a study block; afterwards it asks once, "How focused were you?", from 1 to 5.
+- Dashboard with Today (timer beside the timetable and to-dos), To-do (add with a course tag and an optional if-then plan, edit, reorder by keyboard, complete, delete with undo, start a block on a task), Site lock and Settings (lengths, daily goal, auto-start, bell volume with a preview, corner clock, Appearance).
+- A local session log in IndexedDB that keeps every block and break, with its task and rating, for Today now and insights later.
+- DESIGN.md describing the visual system as built.
+
 - Site lock during study blocks: Close Blocked, or Allow only Study, which closes unfiled sites too. Tabs already open go to the blocked page, and everything opens again in the break.
 - Three site categories (Blocked, Study, Not blocked), filed from the popup, the right-click menu, a one-time prompt beside the corner clock, or Settings > Sites, where sites can be added, moved and removed. The most specific entry wins, so music.youtube.com can stay open while youtube.com is closed.
 - Blocked page with the time left in the block, Back to work, and Open anyway after a 10 second wait and a reason, for that block only. An optional hard lock removes it.
