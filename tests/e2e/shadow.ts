@@ -24,7 +24,27 @@ export async function shadow(page: Page) {
     const { result } = await cdp.send('Runtime.callFunctionOn', { objectId: object.objectId!, functionDeclaration: fn, returnByValue: true });
     return result.value;
   };
+  /** Runs `fn` on every element with the class, in document order (for pages with more than one clock). */
+  const all = async (cls: string, fn: string): Promise<unknown[]> => {
+    const { root } = await cdp.send('DOM.getDocument', { depth: -1, pierce: true });
+    const ids: number[] = [];
+    const walk = (n: any) => {
+      const attrs: string[] = n.attributes ?? [];
+      const i = attrs.indexOf('class');
+      if (i >= 0 && attrs[i + 1]!.split(' ').includes(cls)) ids.push(n.nodeId);
+      for (const c of [...(n.shadowRoots ?? []), ...(n.children ?? [])]) walk(c);
+    };
+    walk(root);
+    const out: unknown[] = [];
+    for (const nodeId of ids) {
+      const { object } = await cdp.send('DOM.resolveNode', { nodeId });
+      const { result } = await cdp.send('Runtime.callFunctionOn', { objectId: object.objectId!, functionDeclaration: fn, returnByValue: true });
+      out.push(result.value);
+    }
+    return out;
+  };
   return {
+    all,
     style: (cls: string) =>
       call(cls, 'function () { const s = getComputedStyle(this); return { opacity: s.opacity, pointerEvents: s.pointerEvents, display: s.display }; }'),
     rect: (cls: string) => call(cls, 'function () { const r = this.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }'),
