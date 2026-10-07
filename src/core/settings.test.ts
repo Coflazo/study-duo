@@ -33,4 +33,11 @@ describe('normalizeSettings', () => {
     expect(normalizeSettings({ siteMode: 'allowOnlyStudy', hardLock: true })).toMatchObject({ siteMode: 'allowOnlyStudy', hardLock: true });
     expect(normalizeSettings({ siteMode: 'nuke', hardLock: 'yes' })).toMatchObject({ siteMode: 'closeBlocked', hardLock: false });
   });
+
+  it('follows the system theme by default and keeps a daily goal of whole blocks', () => {
+    expect(DEFAULT_SETTINGS).toMatchObject({ appearance: 'system', dailyGoal: 8 });
+    expect(normalizeSettings({ appearance: 'dark', dailyGoal: 5.6 })).toMatchObject({ appearance: 'dark', dailyGoal: 6 });
+    expect(normalizeSettings({ appearance: 'sepia', dailyGoal: 400 })).toMatchObject({ appearance: 'system', dailyGoal: 24 });
+    expect(normalizeSettings({ dailyGoal: 0 }).dailyGoal).toBe(1);
+  });
 });

@@ -1,0 +1,8 @@
+/* Shared by every extension page: the canvas, the type and a theme switch that leaves the corner clock alone. */
+:root { color-scheme: light dark; }
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+body {
+  margin: 0; background: var(--color-bg-canvas); color: var(--color-text-primary);
+  font: 400 14px/20px var(--font-family-ui); -webkit-font-smoothing: antialiased;
+}

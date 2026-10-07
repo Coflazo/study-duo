@@ -2,6 +2,7 @@ export type TimerMode = 'pomodoro' | 'flowtime';
 export type OverlayCorner = 'top-right' | 'bottom-right';
 /** During study blocks: close Blocked sites, or close everything except Study and Not blocked sites. */
 export type SiteMode = 'closeBlocked' | 'allowOnlyStudy';
+export type Appearance = 'system' | 'light' | 'dark';
 
 export interface TimerSettings {
   mode: TimerMode;
@@ -24,6 +25,10 @@ export interface TimerSettings {
   siteMode: SiteMode;
   /** No "Open anyway" on the blocked page. */
   hardLock: boolean;
+  /** Extension pages only; the corner clock always stays dark. */
+  appearance: Appearance;
+  /** Study blocks per day, shown as "3 of 8 blocks". Never a streak. */
+  dailyGoal: number;
 }
 
 export const DEFAULT_SETTINGS: TimerSettings = {
@@ -41,6 +46,8 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   overlayCorner: 'top-right',
   siteMode: 'closeBlocked',
   hardLock: false,
+  appearance: 'system',
+  dailyGoal: 8,
 };
 
 function num(v: unknown, min: number, max: number, fallback: number): number {
@@ -70,5 +77,7 @@ export function normalizeSettings(raw: unknown): TimerSettings {
     overlayCorner: r.overlayCorner === 'bottom-right' ? 'bottom-right' : 'top-right',
     siteMode: r.siteMode === 'allowOnlyStudy' ? 'allowOnlyStudy' : 'closeBlocked',
     hardLock: bool(r.hardLock, d.hardLock),
+    appearance: r.appearance === 'light' || r.appearance === 'dark' ? r.appearance : 'system',
+    dailyGoal: Math.round(num(r.dailyGoal, 1, 24, d.dailyGoal)),
   };
 }
