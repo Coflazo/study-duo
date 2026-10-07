@@ -1,6 +1,7 @@
 <script lang="ts">
   import { playBell } from '@/core/bell';
-  import { normalizeSettings, type Appearance, type OverlayCorner, type OverlayIdle, type TimerMode, type TimerSettings } from '@/core/settings';
+  import { CORNER_POS, normalizeSettings, type Appearance, type OverlayCorner, type OverlayIdle, type TimerMode, type TimerSettings } from '@/core/settings';
+  import { cornerOf } from '@/overlay/position';
   import { settingsItem } from '@/core/store';
   import type { createLive } from '@/ui/live.svelte';
   import NumberField from '@/ui/NumberField.svelte';
@@ -69,8 +70,8 @@
       <Toggle checked={s.overlayEnabled} label="Clock in the corner of every page" onchange={(overlayEnabled) => save({ overlayEnabled })} />
     </div>
     <div class="row">
-      <div class="text"><p class="label">Corner</p></div>
-      <Segmented options={CORNERS} value={s.overlayCorner} label="Corner" onchange={(overlayCorner) => save({ overlayCorner })} />
+      <div class="text"><p class="label">Clock position</p><p class="help">Drag the clock on any page to move it; every tab follows. These put it back in a corner.</p></div>
+      <Segmented options={CORNERS} value={cornerOf(s.overlayPos)} label="Clock position" onchange={(corner) => save({ overlayPos: CORNER_POS[corner] })} />
     </div>
     <div class="row">
       <div class="text"><p class="label">Clock when your mouse is away</p><p class="help">Faint is barely there, Soft stays readable, Full never fades. It always lights up when your mouse comes near.</p></div>

@@ -59,11 +59,13 @@ test('corner clock and phase words survive a hostile page and never touch the ne
   // The clock is aria-hidden, so its close button must stay out of the keyboard order.
   expect(await dom.prop('close', 'this.tabIndex')).toBe(-1);
 
-  // The cursor 10 px away brings it up; a click on its body still reaches the page beneath.
+  // The cursor 10 px away brings it up and makes it grabbable (it drags; see drag.e2e.ts), so a click on
+  // its body stays with the clock. Away from the cursor it never takes a click.
   await page.mouse.move(box.x - 10, box.y + box.h / 2);
   await expect.poll(async () => (await dom.style('clock'))!.opacity).toBe('1');
+  expect((await dom.style('clock'))!.pointerEvents).toBe('auto');
   await page.mouse.click(box.x + 20, box.y + box.h / 2);
-  expect(await page.evaluate(() => (window as any).clicks)).toBe(1);
+  expect(await page.evaluate(() => (window as any).clicks ?? 0)).toBe(0);
 
   // The words follow the system theme live: dark mode switches to the lighter break green.
   await page.emulateMedia({ colorScheme: 'dark' });
@@ -91,7 +93,7 @@ test('corner clock and phase words survive a hostile page and never touch the ne
   const close = (await dom.rect('close'))!;
   await page.mouse.click(close.x + close.w / 2, close.y + close.h / 2);
   await expect.poll(async () => (await dom.style('clock'))!.display).toBe('none');
-  expect(await page.evaluate(() => (window as any).clicks)).toBe(1);
+  expect(await page.evaluate(() => (window as any).clicks ?? 0)).toBe(0);
 
   expect(offHost).toEqual([]);
   await ctx.close();

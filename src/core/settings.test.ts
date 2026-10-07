@@ -22,10 +22,9 @@ describe('normalizeSettings', () => {
     expect(normalizeSettings({ mode: 'evil' }).mode).toBe('pomodoro');
   });
 
-  it('defaults the corner clock on, top right, and rejects unknown corners', () => {
-    expect(DEFAULT_SETTINGS).toMatchObject({ overlayEnabled: true, overlayCorner: 'top-right' });
-    expect(normalizeSettings({ overlayEnabled: false, overlayCorner: 'bottom-right' })).toMatchObject({ overlayEnabled: false, overlayCorner: 'bottom-right' });
-    expect(normalizeSettings({ overlayCorner: 'middle' }).overlayCorner).toBe('top-right');
+  it('defaults the corner clock on', () => {
+    expect(DEFAULT_SETTINGS.overlayEnabled).toBe(true);
+    expect(normalizeSettings({ overlayEnabled: false }).overlayEnabled).toBe(false);
   });
 
   it('closes Blocked sites by default without a hard lock, and rejects unknown modes', () => {
@@ -46,5 +45,18 @@ describe('normalizeSettings', () => {
     expect(normalizeSettings({ overlayIdle: 'faint' }).overlayIdle).toBe('faint');
     expect(normalizeSettings({ overlayIdle: 'full' }).overlayIdle).toBe('full');
     expect(normalizeSettings({ overlayIdle: 'invisible' }).overlayIdle).toBe('soft');
+  });
+});
+
+describe('clock position', () => {
+  it('starts top right and keeps an old corner choice', () => {
+    expect(DEFAULT_SETTINGS.overlayPos).toEqual({ h: 'right', v: 'top', x: 16, y: 16 });
+    expect(normalizeSettings({ overlayCorner: 'bottom-right' }).overlayPos).toEqual({ h: 'right', v: 'bottom', x: 16, y: 16 });
+  });
+
+  it('accepts a dragged position and repairs a broken one', () => {
+    expect(normalizeSettings({ overlayPos: { h: 'left', v: 'bottom', x: 40, y: 74 } }).overlayPos).toEqual({ h: 'left', v: 'bottom', x: 40, y: 74 });
+    expect(normalizeSettings({ overlayPos: { h: 'middle', v: 'top', x: -5, y: 1e9 } }).overlayPos).toEqual({ h: 'right', v: 'top', x: 0, y: 10000 });
+    expect(normalizeSettings({ overlayPos: 'top' }).overlayPos).toEqual({ h: 'right', v: 'top', x: 16, y: 16 });
   });
 });

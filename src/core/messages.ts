@@ -1,3 +1,4 @@
+import { strictPos, type OverlayPos } from './settings';
 import type { BellKind } from './bell';
 import { siteOf, type SiteCategory } from './sites';
 import type { Phase, TimerEvent } from './timer';
@@ -87,5 +88,12 @@ export function resolveSiteRequest(msg: SiteMessage, senderUrl: string | undefin
 /** The background asking a page whether its corner clock still works (see overlay-inject.ts). */
 export function isPing(raw: unknown): boolean {
   return raw !== null && typeof raw === 'object' && (raw as Record<string, unknown>).kind === 'overlay' && (raw as Record<string, unknown>).op === 'ping';
+}
+
+/** A page's clock reporting where the user dropped it. */
+export function parseMove(raw: unknown): OverlayPos | null {
+  if (raw === null || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  return r.kind === 'overlay' && r.op === 'move' ? strictPos(r.pos) : null;
 }
 

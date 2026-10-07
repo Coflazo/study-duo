@@ -1,6 +1,7 @@
 import { ALARM_PHASE_END, ALARM_REFRESH, applyEffects } from '@/background/effects';
 import { createTimerService } from '@/background/timer-service';
-import { allowedFromSender, isFromWebPage, parseMessage, parseSiteMessage, resolveSiteRequest } from '@/core/messages';
+import { allowedFromSender, isFromWebPage, parseMessage, parseMove, parseSiteMessage, resolveSiteRequest } from '@/core/messages';
+import { normalizeSettings } from '@/core/settings';
 import { createSiteMenu, handleSiteRequest, onSiteMenuClick } from '@/background/site-requests';
 import { loadSettings, loadState, musicSeededItem, settingsItem, sitesItem, timerItem } from '@/core/store';
 import { normalizeSites, seedMusicSites } from '@/core/sites';
@@ -22,6 +23,8 @@ export default defineBackground(() => {
     const base = browser.runtime.getURL('/');
     const msg = parseMessage(raw);
     if (msg && allowedFromSender(msg, isFromWebPage(sender.url, base))) void timer.dispatch(msg.event).catch(console.error);
+    const pos = parseMove(raw);
+    if (pos) void settingsItem.getValue().then((v) => settingsItem.setValue({ ...normalizeSettings(v), overlayPos: pos })).catch(console.error);
     const site = parseSiteMessage(raw);
     const req = site && resolveSiteRequest(site, sender.url, base);
     if (!req) return;
