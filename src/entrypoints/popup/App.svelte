@@ -64,6 +64,7 @@
     <button onclick={() => send({ type: 'skip' })}>Skip</button>
     <button onclick={() => send({ type: 'reset' })}>Reset</button>
   </div>
+  <button onclick={() => browser.runtime.openOptionsPage()}>Settings</button>
   {#if site}
     <section aria-label="This site">
       <p>This site: {site}</p>

@@ -45,6 +45,8 @@ export default defineConfig({
       // Closed sites redirect here, so the address must be fixed; the corner clock already shows pages the extension is there.
       { resources: ['blocked.html'], matches: ['<all_urls>'] },
     ],
+    // Right-click the toolbar button > Options opens Settings in a tab.
+    options_ui: { page: 'dashboard.html', open_in_tab: true },
     content_security_policy: {
       extension_pages: "script-src 'self'; object-src 'self'; connect-src 'self';",
     },
