@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-export const EXT_DIR = path.resolve('build/chrome-mv3');
+/** Tests run the copy in .test-build (npm run build:test), never the build/ folder a person loads in Chrome. */
+export const EXT_DIR = path.resolve('.test-build/chrome-mv3');
 export const EXT_ID = 'bcggiingdefmehpjcalkfpdnehpcieon';
 
 /**

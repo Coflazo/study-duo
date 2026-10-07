@@ -24,7 +24,8 @@ const CHROMIUM_PUBLIC_KEY =
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   // A visible folder: Finder and Chrome's Load unpacked window hide dot-folders like the default .output.
-  outDir: 'build',
+  // Tests build into .test-build, so work in progress never lands in the folder Chrome loads.
+  outDir: process.env.STUDY_DUO_OUT ?? 'build',
   srcDir: 'src',
   manifestVersion: 3,
   modules: ['@wxt-dev/module-svelte'],
