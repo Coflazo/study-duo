@@ -93,7 +93,7 @@ const BLOCKED = `chrome-extension://${EXT_ID}/blocked.html#`;
 
 async function fileThroughSettings(ctx: BrowserContext) {
   const s = await ctx.newPage();
-  await s.goto(`chrome-extension://${EXT_ID}/dashboard.html`);
+  await s.goto(`chrome-extension://${EXT_ID}/dashboard.html#sites`);
   const add = async (list: number, domain: string) => {
     await s.getByRole('button', { name: 'Add' }).nth(list).click();
     await s.keyboard.type(domain);
@@ -214,7 +214,7 @@ test('a hard lock keeps the lists from opening anything until the block ends', a
   });
   await startBlock(ctx, sw);
   const s = await ctx.newPage();
-  await s.goto(`chrome-extension://${EXT_ID}/dashboard.html`);
+  await s.goto(`chrome-extension://${EXT_ID}/dashboard.html#sites`);
   await expect(s.getByRole('status')).toHaveText('Hard lock is on until this study block ends. You can still close more sites.');
   await expect(s.getByRole('switch', { name: 'Hard lock' })).toBeDisabled();
   await expect(s.getByRole('button', { name: 'Remove video.study-duo.test' })).toBeDisabled();

@@ -1,117 +1,61 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import { capsuleText } from '@/core/capsule';
-  import { localDayRange, pendingRating, rateSession, sessionsBetween, type SessionRecord } from '@/core/sessions';
-  import { DEFAULT_SETTINGS, normalizeSettings } from '@/core/settings';
+  import { pendingRating, rateSession } from '@/core/sessions';
   import { fileSite } from '@/core/site-store';
   import { categoryFor, normalizeSites, siteOf, type SiteCategory, type Sites } from '@/core/sites';
-  import { settingsItem, sitesItem, timerItem } from '@/core/store';
-  import { displayMs, initialState, isBreak, nextPhase, phaseLengthMs, type Phase, type TimerEvent } from '@/core/timer';
-  import { normalizeTodos, todosItem, type Todo } from '@/core/todos';
+  import { sitesItem } from '@/core/store';
+  import { isBreak } from '@/core/timer';
+  import { boardLabel, plateNote, timetable } from '@/core/today-view';
   import { ICONS } from '@/ui/icons';
   import LedBoard from '@/ui/LedBoard.svelte';
+  import { createLive, send } from '@/ui/live.svelte';
   import PhasePlate from '@/ui/PhasePlate.svelte';
   import SignButton from '@/ui/SignButton.svelte';
   import TimetableRow from '@/ui/TimetableRow.svelte';
   import RatingCard from './RatingCard.svelte';
 
-  const PHASE_NAME: Record<Phase, string> = { focus: 'Study block', shortBreak: 'Short break', longBreak: 'Long break' };
   const SITE_CHOICES: Array<[SiteCategory, string]> = [['study', 'Study'], ['neutral', 'Not blocked'], ['blocked', 'Blocked']];
 
-  let timer = $state(initialState());
-  let settings = $state(DEFAULT_SETTINGS);
-  let todos = $state<Todo[]>([]);
-  let today = $state<SessionRecord[]>([]);
-  let now = $state(Date.now());
+  const data = createLive();
+  const live = data.live;
+  const timer = $derived(live.timer);
+  const settings = $derived(live.settings);
   let chosen = $state<string>('');
   let site = $state<string | null>(null);
   let sites = $state<Sites>({});
 
-  const send = (event: TimerEvent) => browser.runtime.sendMessage({ kind: 'timer', event });
-  const open = $derived(todos.filter((t) => !t.done));
-  const taskText = (id: string | null) => (id ? (todos.find((t) => t.id === id)?.text ?? null) : null);
-  const shown = $derived(displayMs(timer, settings, now));
-  const toRate = $derived(pendingRating(today, now));
-  const blocksDone = $derived(today.filter((s) => s.phase === 'focus' && s.completed).length);
-  const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-  const minutes = (ms: number | null) => (ms === null ? '' : ms < 60_000 ? '<1 min' : `${Math.round(ms / 60_000)} min`);
-
-  const plateNote = $derived(
-    timer.status === 'stopped' ? 'Up next'
-    : timer.status === 'paused' ? 'Paused'
-    : isBreak(timer.phase) ? minutes(timer.plannedMs)
-    : timer.plannedMs === null ? 'Counting up'
-    : `Block ${timer.cycle + 1} of ${settings.longBreakEvery}`,
-  );
-  const boardLabel = $derived(
-    timer.status === 'paused' ? 'Paused'
-    : timer.status === 'stopped' ? `${minutes(phaseLengthMs(timer.phase, settings, timer)) || 'Open-ended'} ${isBreak(timer.phase) ? 'break' : 'study'}`
-    : timer.endsAt !== null ? `Ends ${clock(timer.endsAt)}`
-    : 'Counting up',
-  );
+  const open = $derived(live.todos.filter((t) => !t.done));
+  const shown = $derived(data.shown());
+  const toRate = $derived(pendingRating(live.today, live.now));
+  const blocksDone = $derived(live.today.filter((s) => s.phase === 'focus' && s.completed).length);
   const progress = $derived(timer.status !== 'stopped' && timer.plannedMs ? 1 - shown.ms / timer.plannedMs : 0);
+  const rows = $derived(timetable({ timer, settings, sessions: live.today, todos: live.todos, now: live.now, chosen: chosen || null, keepDone: 2 }));
 
-  /** Today as a departures board: the last two finished blocks, the current one, and what comes next. */
-  const rows = $derived.by(() => {
-    const done = today.slice(-2).map((s) => ({
-      key: s.id, state: (s.completed ? 'done' : 'skipped') as 'done' | 'skipped', time: clock(s.startedAt),
-      task: (s.phase === 'focus' && taskText(s.taskId)) || PHASE_NAME[s.phase], duration: minutes(s.activeMs), isBreak: isBreak(s.phase),
-    }));
-    const label = (phase: Phase, taskId: string | null) => (phase === 'focus' && taskText(taskId)) || PHASE_NAME[phase];
-    if (timer.status === 'stopped') {
-      return [...done, { key: 'next', state: 'planned' as const, time: clock(now), task: label(timer.phase, chosen || null), duration: minutes(phaseLengthMs(timer.phase, settings, timer)), isBreak: isBreak(timer.phase) }];
-    }
-    const current = { key: 'now', state: 'current' as const, time: clock(timer.startedAt ?? now), task: label(timer.phase, timer.taskId), duration: '', isBreak: isBreak(timer.phase) };
-    const after = nextPhase(timer, settings, true);
-    const next = { key: 'next', state: 'planned' as const, time: timer.endsAt ? clock(timer.endsAt) : '--:--', task: PHASE_NAME[after], duration: minutes(phaseLengthMs(after, settings, timer)), isBreak: isBreak(after) };
-    return [...done, current, next];
-  });
-
-  async function loadToday() {
-    const [from, to] = localDayRange(Date.now());
-    today = await sessionsBetween(from, to).catch(() => today);
-  }
-
-  let ticker: ReturnType<typeof setInterval> | undefined;
-  let refresher: ReturnType<typeof setInterval> | undefined;
-  const unwatch: Array<() => void> = [];
+  let stop: (() => void) | undefined;
+  let unwatchSites: (() => void) | undefined;
   onMount(async () => {
-    // Watch first, then read, so nothing changes unseen in between.
-    unwatch.push(timerItem.watch((v) => {
-      timer = v ?? initialState();
-      setTimeout(loadToday, 300); // the background logs the finished block right after saving the timer
-    }));
-    unwatch.push(settingsItem.watch((v) => (settings = normalizeSettings(v))));
-    unwatch.push(todosItem.watch((v) => (todos = normalizeTodos(v))));
-    unwatch.push(sitesItem.watch((v) => (sites = normalizeSites(v))));
-    [timer, settings, todos, sites] = await Promise.all([
-      timerItem.getValue(), settingsItem.getValue().then(normalizeSettings), todosItem.getValue().then(normalizeTodos), sitesItem.getValue().then(normalizeSites),
-    ]);
+    unwatchSites = sitesItem.watch((v) => (sites = normalizeSites(v)));
+    stop = await data.start();
+    sites = normalizeSites(await sitesItem.getValue());
     chosen = open[0]?.id ?? '';
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
     site = siteOf(tab?.url);
-    await loadToday();
-    ticker = setInterval(() => {
-      now = Date.now();
-      if (timer.status === 'running' && timer.endsAt !== null && now >= timer.endsAt) void send({ type: 'tick' });
-    }, 250);
-    refresher = setInterval(loadToday, 5_000);
   });
   onDestroy(() => {
-    clearInterval(ticker);
-    clearInterval(refresher);
-    unwatch.forEach((u) => u());
+    stop?.();
+    unwatchSites?.();
   });
 
   async function rate(r: 1 | 2 | 3 | 4 | 5 | 'skip') {
     if (!toRate) return;
     await rateSession(toRate.id, r);
-    await loadToday();
+    await data.loadToday();
   }
 </script>
 
 <main>
-  <PhasePlate phase={timer.phase} status={timer.status} note={plateNote} />
+  <PhasePlate phase={timer.phase} status={timer.status} note={plateNote(timer, settings)} />
 
   {#if timer.status === 'stopped' && timer.phase === 'focus' && open.length > 0}
     <label class="field">
@@ -126,7 +70,7 @@
   {#if toRate}
     <RatingCard onrate={(r) => rate(r)} onskip={() => rate('skip')} />
   {:else}
-    <LedBoard text={capsuleText(shown.ms, shown.countsUp)} {progress} label={boardLabel} paused={timer.status === 'paused'} />
+    <LedBoard text={capsuleText(shown.ms, shown.countsUp)} {progress} label={boardLabel(timer, settings)} paused={timer.status === 'paused'} />
     <section aria-labelledby="today-title">
       <h2 id="today-title">Today <span>{blocksDone} of {settings.dailyGoal} blocks</span></h2>
       <ul>
