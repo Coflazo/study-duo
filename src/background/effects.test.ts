@@ -20,6 +20,7 @@ beforeEach(() => {
   Object.assign(fakeBrowser.runtime, { getContexts: vi.fn(async () => []) });
   vi.spyOn(fakeBrowser.runtime, 'sendMessage').mockResolvedValue(undefined);
   Object.assign(fakeBrowser.notifications, { create: vi.fn(async () => 'phase') });
+  Object.assign(fakeBrowser, { declarativeNetRequest: { getSessionRules: vi.fn(async () => []), updateSessionRules: vi.fn(async () => {}) } });
 });
 
 describe('alarms', () => {

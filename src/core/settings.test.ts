@@ -27,4 +27,10 @@ describe('normalizeSettings', () => {
     expect(normalizeSettings({ overlayEnabled: false, overlayCorner: 'bottom-right' })).toMatchObject({ overlayEnabled: false, overlayCorner: 'bottom-right' });
     expect(normalizeSettings({ overlayCorner: 'middle' }).overlayCorner).toBe('top-right');
   });
+
+  it('closes Blocked sites by default without a hard lock, and rejects unknown modes', () => {
+    expect(DEFAULT_SETTINGS).toMatchObject({ siteMode: 'closeBlocked', hardLock: false });
+    expect(normalizeSettings({ siteMode: 'allowOnlyStudy', hardLock: true })).toMatchObject({ siteMode: 'allowOnlyStudy', hardLock: true });
+    expect(normalizeSettings({ siteMode: 'nuke', hardLock: 'yes' })).toMatchObject({ siteMode: 'closeBlocked', hardLock: false });
+  });
 });

@@ -1,5 +1,5 @@
 import { DIGIT_H, DIGIT_W, litSegments, SEGMENT_PATHS, type Segment } from '@/core/segments';
-import { ICONS } from './icons';
+import { ICONS } from '@/ui/icons';
 
 const NS = 'http://www.w3.org/2000/svg';
 const GAP = 9; // 4 px at the 0.45 display scale, as in Figma

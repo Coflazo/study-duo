@@ -6,10 +6,16 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ### Security
 
+- Web pages can only ask about or file their own site; unlocking, modes and other domains stay with the extension's own pages. Only site names are stored, never full addresses. The blocked page refuses to work inside a frame and only ever opens http(s) addresses.
+
 - Web pages can only report that the clock reached zero; every other timer command must come from the extension's own pages, judged by sender URL.
 - The page overlay lives in a closed shadow root with constructed styles, survives pages that delete it or fake a script restart, and makes no network requests (checked end to end on a hostile page).
 
 ### Added
+
+- Site lock during study blocks: Close Blocked, or Allow only Study, which closes unfiled sites too. Tabs already open go to the blocked page, and everything opens again in the break.
+- Three site categories (Blocked, Study, Not blocked), filed from the popup, the right-click menu, a one-time prompt beside the corner clock, or Settings > Sites, where sites can be added, moved and removed. The most specific entry wins, so music.youtube.com can stay open while youtube.com is closed.
+- Blocked page with the time left in the block, Back to work, and Open anyway after a 10 second wait and a reason, for that block only. An optional hard lock removes it.
 
 - Timer engine: Pomodoro and Flowtime modes, long breaks every fourth block, auto-start options, idle pause and keyboard shortcuts. Time comes from timestamps, so laptop sleep never drifts it and never invents sessions.
 - App icon: one study cycle on a clock dial, 25 minutes red and 5 green, readable on light and dark toolbars.
