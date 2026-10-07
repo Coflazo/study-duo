@@ -1,0 +1,38 @@
+name: Bug report
+description: Something in Study Duo does not work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start a study block
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Chrome 155 on macOS 13
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Study Duo version
+      description: Shown on your browser's extensions page.
+      placeholder: 0.1.0
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Screenshots help. Please do not paste personal study data.
