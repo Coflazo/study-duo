@@ -1,4 +1,7 @@
-# Study Duo
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/banner-dark.png">
+  <img alt="Study Duo. A study timer that lives in your browser. Offline, free, no account." src="docs/media/banner-light.png" width="100%">
+</picture>
 
 A free study timer that lives in your browser.
 
