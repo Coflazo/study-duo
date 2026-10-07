@@ -7,6 +7,7 @@ import { loadSettings, loadState, musicSeededItem, settingsItem, sitesItem, time
 import { normalizeSites, seedMusicSites } from '@/core/sites';
 import { unlockedItem } from '@/background/site-lock';
 import { ensureOverlay, keepClocksOnOpenTabs } from '@/background/overlay-inject';
+import { trackActivity } from '@/background/activity';
 
 export default defineBackground(() => {
   const timer = createTimerService({
@@ -54,6 +55,7 @@ export default defineBackground(() => {
     await Promise.all(tabs.map((t) => (t.id === undefined ? undefined : ensureOverlay(t.id))));
   }
   keepClocksOnOpenTabs();
+  trackActivity();
 
   browser.commands.onCommand.addListener((command) => {
     if (command === 'toggle-timer') void timer.dispatch({ type: 'toggle' }).catch(console.error);
