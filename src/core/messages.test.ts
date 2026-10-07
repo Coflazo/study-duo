@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedFromSender, isFromWebPage, parseAnnounce, parseMessage, parseOffscreenMessage } from './messages';
+import { allowedFromSender, isFromWebPage, parseAnnounce, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest } from './messages';
 
 describe('parseMessage', () => {
   it('accepts every plain timer event', () => {
@@ -73,5 +73,25 @@ describe('isFromWebPage', () => {
     expect(isFromWebPage('https://khanacademy.org/', base)).toBe(true);
     expect(isFromWebPage(undefined, base)).toBe(true);
     expect(isFromWebPage('https://evil.test/chrome-extension://bcggiingdefmehpjcalkfpdnehpcieon/', base)).toBe(true);
+  });
+});
+
+describe('site messages from content scripts', () => {
+  const base = 'chrome-extension://bcggiingdefmehpjcalkfpdnehpcieon/';
+  it('accepts status, file and dismiss, and nothing else', () => {
+    expect(parseSiteMessage({ kind: 'site', op: 'status' })).toEqual({ kind: 'site', op: 'status' });
+    expect(parseSiteMessage({ kind: 'site', op: 'file', category: 'study', domain: 'evil.test' })).toEqual({ kind: 'site', op: 'file', category: 'study' });
+    expect(parseSiteMessage({ kind: 'site', op: 'dismiss' })).toEqual({ kind: 'site', op: 'dismiss' });
+    expect(parseSiteMessage({ kind: 'site', op: 'file', category: 'whitelist' })).toBeNull();
+    expect(parseSiteMessage({ kind: 'site', op: 'unlock' })).toBeNull();
+    expect(parseSiteMessage({ kind: 'site', op: 'remove' })).toBeNull();
+    expect(parseSiteMessage({ kind: 'timer', event: { type: 'tick' } })).toBeNull();
+  });
+  it('acts only on the sending page\'s own site, and only for web pages', () => {
+    const file = { kind: 'site', op: 'file', category: 'study' } as const;
+    expect(resolveSiteRequest(file, 'https://www.khanacademy.org/math', base)).toEqual({ op: 'file', category: 'study', domain: 'khanacademy.org' });
+    expect(resolveSiteRequest(file, `${base}popup.html`, base)).toBeNull();
+    expect(resolveSiteRequest(file, 'file:///notes.pdf', base)).toBeNull();
+    expect(resolveSiteRequest(file, undefined, base)).toBeNull();
   });
 });
