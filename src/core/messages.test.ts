@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedFromSender, isFromWebPage, parseAnnounce, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest, isPing, parseMove, parseCounts } from './messages';
+import { allowedFromSender, isFromWebPage, parseAnnounce, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest, isPing, parseMove, parseCounts, parseSound } from './messages';
 
 describe('parseMessage', () => {
   it('accepts every plain timer event', () => {
@@ -125,5 +125,16 @@ describe('parseCounts', () => {
     expect(parseCounts({ kind: 'activity', op: 'counts', keys: -1, clicks: 0, scrolls: 0 })).toBeNull();
     expect(parseCounts({ kind: 'activity', op: 'counts', keys: 1 })).toBeNull();
     expect(parseCounts({ kind: 'activity', op: 'counts', keys: 'a', clicks: 0, scrolls: 0, which: 'KeyA' })).toBeNull();
+  });
+});
+
+describe('parseSound', () => {
+  it('accepts play with a known noise and a volume, stop and volume changes', () => {
+    expect(parseSound({ kind: 'sound', op: 'play', noise: 'brown', volume: 0.4 })).toEqual({ op: 'play', noise: 'brown', volume: 0.4 });
+    expect(parseSound({ kind: 'sound', op: 'play', noise: 'pink', volume: 7 })).toEqual({ op: 'play', noise: 'pink', volume: 1 });
+    expect(parseSound({ kind: 'sound', op: 'stop' })).toEqual({ op: 'stop' });
+    expect(parseSound({ kind: 'sound', op: 'volume', volume: 0.2 })).toEqual({ op: 'volume', volume: 0.2 });
+    expect(parseSound({ kind: 'sound', op: 'play', noise: 'rain', volume: 0.4 })).toBeNull();
+    expect(parseSound({ kind: 'sound', op: 'play', noise: 'white' })).toBeNull();
   });
 });

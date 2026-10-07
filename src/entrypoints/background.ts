@@ -1,6 +1,7 @@
 import { ALARM_PHASE_END, ALARM_REFRESH, applyEffects } from '@/background/effects';
 import { createTimerService } from '@/background/timer-service';
-import { allowedFromSender, isFromWebPage, parseCounts, parseMessage, parseMove, parseSiteMessage, resolveSiteRequest } from '@/core/messages';
+import { allowedFromSender, isFromWebPage, parseCounts, parseMessage, parseMove, parseSiteMessage, parseSound, resolveSiteRequest } from '@/core/messages';
+import { focusSound } from '@/background/sound';
 import { normalizeSettings } from '@/core/settings';
 import { createSiteMenu, handleSiteRequest, onSiteMenuClick } from '@/background/site-requests';
 import { loadSettings, loadState, musicSeededItem, settingsItem, sitesItem, timerItem } from '@/core/store';
@@ -26,6 +27,8 @@ export default defineBackground(() => {
     const base = browser.runtime.getURL('/');
     const msg = parseMessage(raw);
     if (msg && allowedFromSender(msg, isFromWebPage(sender.url, base))) void timer.dispatch(msg.event).catch(console.error);
+    const sound = parseSound(raw);
+    if (sound && !isFromWebPage(sender.url, base) && (raw as { target?: unknown }).target !== 'offscreen') void focusSound(sound).catch(console.error);
     const song = parseNowPlaying(raw);
     if ((song || isMusicStop(raw)) && sender.tab?.id !== undefined && isFromWebPage(sender.url, base)) void hearTab(sender.tab.id, sender.url, song);
     const counts = parseCounts(raw);

@@ -38,12 +38,12 @@ export async function syncAction(state: TimerState, settings: TimerSettings, now
 
 let creating: Promise<void> | null = null;
 
-async function ensureOffscreen(): Promise<void> {
+export async function ensureOffscreen(): Promise<void> {
   const url = browser.runtime.getURL('/offscreen.html');
   const existing = await browser.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'], documentUrls: [url] });
   if (existing.length > 0) return;
   creating ??= browser.offscreen
-    .createDocument({ url, reasons: ['AUDIO_PLAYBACK'], justification: 'Play the bell between study blocks.' })
+    .createDocument({ url, reasons: ['AUDIO_PLAYBACK'], justification: 'Play the bell between study blocks and focus sounds.' })
     .finally(() => {
       creating = null;
     });
