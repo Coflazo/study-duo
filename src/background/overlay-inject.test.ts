@@ -7,7 +7,7 @@ import { ensureOverlay, keepClocksOnOpenTabs } from './overlay-inject';
 
 const sendMessage = vi.fn();
 const executeScript = vi.fn(async () => []);
-const get = vi.fn(async (id: number) => ({ id, status: 'complete' }));
+const get = vi.fn(async (id: number) => ({ id, status: 'complete', url: 'https://example.test/' }));
 const query = vi.fn(async () => [{ id: 7, active: true }]);
 const flush = () => new Promise((r) => setTimeout(r, 20));
 
@@ -44,11 +44,23 @@ describe('ensureOverlay', () => {
     expect(executeScript).toHaveBeenCalledTimes(1);
   });
 
-  it('shrugs off pages it may not touch (chrome:// pages, the Web Store, closed tabs)', async () => {
-    executeScript.mockRejectedValueOnce(new Error('Cannot access a chrome:// URL'));
+  it('skips pages no extension may touch without a word (chrome://, the PDF viewer, new tab)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    get.mockResolvedValueOnce({ id: 3, status: 'complete', url: undefined } as never);
+    await ensureOverlay(3);
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('says so when a web page cannot get its clock, instead of failing silently', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    executeScript.mockRejectedValueOnce(new TypeError("Cannot read properties of undefined (reading 'executeScript')"));
     await expect(ensureOverlay(3)).resolves.toBeUndefined();
-    get.mockRejectedValueOnce(new Error('No tab with id: 3'));
-    await expect(ensureOverlay(3)).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalledWith('Study Duo could not add the corner clock to example.test:', expect.any(TypeError));
+    get.mockRejectedValueOnce(new Error('No tab with id: 3')); // closed meanwhile: nothing to say
+    warn.mockClear();
+    await ensureOverlay(3);
+    expect(warn).not.toHaveBeenCalled();
   });
 });
 
