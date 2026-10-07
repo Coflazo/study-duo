@@ -70,10 +70,21 @@ export async function launchBare(): Promise<{ browser: Browser; ctx: BrowserCont
   const portFile = path.join(profile, 'DevToolsActivePort');
   // Chrome creates the file before it writes the port into it.
   const readPort = () => (fs.existsSync(portFile) ? fs.readFileSync(portFile, 'utf8').split('\n')[0]!.trim() : '');
-  for (let i = 0; i < 100 && !readPort(); i++) await new Promise((r) => setTimeout(r, 100));
-  const port = readPort();
-  const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
-  const cdp: CDPSession = await browser.newBrowserCDPSession();
+  const stop = () => {
+    proc.kill();
+    fs.rmSync(profile, { recursive: true, force: true });
+  };
+  let browser: Browser;
+  let cdp: CDPSession;
+  try {
+    for (let i = 0; i < 100 && !readPort(); i++) await new Promise((r) => setTimeout(r, 100));
+    if (!readPort()) throw new Error('Chrome did not open a debugging port within 10 s');
+    browser = await chromium.connectOverCDP(`http://127.0.0.1:${readPort()}`);
+    cdp = await browser.newBrowserCDPSession();
+  } catch (e) {
+    stop(); // a live Chrome child keeps the test worker, and so the CI job, from ever exiting
+    throw e;
+  }
   return {
     browser,
     ctx: browser.contexts()[0]!,
@@ -82,7 +93,7 @@ export async function launchBare(): Promise<{ browser: Browser; ctx: BrowserCont
       await browser.close().catch(() => undefined);
       proc.kill();
       await new Promise((r) => setTimeout(r, 500));
-      fs.rmSync(profile, { recursive: true, force: true });
+      stop();
     },
   };
 }
