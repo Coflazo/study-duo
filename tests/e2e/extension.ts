@@ -68,8 +68,10 @@ export async function launchBare(): Promise<{ browser: Browser; ctx: BrowserCont
   const exe = chromePath() ?? chromium.executablePath();
   const proc = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--enable-unsafe-extension-debugging', '--no-first-run', '--no-default-browser-check', '--no-sandbox', 'about:blank'], { stdio: 'ignore' });
   const portFile = path.join(profile, 'DevToolsActivePort');
-  for (let i = 0; i < 100 && !fs.existsSync(portFile); i++) await new Promise((r) => setTimeout(r, 100));
-  const port = fs.readFileSync(portFile, 'utf8').split('\n')[0];
+  // Chrome creates the file before it writes the port into it.
+  const readPort = () => (fs.existsSync(portFile) ? fs.readFileSync(portFile, 'utf8').split('\n')[0]!.trim() : '');
+  for (let i = 0; i < 100 && !readPort(); i++) await new Promise((r) => setTimeout(r, 100));
+  const port = readPort();
   const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
   const cdp: CDPSession = await browser.newBrowserCDPSession();
   return {
