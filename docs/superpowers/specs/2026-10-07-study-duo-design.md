@@ -222,7 +222,9 @@ The promise is the GitHub repo, not a store listing. Every release is a GitHub R
 | Your computer | Paste this in any terminal |
 |---|---|
 | macOS / Linux (Terminal, iTerm, bash, zsh, fish) | `curl -fsSL https://raw.githubusercontent.com/Coflazo/study-duo/main/install.sh \| sh` |
-| Windows (PowerShell, Command Prompt, Windows Terminal) | `powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/Coflazo/study-duo/main/install.ps1 \| iex"` |
+| Windows (PowerShell, Command Prompt, Windows Terminal) | `powershell -c "irm https://raw.githubusercontent.com/Coflazo/study-duo/main/install.ps1 \| iex"` (no execution-policy flag needed: piped scripts are not subject to it) |
+
+**Install page (the README's first link):** `coflazo.github.io/study-duo`, a static GitHub Pages page (free, no server, no tracking) that detects the visitor's OS and shows the one matching line with a large copy button, plus "how to open a terminal" for that OS and a short GIF of the 3 browser clicks. No single command line works across bash/zsh/fish and Windows PowerShell 5.1 (different syntax, no `sh` on Windows), so OS detection on a page is how rustup, Bun and Deno solve the same problem. README written for non-technical readers: plain steps first, technical detail folded into `<details>` sections.
 
 What the installer does (and nothing else):
 1. Downloads the latest release zip + `SHA256SUMS` from `github.com/Coflazo/study-duo/releases/latest/download/` over HTTPS.
