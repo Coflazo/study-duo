@@ -87,3 +87,114 @@ test('asks once about an unfiled site and files it from the prompt', async () =>
   await ctx.close();
   fs.rmSync(profile, { recursive: true, force: true });
 });
+
+const sitesIn = (sw: Worker) => sw.evaluate(async () => (await chrome.storage.local.get('sites')).sites ?? {});
+const BLOCKED = `chrome-extension://${EXT_ID}/blocked.html#`;
+
+async function fileThroughSettings(ctx: BrowserContext) {
+  const s = await ctx.newPage();
+  await s.goto(`chrome-extension://${EXT_ID}/dashboard.html`);
+  const add = async (list: number, domain: string) => {
+    await s.getByRole('button', { name: 'Add' }).nth(list).click();
+    await s.keyboard.type(domain);
+    await s.keyboard.press('Enter');
+    await expect(s.getByRole('button', { name: domain, exact: true })).toBeVisible();
+  };
+  await add(0, 'video.study-duo.test');
+  await add(0, 'music.video.study-duo.test');
+  await s.getByRole('button', { name: 'music.video.study-duo.test', exact: true }).click();
+  await s.getByRole('menuitem', { name: 'Move to Not blocked' }).click();
+  await add(1, 'learn.study-duo.test');
+  await add(2, 'gone.study-duo.test');
+  await s.getByRole('button', { name: 'Remove gone.study-duo.test' }).click();
+  return s;
+}
+
+test('closes Blocked sites during a block, keeps exceptions open, and opens everything in the break', async () => {
+  const { profile, ctx, sw, offHost } = await setup();
+  const settings = await fileThroughSettings(ctx);
+  expect(await sitesIn(sw)).toEqual({ 'video.study-duo.test': 'blocked', 'music.video.study-duo.test': 'neutral', 'learn.study-duo.test': 'study' });
+
+  const open = await ctx.newPage();
+  await open.goto('https://video.study-duo.test/already-open?t=1');
+  await startBlock(ctx, sw);
+  await expect.poll(() => open.url(), { timeout: 10_000 }).toBe(`${BLOCKED}https://video.study-duo.test/already-open?t=1`);
+  await expect(open.getByRole('heading', { name: 'video.study-duo.test is closed' })).toBeVisible();
+
+  const p = await ctx.newPage();
+  await p.goto('https://www.video.study-duo.test/watch').catch(() => undefined);
+  await expect.poll(() => p.url()).toContain(`${BLOCKED}https://www.video.study-duo.test/watch`);
+  for (const host of ['music.video.study-duo.test', 'learn.study-duo.test', 'other.study-duo.test']) {
+    await p.goto(`https://${host}/`);
+    expect(p.url(), host).toBe(`https://${host}/`);
+  }
+
+  // Allow only Study: unfiled sites close too; Study and Not blocked stay open.
+  await settings.getByRole('radio', { name: 'Allow only Study' }).click();
+  await expect.poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getSessionRules()).some((r: any) => r.priority === 1))).toBe(true);
+  await p.goto('https://other.study-duo.test/').catch(() => undefined);
+  await expect.poll(() => p.url()).toContain(`${BLOCKED}https://other.study-duo.test/`);
+  await p.goto('https://learn.study-duo.test/');
+  expect(p.url()).toBe('https://learn.study-duo.test/');
+
+  // Framed inside someone else's page, the blocked page shows no buttons at all.
+  await p.setContent(`<iframe src="${BLOCKED}https://video.study-duo.test/"></iframe>`);
+  const frame = p.frameLocator('iframe');
+  await p.waitForTimeout(500);
+  expect(await frame.locator('button').count()).toBe(0);
+
+  // The break opens everything.
+  const popup = await ctx.newPage();
+  await popup.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  await popup.getByRole('button', { name: 'Skip' }).click();
+  await expect.poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getSessionRules()).length)).toBe(0);
+  await p.goto('https://video.study-duo.test/');
+  expect(p.url()).toBe('https://video.study-duo.test/');
+
+  expect(offHost).toEqual([]);
+  await ctx.close();
+  fs.rmSync(profile, { recursive: true, force: true });
+});
+
+test('Open anyway waits 10 seconds and a reason, lasts for this block only, and pausing keeps sites closed', async () => {
+  const { profile, ctx, sw, offHost } = await setup();
+  await sw.evaluate(() => chrome.storage.local.set({ sites: { 'video.study-duo.test': 'blocked' } }));
+  await startBlock(ctx, sw);
+  // The timer is saved a moment before the rules land; a person is never that fast.
+  await expect.poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getSessionRules()).length)).toBeGreaterThan(0);
+
+  const p = await ctx.newPage();
+  await p.goto('https://video.study-duo.test/clip').catch(() => undefined);
+  await expect.poll(() => p.url()).toContain(BLOCKED);
+  const later = p.getByRole('button', { name: /^Open anyway/ });
+  await expect(later).toBeDisabled();
+  await expect(later).toHaveText(/Open anyway in \d+ s/);
+  await expect(later).toBeEnabled({ timeout: 12_000 });
+  await later.click();
+  const confirm = p.getByRole('button', { name: 'Open video.study-duo.test' });
+  await p.getByLabel('Why open video.study-duo.test now?').fill('ab');
+  await expect(confirm).toBeDisabled();
+  await p.getByLabel('Why open video.study-duo.test now?').fill('lecture clip for the exam');
+  await confirm.click();
+  await expect.poll(() => p.url(), { timeout: 10_000 }).toBe('https://video.study-duo.test/clip');
+
+  // Pause keeps the lock; the unlock still holds inside this block.
+  const popup = await ctx.newPage();
+  await popup.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  await popup.getByRole('button', { name: 'Pause' }).click();
+  await expect.poll(() => sw.evaluate(async () => (await chrome.storage.local.get('timer')).timer?.status)).toBe('paused');
+  expect((await sw.evaluate(() => chrome.declarativeNetRequest.getSessionRules())).length).toBeGreaterThan(0);
+
+  // The next block closes it again.
+  await popup.getByRole('button', { name: 'Skip' }).click();
+  await expect.poll(() => sw.evaluate(async () => (await chrome.storage.session.get('unlocked')).unlocked ?? [])).toEqual([]);
+  await popup.getByRole('button', { name: 'Skip' }).click();
+  await popup.getByRole('button', { name: 'Start' }).click();
+  await expect.poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getSessionRules()).length)).toBeGreaterThan(0);
+  await p.goto('https://video.study-duo.test/clip').catch(() => undefined);
+  await expect.poll(() => p.url()).toContain(BLOCKED);
+
+  expect(offHost).toEqual([]);
+  await ctx.close();
+  fs.rmSync(profile, { recursive: true, force: true });
+});
