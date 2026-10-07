@@ -36,3 +36,6 @@ web-ext.config.ts
 test-results/
 playwright-report/
 .impeccable/questions/
+
+# Claude Code agent worktrees
+.claude/worktrees/

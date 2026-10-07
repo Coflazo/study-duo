@@ -36,7 +36,7 @@ test('settings: lengths, validation, switches, appearance and the bell preview',
   await p.getByRole('switch', { name: 'Clock in the corner of every page' }).click();
   await expect.poll(() => setting(sw, 'overlayEnabled')).toBe(false);
   await p.getByRole('radio', { name: 'Bottom right' }).click();
-  await expect.poll(() => setting(sw, 'overlayCorner')).toBe('bottom-right');
+  await expect.poll(() => setting(sw, 'overlayPos')).toEqual({ h: 'right', v: 'bottom', x: 16, y: 16 });
   await p.getByRole('radio', { name: 'Flowtime' }).click();
   await expect.poll(() => setting(sw, 'mode')).toBe('flowtime');
   await p.getByRole('radio', { name: 'Pomodoro' }).click();

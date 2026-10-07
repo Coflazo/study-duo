@@ -17,6 +17,17 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 - Dashboard with Today (timer beside the timetable and to-dos), To-do (add with a course tag and an optional if-then plan, edit, reorder by keyboard, complete, delete with undo, start a block on a task), Site lock and Settings (lengths, daily goal, auto-start, bell volume with a preview, corner clock, Appearance).
 - A local session log in IndexedDB that keeps every block and break, with its task and rating, for Today now and insights later.
 - DESIGN.md describing the visual system as built.
+- Drag the corner clock anywhere on a page; the spot is saved for every tab, open or new, measured from the nearest window edges so it stays put when the window resizes. Settings > Clock position puts it back in a corner.
+- Settings > Clock when your mouse is away: Faint, Soft (default) or Full.
+
+### Changed
+
+- Hovering the corner clock now makes it grabbable, so a click on its body no longer reaches the page beneath it; drag it aside or close it to reach what is under it.
+
+### Fixed
+
+- Tabs that were open across an install, an update or switching the extension off and on now get one working clock, without reloading the page.
+- A quick "No task" in the Work on picker is never overwritten by the default.
 
 - Site lock during study blocks: Close Blocked, or Allow only Study, which closes unfiled sites too. Tabs already open go to the blocked page, and everything opens again in the break.
 - Three site categories (Blocked, Study, Not blocked), filed from the popup, the right-click menu, a one-time prompt beside the corner clock, or Settings > Sites, where sites can be added, moved and removed. The most specific entry wins, so music.youtube.com can stay open while youtube.com is closed.
