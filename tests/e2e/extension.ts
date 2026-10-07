@@ -63,24 +63,37 @@ export function holdSessionLog(sw: Worker, ms: number): Promise<void> {
  * A running browser without the extension, so a test can install and reload it the way a person does on
  * chrome://extensions, with tabs already open. Playwright cannot reload an extension it loaded itself.
  */
-export async function launchBare(): Promise<{ browser: Browser; ctx: BrowserContext; install: () => Promise<void>; close: () => Promise<void> }> {
+export async function launchBare(): Promise<{ browser: Browser; ctx: BrowserContext; install: (dir?: string) => Promise<void>; close: () => Promise<void> }> {
   const profile = tempProfile();
   const exe = chromePath() ?? chromium.executablePath();
   const proc = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--enable-unsafe-extension-debugging', '--no-first-run', '--no-default-browser-check', '--no-sandbox', 'about:blank'], { stdio: 'ignore' });
   const portFile = path.join(profile, 'DevToolsActivePort');
-  for (let i = 0; i < 100 && !fs.existsSync(portFile); i++) await new Promise((r) => setTimeout(r, 100));
-  const port = fs.readFileSync(portFile, 'utf8').split('\n')[0];
-  const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
-  const cdp: CDPSession = await browser.newBrowserCDPSession();
+  // Chrome creates the file before it writes the port into it.
+  const readPort = () => (fs.existsSync(portFile) ? fs.readFileSync(portFile, 'utf8').split('\n')[0]!.trim() : '');
+  const stop = () => {
+    proc.kill();
+    fs.rmSync(profile, { recursive: true, force: true });
+  };
+  let browser: Browser;
+  let cdp: CDPSession;
+  try {
+    for (let i = 0; i < 100 && !readPort(); i++) await new Promise((r) => setTimeout(r, 100));
+    if (!readPort()) throw new Error('Chrome did not open a debugging port within 10 s');
+    browser = await chromium.connectOverCDP(`http://127.0.0.1:${readPort()}`);
+    cdp = await browser.newBrowserCDPSession();
+  } catch (e) {
+    stop(); // a live Chrome child keeps the test worker, and so the CI job, from ever exiting
+    throw e;
+  }
   return {
     browser,
     ctx: browser.contexts()[0]!,
-    install: async () => void (await cdp.send('Extensions.loadUnpacked' as any, { path: EXT_DIR })),
+    install: async (dir = EXT_DIR) => void (await cdp.send('Extensions.loadUnpacked' as any, { path: dir })),
     close: async () => {
       await browser.close().catch(() => undefined);
       proc.kill();
       await new Promise((r) => setTimeout(r, 500));
-      fs.rmSync(profile, { recursive: true, force: true });
+      stop();
     },
   };
 }
