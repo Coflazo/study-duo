@@ -30,7 +30,8 @@ export async function syncLock(state: TimerState, settings: TimerSettings, sites
   await Promise.all(
     tabs
       .filter((t) => t.id !== undefined && wouldClose(rules, t.url))
-      .map((t) => browser.tabs.update(t.id!, { url: `${blockedPage()}#${t.url}` }).catch(() => undefined)),
+      // ?swept tells the blocked page that going back would only reopen the closed site.
+      .map((t) => browser.tabs.update(t.id!, { url: `${blockedPage()}?swept#${t.url}` }).catch(() => undefined)),
   );
 }
 

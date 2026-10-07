@@ -43,10 +43,15 @@
     unwatch.forEach((u) => u());
   });
 
+  /** Tabs the block itself closed carry ?swept: going back would only reopen the closed site. */
+  const swept = new URLSearchParams(location.search).has('swept');
+
   async function backToWork() {
-    if (history.length > 1) return history.back();
+    if (!swept && history.length > 1) return history.back();
     const tab = await browser.tabs.getCurrent();
-    if (tab?.id !== undefined) await browser.tabs.remove(tab.id);
+    const siblings = await browser.tabs.query({ windowId: tab?.windowId });
+    if (tab?.id !== undefined && siblings.length > 1) return browser.tabs.remove(tab.id);
+    location.replace(browser.runtime.getURL('/dashboard.html')); // the window's last tab: keep the window
   }
 
   /** The rules change in the background; wait until they let this site through, or the redirect would loop. */

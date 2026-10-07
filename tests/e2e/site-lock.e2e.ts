@@ -118,8 +118,12 @@ test('closes Blocked sites during a block, keeps exceptions open, and opens ever
   const open = await ctx.newPage();
   await open.goto('https://video.study-duo.test/already-open?t=1');
   await startBlock(ctx, sw);
-  await expect.poll(() => open.url(), { timeout: 10_000 }).toBe(`${BLOCKED}https://video.study-duo.test/already-open?t=1`);
+  await expect.poll(() => open.url(), { timeout: 10_000 }).toContain('blocked.html');
+  expect(open.url()).toContain('#https://video.study-duo.test/already-open?t=1');
   await expect(open.getByRole('heading', { name: 'video.study-duo.test is closed' })).toBeVisible();
+  // Going back would only reopen the closed site, so Back to work closes a tab the block closed.
+  await open.getByRole('button', { name: 'Back to work' }).click();
+  await expect.poll(() => open.isClosed(), { timeout: 5_000 }).toBe(true);
 
   const p = await ctx.newPage();
   await p.goto('https://www.video.study-duo.test/watch').catch(() => undefined);

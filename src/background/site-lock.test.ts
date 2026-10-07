@@ -42,7 +42,7 @@ describe('site lock', () => {
     await syncLock(study, S, { ...sites }, []);
     expect(session.length).toBeGreaterThan(0);
     expect(fakeBrowser.tabs.update).toHaveBeenCalledTimes(1);
-    expect(fakeBrowser.tabs.update).toHaveBeenCalledWith(1, { url: expect.stringMatching(/blocked\.html#https:\/\/www\.youtube\.com\/watch\?v=1$/) });
+    expect(fakeBrowser.tabs.update).toHaveBeenCalledWith(1, { url: expect.stringMatching(/blocked\.html\?swept#https:\/\/www\.youtube\.com\/watch\?v=1$/) });
   });
 
   it('does not sweep tabs again while the rules stay the same', async () => {
