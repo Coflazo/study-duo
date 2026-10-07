@@ -1,10 +1,16 @@
 import tokens from '@/ui/tokens.css?inline';
 
-/** The shared tokens, rewritten so they apply inside a shadow root (page themes and :root rules never reach it). */
-const hostTokens = tokens
-  .replaceAll(':root:not([data-theme="light"])', ':host')
-  .replaceAll(':root[data-theme="dark"]', ':host([data-theme="dark"])')
-  .replaceAll(':root', ':host');
+/**
+ * The shared tokens, moved onto the shadow host so they apply inside it (page :root rules never reach it).
+ * Light and dark follow the system theme live. Quotes are optional because the minifier drops them.
+ */
+export function toHostCss(css: string): string {
+  return css
+    .replace(/:root:not\(\[data-theme=["']?light["']?\]\)/g, ':host')
+    .replace(/:root\[data-theme=["']?dark["']?\]/g, ':host([data-theme="dark"])')
+    .replaceAll(':root', ':host');
+}
+const hostTokens = toHostCss(tokens);
 
 /** A family name of our own, so a page that ships Atkinson under the same name cannot swap our files. */
 export const FONT_FAMILY = 'Study Duo Sans';
@@ -33,7 +39,7 @@ export const CSS = `${hostTokens}
 }
 .clock[hidden] { display: none; }
 .clock[data-corner="bottom-right"] { top: auto; bottom: 16px; }
-.clock[data-near] { opacity: 1; pointer-events: auto; padding-right: 6px; }
+.clock[data-near] { opacity: 1; padding-right: 6px; }
 .lamp { flex: none; width: 6px; height: 6px; background: var(--color-bg-plate-focus); }
 .clock[data-phase="break"] .lamp { background: var(--color-bg-plate-break); }
 .digits { display: block; flex: none; width: 86px; height: 29px; }
@@ -45,7 +51,8 @@ export const CSS = `${hostTokens}
   display: none; place-items: center; width: 24px; height: 24px; margin: 0; padding: 0;
   border: 0; border-radius: 2px; background: none; color: var(--color-text-led); cursor: pointer;
 }
-.clock[data-near] .close { display: grid; }
+/* Only the close button ever takes clicks; the clock body lets them through to the page, near or not. */
+.clock[data-near] .close { display: grid; pointer-events: auto; }
 .close:hover { background: rgb(255 255 255 / 0.08); }
 .close:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .close svg { width: 14px; height: 14px; fill: currentColor; }

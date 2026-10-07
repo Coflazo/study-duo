@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedFromSender, parseAnnounce, parseMessage, parseOffscreenMessage } from './messages';
+import { allowedFromSender, isFromWebPage, parseAnnounce, parseMessage, parseOffscreenMessage } from './messages';
 
 describe('parseMessage', () => {
   it('accepts every plain timer event', () => {
@@ -60,5 +60,18 @@ describe('allowedFromSender', () => {
       expect(allowedFromSender({ kind: 'timer', event: { type } as never }, true)).toBe(false);
       expect(allowedFromSender({ kind: 'timer', event: { type } as never }, false)).toBe(true);
     }
+  });
+});
+
+describe('isFromWebPage', () => {
+  const base = 'chrome-extension://bcggiingdefmehpjcalkfpdnehpcieon/';
+  it('treats the popup and dashboard as extension pages, even when opened in a tab', () => {
+    expect(isFromWebPage(`${base}popup.html`, base)).toBe(false);
+    expect(isFromWebPage(`${base}dashboard.html#today`, base)).toBe(false);
+  });
+  it('treats content scripts, unknown and look-alike senders as web pages', () => {
+    expect(isFromWebPage('https://khanacademy.org/', base)).toBe(true);
+    expect(isFromWebPage(undefined, base)).toBe(true);
+    expect(isFromWebPage('https://evil.test/chrome-extension://bcggiingdefmehpjcalkfpdnehpcieon/', base)).toBe(true);
   });
 });

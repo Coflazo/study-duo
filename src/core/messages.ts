@@ -45,7 +45,15 @@ export function parseAnnounce(raw: unknown): AnnounceMessage | null {
   return { kind: 'announce', line: raw.line, sub: raw.sub, phase: raw.phase as Phase };
 }
 
+/**
+ * True unless the sender is one of our own pages. A popup or dashboard opened in a tab still has `sender.tab`,
+ * so the URL decides: content scripts report the web page's URL.
+ */
+export function isFromWebPage(senderUrl: string | undefined, extensionBase: string): boolean {
+  return !senderUrl?.startsWith(extensionBase);
+}
+
 /** A content script runs inside web pages, so it may only report that the clock reached zero; real commands come from extension pages. */
-export function allowedFromSender(msg: TimerMessage, fromTab: boolean): boolean {
-  return !fromTab || msg.event.type === 'tick';
+export function allowedFromSender(msg: TimerMessage, fromWebPage: boolean): boolean {
+  return !fromWebPage || msg.event.type === 'tick';
 }
