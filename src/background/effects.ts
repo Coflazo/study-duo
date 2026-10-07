@@ -6,6 +6,7 @@ import { syncLockFromStorage } from './site-lock';
 import type { AnnounceMessage } from '@/core/messages';
 import { phaseTitle } from '@/core/phase-copy';
 import { drawLine, momentFor, subLine } from '@/core/phrases';
+import { addSessions } from '@/core/sessions';
 import { lastFocusDayItem, phraseBagItem } from '@/core/store';
 import type { TimerSettings } from '@/core/settings';
 import type { TimerState } from '@/core/timer';
@@ -86,6 +87,8 @@ export async function announce({ prev, state, settings, now }: EffectInput): Pro
 
 export async function applyEffects(input: EffectInput): Promise<void> {
   const { event, state, settings, segments, now } = input;
+  // The log must never hold up the timer: a database failure is logged and the effects go on.
+  await addSessions(segments).catch(console.error);
   await syncAlarms(state);
   await syncAction(state, settings, now);
   // A rule failure must not stop the bell or the phase words, and the other way round.

@@ -30,6 +30,21 @@ test('start, badge, alarm, completion with bell, pause, and badge restored after
     await chrome.storage.local.set({ timer: { ...timer, endsAt: Date.now() + 1500 } });
   });
   await expect.poll(() => timerField(sw, 'phase'), { timeout: 10_000 }).toBe('shortBreak');
+  // The finished block is in the local session log.
+  const logged = () =>
+    sw.evaluate(
+      () =>
+        new Promise<unknown[]>((resolve, reject) => {
+          const req = indexedDB.open('study-duo');
+          req.onsuccess = () => {
+            const all = req.result.transaction('sessions').objectStore('sessions').getAll();
+            all.onsuccess = () => resolve(all.result.map((r: any) => [r.phase, r.completed]));
+            all.onerror = () => reject(all.error);
+          };
+          req.onerror = () => reject(req.error);
+        }),
+    );
+  await expect.poll(logged).toEqual([['focus', true]]);
   await expect.poll(() => sw.evaluate(() => chrome.action.getBadgeText({}))).toBe('5');
   expect(await sw.evaluate(() => chrome.action.getBadgeBackgroundColor({}))).toEqual([46, 125, 79, 255]);
   await expect
