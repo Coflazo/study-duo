@@ -82,7 +82,7 @@ describe('completion', () => {
   it('tick at endsAt logs a completed focus and starts the short break at endsAt', () => {
     const r = reduce(started(), { type: 'tick' }, S, T0 + 25 * MIN + 2000);
     expect(r.segments).toEqual([
-      { phase: 'focus', startedAt: T0, endedAt: T0 + 25 * MIN, plannedMs: 25 * MIN, activeMs: 25 * MIN, pausedMs: 0, completed: true, taskId: 'read' },
+      { phase: 'focus', startedAt: T0, endedAt: T0 + 25 * MIN, plannedMs: 25 * MIN, activeMs: 25 * MIN, pausedMs: 0, extendedMs: 0, completed: true, taskId: 'read' },
     ]);
     expect(r.state).toMatchObject({ phase: 'shortBreak', status: 'running', startedAt: T0 + 25 * MIN, endsAt: T0 + 30 * MIN, cycle: 1, taskId: 'read' });
   });
@@ -188,4 +188,16 @@ describe('commands after a missed phase end', () => {
       expect(r.state).toMatchObject({ phase: 'shortBreak', status: 'stopped', cycle: 1 });
     });
   }
+});
+
+describe('extensions', () => {
+  it('carries the time added with +5 into the logged block, and starts each phase at zero', () => {
+    const t0 = 1_800_000_000_000;
+    let s = reduce(initialState(), { type: 'start' }, DEFAULT_SETTINGS, t0).state;
+    s = reduce(s, { type: 'extend', ms: 300_000 }, DEFAULT_SETTINGS, t0 + 1000).state;
+    s = reduce(s, { type: 'extend', ms: 300_000 }, DEFAULT_SETTINGS, t0 + 2000).state;
+    const done = reduce(s, { type: 'skip' }, DEFAULT_SETTINGS, t0 + 60_000);
+    expect(done.segments[0]).toMatchObject({ phase: 'focus', extendedMs: 600_000 });
+    expect(done.state.extendedMs ?? 0).toBe(0);
+  });
 });
