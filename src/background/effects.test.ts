@@ -77,7 +77,7 @@ describe('phase words', () => {
   beforeEach(() => {
     Object.assign(fakeBrowser.tabs, {
       query: vi.fn(async () => [{ id: 1 }, { id: 2 }]),
-      sendMessage: vi.fn(async (id: number) => { if (id === 2) throw new Error('no receiver'); }),
+      sendMessage: vi.fn(async (id: number) => { if (id === 2) throw new Error('no receiver'); return true; }),
     });
   });
 
@@ -87,6 +87,12 @@ describe('phase words', () => {
     expect(sent()[0]).toMatchObject({ kind: 'announce', phase: 'shortBreak', sub: 'Short break, 5 minutes.' });
     expect(phrases.shortBreak).toContain(sent()[0].line);
     expect(fakeBrowser.notifications.create).not.toHaveBeenCalled();
+  });
+
+  it('counts a page that could not show the words (fullscreen video, minimised window) as not shown', async () => {
+    Object.assign(fakeBrowser.tabs, { query: vi.fn(async () => [{ id: 1 }]), sendMessage: vi.fn(async () => false) });
+    await finishFocus(at(9));
+    expect(fakeBrowser.notifications.create).toHaveBeenCalledTimes(1);
   });
 
   it('falls back to a notification when no page can show it', async () => {

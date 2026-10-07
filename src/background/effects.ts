@@ -76,7 +76,7 @@ async function ringBell(kind: BellKind, volume: number): Promise<void> {
   await browser.runtime.sendMessage({ target: 'offscreen', kind: 'bell', bell: kind, volume });
 }
 
-/** Shows the phase words in the active tab of every window. Returns how many pages showed them. */
+/** Shows the phase words in the active tab of every window. Returns how many pages confirmed they showed them. */
 export async function announce({ prev, state, settings, now }: EffectInput): Promise<number> {
   const next = state.phase;
   const today = new Date(now).toDateString();
@@ -88,7 +88,7 @@ export async function announce({ prev, state, settings, now }: EffectInput): Pro
   const message: AnnounceMessage = { kind: 'announce', line, sub: subLine(next, settings, state), phase: next };
   const tabs = await browser.tabs.query({ active: true, windowType: 'normal' });
   const delivered = await Promise.all(
-    tabs.map((t) => (t.id === undefined ? 0 : browser.tabs.sendMessage(t.id, message).then(() => 1, () => 0))),
+    tabs.map((t) => (t.id === undefined ? 0 : browser.tabs.sendMessage(t.id, message).then((shown) => (shown === true ? 1 : 0), () => 0))),
   );
   return delivered.reduce<number>((a, b) => a + b, 0);
 }
