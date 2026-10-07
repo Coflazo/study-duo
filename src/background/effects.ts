@@ -6,6 +6,7 @@ import { syncLockFromStorage } from './site-lock';
 import type { AnnounceMessage } from '@/core/messages';
 import { phaseTitle } from '@/core/phase-copy';
 import { drawLine, momentFor, subLine } from '@/core/phrases';
+import { addSessions } from '@/core/sessions';
 import { lastFocusDayItem, phraseBagItem } from '@/core/store';
 import type { TimerSettings } from '@/core/settings';
 import type { TimerState } from '@/core/timer';
@@ -63,6 +64,7 @@ async function ringBell(kind: BellKind, volume: number): Promise<void> {
 
 /** A tab frozen by alert() or print() never answers; the timer queue must not wait on it. */
 const ANNOUNCE_WAIT_MS = 1_500;
+const SESSION_WRITE_MS = 3_000;
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | undefined> {
   return Promise.race([p, new Promise<undefined>((resolve) => setTimeout(resolve, ms))]);
 }
@@ -90,6 +92,8 @@ export async function applyEffects(input: EffectInput): Promise<void> {
   await syncAction(state, settings, now);
   // A rule failure must not stop the bell or the phase words, and the other way round.
   await syncLockFromStorage(state, settings).catch(console.error);
+  // The log comes after everything that keeps the timer running, and a database that never answers is abandoned.
+  await withTimeout(addSessions(segments), SESSION_WRITE_MS).catch(console.error);
   const finishedOnItsOwn = event.type === 'tick' && segments.some((s) => s.completed);
   if (!finishedOnItsOwn) return;
   // A silent bell must not also hide the phase change.

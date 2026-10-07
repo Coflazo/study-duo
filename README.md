@@ -135,7 +135,7 @@ You need Node.js 22 or newer.
 git clone https://github.com/Coflazo/study-duo && cd study-duo && npm ci && npm run dev
 ```
 
-`npm test` runs the unit tests, `npm run test:e2e` runs the browser test, `npm run build` writes the extension to `.output/chrome-mv3`. The design spec is in [docs/superpowers/specs](docs/superpowers/specs/2026-10-07-study-duo-design.md).
+`npm test` runs the unit tests, `npm run test:e2e` runs the browser test, `npm run build` writes the extension to `build/chrome-mv3`. The design spec is in [docs/superpowers/specs](docs/superpowers/specs/2026-10-07-study-duo-design.md).
 
 </details>
 

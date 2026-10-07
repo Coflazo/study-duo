@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-07T18:14:41.339296+00:00",
+  "title": "Design System: Study Duo",
+  "extensions": {
+    "colorMeta": {
+      "signal-red": {
+        "role": "primary",
+        "displayName": "Signal Red",
+        "canonical": "#D52B1E",
+        "tonalRamp": [
+          "#F07A6E",
+          "#E5483A",
+          "#D52B1E",
+          "#B3211A",
+          "#8E1A15"
+        ]
+      },
+      "signal-green": {
+        "role": "secondary",
+        "displayName": "Signal Green",
+        "canonical": "#2E7D4F",
+        "tonalRamp": [
+          "#7BC59A",
+          "#4FA772",
+          "#2E7D4F",
+          "#246841",
+          "#1B5232"
+        ]
+      },
+      "led-amber": {
+        "role": "tertiary",
+        "displayName": "Platform LED Amber",
+        "canonical": "#FFB000"
+      },
+      "board": {
+        "role": "neutral",
+        "displayName": "Board Black",
+        "canonical": "#0B0C0D"
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Enamel Canvas",
+        "canonical": "#F3F3F0",
+        "tonalRamp": [
+          "#FBFBF9",
+          "#F3F3F0",
+          "#E6E7E3",
+          "#D2D4CF",
+          "#B4B7B1",
+          "#8D918B",
+          "#6A6E69",
+          "#4E524E",
+          "#363A37",
+          "#23262A",
+          "#17191C",
+          "#0F1113"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#17191C"
+      }
+    },
+    "typographyMeta": {
+      "sign-display": {
+        "displayName": "Sign Display",
+        "purpose": "Page titles, Block done., the blocked site name."
+      },
+      "sign-title": {
+        "displayName": "Sign Title",
+        "purpose": "Phase plates, section titles, sign buttons."
+      },
+      "timetable-time": {
+        "displayName": "Timetable Time",
+        "purpose": "Times, domains and course tags so columns align."
+      },
+      "phase-words": {
+        "displayName": "Phase Words",
+        "purpose": "The line over a page at a phase change; plain text with a halo."
+      }
+    },
+    "shadows": [
+      {
+        "name": "floating-over-page",
+        "value": "0 2px 8px rgb(0 0 0 / 0.25)",
+        "purpose": "Corner clock and site prompt over any web page."
+      },
+      {
+        "name": "menu",
+        "value": "0 2px 8px rgb(0 0 0 / 0.08)",
+        "purpose": "Open menus only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "press",
+        "value": "transform 120ms ease, scale 0.97",
+        "purpose": "Sign buttons on press."
+      },
+      {
+        "name": "clock-near",
+        "value": "opacity 180ms ease",
+        "purpose": "Corner clock and prompt between 15% and full."
+      },
+      {
+        "name": "phase-words",
+        "value": "400ms cubic-bezier(0.23, 1, 0.32, 1) in, 1600ms hold, 1800ms ease out",
+        "purpose": "Phase change line; reduced motion keeps opacity only."
+      },
+      {
+        "name": "switch",
+        "value": "transform 180ms ease-out",
+        "purpose": "Switch knob."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "single-column",
+        "value": "899px"
+      },
+      {
+        "name": "popup",
+        "value": "360px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Sign Button",
+      "kind": "button",
+      "refersTo": "sign-button-primary",
+      "description": "The main action: Start, Pause, Resume.",
+      "html": "<button class=\"ds-sign-primary\">Start</button>",
+      "css": ".ds-sign-primary{display:inline-flex;align-items:center;justify-content:center;height:48px;padding:12px 20px;border:0;border-radius:var(--radius-md,4px);background:var(--color-bg-action,#17191C);color:var(--color-text-on-action,#FBFBF9);font:700 20px/24px 'Atkinson Hyperlegible Next',system-ui,sans-serif;cursor:pointer;transition:transform 120ms ease}.ds-sign-primary:hover{background:var(--color-bg-action-hover,#363A37)}.ds-sign-primary:active{transform:scale(.97)}.ds-sign-primary:focus-visible{outline:3px solid var(--color-focus-ring,#17191C);outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Sign Button",
+      "kind": "button",
+      "refersTo": "sign-button-secondary",
+      "description": "Skip, Skip break, Finish.",
+      "html": "<button class=\"ds-sign-secondary\">Skip</button>",
+      "css": ".ds-sign-secondary{display:inline-flex;align-items:center;justify-content:center;height:48px;padding:12px 20px;border:2px solid var(--color-border-strong,#17191C);border-radius:var(--radius-md,4px);background:transparent;color:var(--color-text-primary,#17191C);font:700 20px/24px 'Atkinson Hyperlegible Next',system-ui,sans-serif;cursor:pointer}.ds-sign-secondary:hover{background:var(--color-bg-sunken,#E6E7E3)}.ds-sign-secondary:focus-visible{outline:3px solid var(--color-focus-ring,#17191C);outline-offset:2px}"
+    },
+    {
+      "name": "Phase Plate",
+      "kind": "custom",
+      "refersTo": "phase-plate-running",
+      "description": "Current phase as a station sign; solid running, dashed paused, hollow stopped.",
+      "html": "<div class=\"ds-plate\"><span class=\"ds-plate-name\">Study</span><span class=\"ds-plate-note\">Block 2 of 4</span></div>",
+      "css": ".ds-plate{display:flex;align-items:center;gap:12px;min-height:56px;padding:12px 16px;border-radius:4px;background:#D52B1E;color:#FBFBF9;font-family:'Atkinson Hyperlegible Next',system-ui,sans-serif}.ds-plate-name{flex:1;font:700 20px/24px inherit}.ds-plate-note{font:600 12px/16px inherit}"
+    },
+    {
+      "name": "Timetable Row",
+      "kind": "custom",
+      "refersTo": "timetable-row",
+      "description": "A departures-board line; current row carries a red rail.",
+      "html": "<li class=\"ds-row ds-row-now\"><span class=\"ds-time\">09:30</span><span class=\"ds-mark\"></span><span class=\"ds-task\">Linear algebra, chapter 3</span><span class=\"ds-end\">Now</span></li>",
+      "css": ".ds-row{display:flex;align-items:center;gap:12px;min-height:40px;padding:8px 12px;border-bottom:1px solid #D2D4CF;list-style:none;font:400 14px/20px 'Atkinson Hyperlegible Next',system-ui,sans-serif}.ds-row-now{border-bottom:0;border-left:3px solid #D52B1E;background:#E6E7E3;font-weight:600}.ds-time{font:500 14px/20px 'Atkinson Hyperlegible Mono',monospace}.ds-mark{width:8px;height:8px;background:#D52B1E}.ds-task{flex:1}.ds-end{font:400 12px/16px inherit;color:#B3211A}"
+    },
+    {
+      "name": "Site Chip",
+      "kind": "chip",
+      "refersTo": "site-chip",
+      "description": "A filed site in Settings > Sites.",
+      "html": "<span class=\"ds-chip\">youtube.com</span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;padding:6px 10px;border-radius:2px;background:#E6E7E3;color:#17191C;font:500 14px/20px 'Atkinson Hyperlegible Mono',monospace}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Exam Hall and Platform Clock",
+    "overview": "Study blocks run on platform time: enamel sign plates, a signage sans, timetable rows with tabular figures and an amber seven-segment board. Calm and operational; colour is scarce and state is carried by form as well as colour.",
+    "keyCharacteristics": [
+      "Sign plates and boards, not cards",
+      "One signal colour per phase; amber only in LED digits",
+      "Atkinson Hyperlegible Next and Mono",
+      "State by form: solid, dashed, hollow",
+      "Plain short copy"
+    ],
+    "rules": [
+      {
+        "name": "The Signal Rule",
+        "body": "Red means study, green means break; never decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Amber Rule",
+        "body": "Amber appears only inside board-black displays.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Times and domains are set in the mono.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Sign Rule",
+        "body": "Only things floating over another page, or an open menu, get a shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do carry state by form as well as colour",
+      "Do keep amber inside board-black displays",
+      "Do use the mono for times, domains and course tags",
+      "Do follow the system theme by default"
+    ],
+    "donts": [
+      "Don't use a tomato or red ring as the timer identity",
+      "Don't add gradients, glass, glows, emoji or pill buttons",
+      "Don't use radii over 8 px",
+      "Don't put a background behind the phase words",
+      "Don't use signal colours for anything but study and break"
+    ]
+  }
+}

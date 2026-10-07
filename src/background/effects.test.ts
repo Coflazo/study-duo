@@ -1,15 +1,19 @@
+import 'fake-indexeddb/auto';
+import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { DEFAULT_SETTINGS } from '@/core/settings';
 import phrases from '@/locales/en/phrases.json';
 import { lastFocusDayItem, phraseBagItem } from '@/core/store';
 import { initialState, reduce, type TimerState } from '@/core/timer';
+import { sessionsBetween } from '@/core/sessions';
 import { ALARM_PHASE_END, ALARM_REFRESH, applyEffects, syncAlarms } from './effects';
 
 const MIN = 60_000;
 const T0 = 1_800_000_000_000;
 
 beforeEach(() => {
+  globalThis.indexedDB = new IDBFactory();
   fakeBrowser.reset();
   Object.assign(fakeBrowser.action, {
     setBadgeText: vi.fn(async () => {}),
@@ -105,6 +109,8 @@ describe('phase words', () => {
   });
 
   it('does not let a page stuck in a dialog hold up the timer', async () => {
+    Object.assign(globalThis, { indexedDB: undefined }); // fake-indexeddb runs on the timers faked below
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.useFakeTimers({ toFake: ['setTimeout'] });
     try {
       Object.assign(fakeBrowser.tabs, { query: vi.fn(async () => [{ id: 1 }]), sendMessage: vi.fn(() => new Promise(() => {})) });
@@ -141,5 +147,31 @@ describe('phase words', () => {
     await applyEffects({ event: { type: 'tick' }, prev, state: r.state, settings: DEFAULT_SETTINGS, segments: r.segments, now: prev.endsAt });
     expect(phrases.focusAfterLong).toContain(sent()[0].line);
     expect((await phraseBagItem.getValue()).focusAfterLong).toHaveLength(phrases.focusAfterLong.length - 1);
+  });
+});
+
+describe('session log', () => {
+  beforeEach(() => {
+    Object.assign(fakeBrowser.tabs, { query: vi.fn(async () => []) }); // no page shows the words here
+  });
+
+  it('records the finished block', async () => {
+    const T = Date.UTC(2026, 9, 7, 9, 0);
+    const prev = reduce(initialState(), { type: 'start' }, DEFAULT_SETTINGS, T).state;
+    const r = reduce(prev, { type: 'tick' }, DEFAULT_SETTINGS, prev.endsAt!);
+    await applyEffects({ event: { type: 'tick' }, prev, state: r.state, settings: DEFAULT_SETTINGS, segments: r.segments, now: prev.endsAt! });
+    const got = await sessionsBetween(T - 1, prev.endsAt! + 1);
+    expect(got).toHaveLength(1);
+    expect(got[0]).toMatchObject({ phase: 'focus', completed: true });
+  });
+
+  it('keeps the timer going when the database cannot open', async () => {
+    Object.assign(globalThis, { indexedDB: undefined });
+    const T = Date.UTC(2026, 9, 7, 9, 0);
+    const prev = reduce(initialState(), { type: 'start' }, DEFAULT_SETTINGS, T).state;
+    const r = reduce(prev, { type: 'tick' }, DEFAULT_SETTINGS, prev.endsAt!);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await applyEffects({ event: { type: 'tick' }, prev, state: r.state, settings: DEFAULT_SETTINGS, segments: r.segments, now: prev.endsAt! });
+    expect(fakeBrowser.notifications.create).toHaveBeenCalledTimes(1);
   });
 });

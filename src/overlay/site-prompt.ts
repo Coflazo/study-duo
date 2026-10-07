@@ -13,7 +13,7 @@ export interface SitePrompt {
   hide(): void;
 }
 
-/** "New site: khanacademy.org" with Study, Not blocked and Blocked. `answer(null)` means closed without filing. */
+/** "File khanacademy.org as" with Study, Not blocked and Blocked. `answer(null)` means closed without filing. */
 export function createSitePrompt(answer: (category: SiteCategory | null) => void): SitePrompt {
   const el = document.createElement('div');
   el.className = 'prompt';
@@ -23,14 +23,11 @@ export function createSitePrompt(answer: (category: SiteCategory | null) => void
 
   const head = document.createElement('div');
   head.className = 'prompt-head';
-  const q = document.createElement('div');
+  const q = document.createElement('p');
   q.className = 'prompt-q';
-  const kicker = document.createElement('span');
-  kicker.className = 'prompt-kicker';
-  kicker.textContent = 'New site';
   const domain = document.createElement('strong');
   domain.className = 'prompt-domain';
-  q.append(kicker, domain);
+  q.append('File ', domain, ' as');
 
   const trusted = (fn: () => void) => (e: MouseEvent) => {
     e.stopPropagation();

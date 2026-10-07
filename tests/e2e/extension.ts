@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-export const EXT_DIR = path.resolve('.output/chrome-mv3');
+export const EXT_DIR = path.resolve('build/chrome-mv3');
 export const EXT_ID = 'bcggiingdefmehpjcalkfpdnehpcieon';
 
 /**
@@ -30,6 +30,11 @@ export async function launch(userDataDir: string): Promise<{ ctx: BrowserContext
     args: [`--disable-extensions-except=${EXT_DIR}`, `--load-extension=${EXT_DIR}`],
   });
   const sw = ctx.serviceWorkers()[0] ?? (await ctx.waitForEvent('serviceworker'));
+  // Wait for the install step (music players filed as Not blocked), so tests never race it.
+  for (let i = 0; i < 50; i++) {
+    if (await sw.evaluate(async () => (await (globalThis as any).chrome.storage.local.get('musicSitesSeeded')).musicSitesSeeded === true)) break;
+    await new Promise((r) => setTimeout(r, 100));
+  }
   return { ctx, sw };
 }
 

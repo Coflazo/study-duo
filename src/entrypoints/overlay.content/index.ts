@@ -10,6 +10,8 @@ import type { SiteStatus } from '@/background/site-requests';
 import { isNear } from '@/overlay/proximity';
 import { CSS, ensureFont } from '@/overlay/styles';
 
+const FRESH_MS = 4_000;
+
 /** Inline !important beats any page rule, including `* { all: unset !important }`. */
 const HOST_STYLE: Array<[string, string]> = [
   ['all', 'initial'],
@@ -90,6 +92,8 @@ export default defineContentScript({
       clock.el.dataset.phase = isBreak(state.phase) ? 'break' : 'focus';
       clock.el.dataset.status = state.status;
       clock.el.dataset.corner = settings.overlayCorner;
+      // Full brightness for the first seconds of a block so it gets noticed, then as quiet as the user asked.
+      clock.el.toggleAttribute('data-fresh', state.status === 'running' && state.startedAt !== null && Date.now() - state.startedAt < FRESH_MS);
       const now = Date.now();
       const { ms, countsUp } = displayMs(state, settings, now);
       clock.show(capsuleText(ms, countsUp));

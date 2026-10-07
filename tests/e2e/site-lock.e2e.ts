@@ -13,7 +13,7 @@ async function setup() {
   await ctx.route('**/*', (route) => {
     const url = new URL(route.request().url());
     if (url.protocol === 'chrome-extension:') return route.continue();
-    if (url.host.endsWith('study-duo.test') || url.host === 'intranet') return route.fulfill({ contentType: 'text/html', body: page(url.host) });
+    if (url.host.endsWith('study-duo.test') || url.host === 'intranet' || url.host.endsWith('youtube.com')) return route.fulfill({ contentType: 'text/html', body: page(url.host) });
     offHost.push(url.href);
     return route.abort();
   });
@@ -70,12 +70,12 @@ test('asks once about an unfiled site and files it from the prompt', async () =>
   // A synthetic click from the page does nothing; only a real click files the site.
   await dom.dispatchClick('choice-study');
   await p.waitForTimeout(300);
-  expect(await sw.evaluate(async () => (await chrome.storage.local.get('sites')).sites ?? {})).toEqual({});
+  expect(await sitesIn(sw)).toEqual({});
 
   const r = (await dom.rect('choice-study'))!;
   await p.mouse.move(r.x + r.w / 2, r.y + r.h / 2);
   await p.mouse.click(r.x + r.w / 2, r.y + r.h / 2);
-  await expect.poll(() => sw.evaluate(async () => (await chrome.storage.local.get('sites')).sites)).toEqual({ 'learn.study-duo.test': 'study' });
+  await expect.poll(() => sitesIn(sw)).toEqual({ 'learn.study-duo.test': 'study' });
   await expect.poll(() => dom.shown('prompt')).toBe(false);
 
   await p.reload();
@@ -88,12 +88,15 @@ test('asks once about an unfiled site and files it from the prompt', async () =>
   fs.rmSync(profile, { recursive: true, force: true });
 });
 
-const sitesIn = (sw: Worker) => sw.evaluate(async () => (await chrome.storage.local.get('sites')).sites ?? {});
+const MUSIC = ['music.youtube.com', 'open.spotify.com', 'music.apple.com', 'soundcloud.com', 'listen.tidal.com', 'deezer.com', 'music.amazon.com'];
+/** The user's own filings, without the music players Study Duo files as Not blocked on install. */
+const sitesIn = (sw: Worker) =>
+  sw.evaluate(async (music) => Object.fromEntries(Object.entries((await chrome.storage.local.get('sites')).sites ?? {}).filter(([d]) => !music.includes(d))), MUSIC);
 const BLOCKED = `chrome-extension://${EXT_ID}/blocked.html#`;
 
 async function fileThroughSettings(ctx: BrowserContext) {
   const s = await ctx.newPage();
-  await s.goto(`chrome-extension://${EXT_ID}/dashboard.html`);
+  await s.goto(`chrome-extension://${EXT_ID}/dashboard.html#sites`);
   const add = async (list: number, domain: string) => {
     await s.getByRole('button', { name: 'Add' }).nth(list).click();
     await s.keyboard.type(domain);
@@ -214,7 +217,7 @@ test('a hard lock keeps the lists from opening anything until the block ends', a
   });
   await startBlock(ctx, sw);
   const s = await ctx.newPage();
-  await s.goto(`chrome-extension://${EXT_ID}/dashboard.html`);
+  await s.goto(`chrome-extension://${EXT_ID}/dashboard.html#sites`);
   await expect(s.getByRole('status')).toHaveText('Hard lock is on until this study block ends. You can still close more sites.');
   await expect(s.getByRole('switch', { name: 'Hard lock' })).toBeDisabled();
   await expect(s.getByRole('button', { name: 'Remove video.study-duo.test' })).toBeDisabled();
@@ -231,6 +234,28 @@ test('a hard lock keeps the lists from opening anything until the block ends', a
   await s.keyboard.type('music.video.study-duo.test');
   await s.keyboard.press('Enter');
   await expect(s.getByRole('alert')).toHaveText('Hard lock is on until this study block ends.');
+  await ctx.close();
+  fs.rmSync(profile, { recursive: true, force: true });
+});
+
+test('blocking YouTube keeps YouTube Music open, because music players are filed Not blocked on install', async () => {
+  const { profile, ctx, sw, offHost } = await setup();
+  await expect.poll(async () => (await sw.evaluate(async () => (await chrome.storage.local.get('sites')).sites ?? {}))['music.youtube.com']).toBe('neutral');
+  // File the page the way a person does: from its address in Settings.
+  const s = await ctx.newPage();
+  await s.goto(`chrome-extension://${EXT_ID}/dashboard.html#sites`);
+  await s.getByRole('button', { name: 'Add' }).first().click();
+  await s.keyboard.type('https://www.youtube.com/?hl=TR');
+  await s.keyboard.press('Enter');
+  await expect.poll(() => sitesIn(sw)).toEqual({ 'youtube.com': 'blocked' });
+  await startBlock(ctx, sw);
+  await expect.poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getSessionRules()).length)).toBeGreaterThan(0);
+  const p = await ctx.newPage();
+  await p.goto('https://www.youtube.com/?hl=TR').catch(() => undefined);
+  await expect.poll(() => p.url()).toContain('blocked.html');
+  await p.goto('https://music.youtube.com/');
+  expect(p.url()).toBe('https://music.youtube.com/');
+  expect(offHost).toEqual([]);
   await ctx.close();
   fs.rmSync(profile, { recursive: true, force: true });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { categoryFor, hostOf, normalizeDomain, normalizeSites, siteOf } from './sites';
+import { categoryFor, hostOf, MUSIC_SITES, normalizeDomain, normalizeSites, seedMusicSites, siteOf } from './sites';
 
 describe('hostOf', () => {
   it('reads the site from web addresses only', () => {
@@ -69,5 +69,16 @@ describe('siteOf', () => {
     for (const url of ['http://localhost:5173/', 'http://192.168.1.1/', 'http://[::1]/', 'http://intranet/', 'file:///a.html', undefined]) {
       expect(siteOf(url), String(url)).toBeNull();
     }
+  });
+});
+
+describe('music sites stay open by default', () => {
+  it('files the music players as Not blocked, without overriding anything the user filed', () => {
+    const seeded = seedMusicSites({ 'youtube.com': 'blocked', 'open.spotify.com': 'blocked' });
+    expect(seeded['music.youtube.com']).toBe('neutral');
+    expect(seeded['open.spotify.com']).toBe('blocked');
+    expect(seeded['youtube.com']).toBe('blocked');
+    for (const d of MUSIC_SITES) expect(normalizeDomain(d)).toEqual({ domain: d });
+    expect(categoryFor('music.youtube.com', seeded)).toBe('neutral');
   });
 });

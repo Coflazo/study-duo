@@ -40,6 +40,7 @@ export const CSS = `${hostTokens}
 .clock[hidden] { display: none; }
 .clock[data-corner="bottom-right"] { top: auto; bottom: 16px; }
 .clock[data-near] { opacity: 1; padding-right: 6px; }
+.clock[data-fresh] { opacity: 1; }
 .lamp { flex: none; width: 6px; height: 6px; background: var(--color-bg-plate-focus); }
 .clock[data-phase="break"] .lamp { background: var(--color-bg-plate-break); }
 .digits { display: block; flex: none; width: 86px; height: 29px; }
@@ -90,9 +91,8 @@ export const CSS = `${hostTokens}
 .prompt[data-near], .prompt[data-fresh] { opacity: 1; }
 .prompt[data-near] { pointer-events: auto; }
 .prompt-head { display: flex; align-items: center; gap: 8px; }
-.prompt-q { display: flex; flex: 1; flex-direction: column; gap: 2px; min-inline-size: 0; }
-.prompt-kicker { font-size: 11px; line-height: 15px; font-weight: 600; color: var(--neutral-400); }
-.prompt-domain { font-size: 14px; line-height: 19px; font-weight: 700; overflow-wrap: anywhere; }
+.prompt-q { flex: 1; min-inline-size: 0; margin: 0; font-size: 14px; line-height: 20px; overflow-wrap: anywhere; }
+.prompt-domain { font-weight: 700; }
 .prompt-close {
   display: grid; place-items: center; flex: none; width: 24px; height: 24px; margin: 0; padding: 0;
   border: 0; border-radius: 2px; background: none; color: var(--neutral-400); cursor: pointer;

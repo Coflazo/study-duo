@@ -1,9 +1,9 @@
 import { mount } from 'svelte';
+import '@/ui/fonts.css';
+import '@/ui/tokens.css';
+import '@/ui/base.css';
+import { followAppearance } from '@/ui/theme';
 import App from './App.svelte';
-import './app.css';
 
-const app = mount(App, {
-  target: document.getElementById('app')!,
-});
-
-export default app;
+void followAppearance();
+mount(App, { target: document.getElementById('app')! });

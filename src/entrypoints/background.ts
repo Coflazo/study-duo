@@ -2,7 +2,8 @@ import { ALARM_PHASE_END, ALARM_REFRESH, applyEffects } from '@/background/effec
 import { createTimerService } from '@/background/timer-service';
 import { allowedFromSender, isFromWebPage, parseMessage, parseSiteMessage, resolveSiteRequest } from '@/core/messages';
 import { createSiteMenu, handleSiteRequest, onSiteMenuClick } from '@/background/site-requests';
-import { loadSettings, loadState, settingsItem, sitesItem, timerItem } from '@/core/store';
+import { loadSettings, loadState, musicSeededItem, settingsItem, sitesItem, timerItem } from '@/core/store';
+import { normalizeSites, seedMusicSites } from '@/core/sites';
 import { unlockedItem } from '@/background/site-lock';
 
 export default defineBackground(() => {
@@ -35,6 +36,21 @@ export default defineBackground(() => {
   browser.runtime.onStartup.addListener(tick);
   browser.runtime.onInstalled.addListener(tick);
   browser.runtime.onInstalled.addListener(() => void createSiteMenu().catch(console.error));
+  browser.runtime.onInstalled.addListener(() => void afterInstall().catch(console.error));
+
+  async function afterInstall() {
+    // Music players stay open during study blocks, once; a site the user removes later stays removed.
+    if (!(await musicSeededItem.getValue())) {
+      await sitesItem.setValue(seedMusicSites(normalizeSites(await sitesItem.getValue())));
+      await musicSeededItem.setValue(true);
+    }
+    // Chrome adds content scripts only to pages loaded after an install or update; give open tabs the clock now.
+    if (import.meta.env.BROWSER === 'firefox') return; // Firefox already does
+    const tabs = await browser.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+    await Promise.all(
+      tabs.map((t) => t.id === undefined ? undefined : browser.scripting.executeScript({ target: { tabId: t.id }, files: ['/content-scripts/overlay.js'] }).catch(() => undefined)),
+    );
+  }
 
   browser.commands.onCommand.addListener((command) => {
     if (command === 'toggle-timer') void timer.dispatch({ type: 'toggle' }).catch(console.error);

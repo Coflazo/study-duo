@@ -8,6 +8,8 @@ const CHROMIUM_PUBLIC_KEY =
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
+  // A visible folder: Finder and Chrome's Load unpacked window hide dot-folders like the default .output.
+  outDir: 'build',
   srcDir: 'src',
   manifestVersion: 3,
   modules: ['@wxt-dev/module-svelte'],
@@ -30,6 +32,7 @@ export default defineConfig({
       'idle',
       'declarativeNetRequestWithHostAccess',
       'contextMenus',
+      'scripting',
       ...(browser === 'firefox' ? [] : ['offscreen']),
     ],
     // Redirects and reading an open tab's address need host access; the corner clock already asks for every site.

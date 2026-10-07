@@ -25,3 +25,6 @@ export const lastFocusDayItem = storage.defineItem<string | null>('local:lastFoc
 export const sitesItem = storage.defineItem<Sites>('local:sites', { fallback: {} });
 /** Domains whose "is this for studying?" prompt was answered or closed. */
 export const promptDismissedItem = storage.defineItem<string[]>('local:sitePromptDismissed', { fallback: [] });
+
+/** Set once the music players have been filed as Not blocked, so removing one later is respected. */
+export const musicSeededItem = storage.defineItem<boolean>('local:musicSitesSeeded', { fallback: false });
