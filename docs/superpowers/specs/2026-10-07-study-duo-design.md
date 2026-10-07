@@ -278,6 +278,18 @@ Numbers come from a benchmark harness (`bench/`, Playwright + CDP, fixed page se
 - "how smart": on simulated students, how many sessions until the model finds each student's true best hours and music, and its forecast error versus a plain average (labeled as simulated); real figures from your own data added only if you agree.
 Competitors appear by name only, no logos. Every number in the video traces to a file in `bench/results/`.
 
+## Design system v0.1 (Figma, built 2026-10-07)
+
+File: https://www.figma.com/design/mswojkCHnwTQOvOcsn3vO5 . Direction: Exam Hall and Platform Clock (impeccable roll, seed 00f48c89; contract in `.impeccable/surfaces/`).
+
+- Tokens: 6 collections, 76 variables (Primitives, Color Light/Dark, Spacing, Radius, Type, Motion), all scoped, all with `var(--...)` code syntax. Signal red focus, signal green break, amber LED only inside segment displays, graphite and enamel neutrals. Every text pair WCAG AA.
+- Type: Atkinson Hyperlegible Next (signs, UI) and Atkinson Hyperlegible Mono (times), SIL OFL. 9 text styles.
+- Components: Phosphor icons (18), LED digit, colon and board, phase plate (state by form: solid running, dashed paused, hollow stopped), sign button, timetable row, to-do row, rating key, corner clock capsule, announcement, toggle, segmented control, heat cell (uncertain data drawn as a small dot).
+- Screens: popup (ready, focus, break, rating, dark), page with corner clock and phase words, blocked page, dashboard Today, Insights, Settings, empty and input states.
+- Decisions from Cagan: phase words over the page are plain text, no background plate (a soft canvas-coloured halo keeps them readable on any site).
+- Build rulings: no strike-through on disabled buttons (Figma text properties sync decoration across variants; disabled stays muted); per-variant announcement lines; heat brightness on the node.
+- DESIGN.md is written when the popup and dashboard exist in code (S5), from the built world.
+
 ## Repo & tooling
 
 `Coflazo/study-duo`, public, MIT. Commits as Coflazo (git config already correct). Layout:
