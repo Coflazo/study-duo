@@ -3,6 +3,15 @@ export type OverlayCorner = 'top-right' | 'bottom-right';
 /** During study blocks: close Blocked sites, or close everything except Study and Not blocked sites. */
 export type SiteMode = 'closeBlocked' | 'allowOnlyStudy';
 export type Appearance = 'system' | 'light' | 'dark';
+/** One switch per thing Study Duo measures (Settings > What Study Duo measures). Input counting is off until turned on. */
+export interface Measure {
+  sites: boolean;
+  blocked: boolean;
+  outcome: boolean;
+  away: boolean;
+  music: boolean;
+  input: boolean;
+}
 
 export interface TimerSettings {
   mode: TimerMode;
@@ -29,6 +38,9 @@ export interface TimerSettings {
   appearance: Appearance;
   /** Study blocks per day, shown as "3 of 8 blocks". Never a streak. */
   dailyGoal: number;
+  measure: Measure;
+  /** Days of history kept before it is deleted. */
+  retentionDays: number;
 }
 
 export const DEFAULT_SETTINGS: TimerSettings = {
@@ -48,6 +60,8 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   hardLock: false,
   appearance: 'system',
   dailyGoal: 8,
+  measure: { sites: true, blocked: true, outcome: true, away: true, music: true, input: false },
+  retentionDays: 365,
 };
 
 function num(v: unknown, min: number, max: number, fallback: number): number {
@@ -56,6 +70,11 @@ function num(v: unknown, min: number, max: number, fallback: number): number {
 
 function bool(v: unknown, fallback: boolean): boolean {
   return typeof v === 'boolean' ? v : fallback;
+}
+
+function measure(v: unknown, d: Measure): Measure {
+  const r = (v !== null && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  return { sites: bool(r.sites, d.sites), blocked: bool(r.blocked, d.blocked), outcome: bool(r.outcome, d.outcome), away: bool(r.away, d.away), music: bool(r.music, d.music), input: bool(r.input, d.input) };
 }
 
 /** Settings can come from storage or an import file, so treat them as untrusted. */
@@ -79,5 +98,7 @@ export function normalizeSettings(raw: unknown): TimerSettings {
     hardLock: bool(r.hardLock, d.hardLock),
     appearance: r.appearance === 'light' || r.appearance === 'dark' ? r.appearance : 'system',
     dailyGoal: Math.round(num(r.dailyGoal, 1, 24, d.dailyGoal)),
+    measure: measure(r.measure, d.measure),
+    retentionDays: Math.round(num(r.retentionDays, 30, 3650, d.retentionDays)),
   };
 }
