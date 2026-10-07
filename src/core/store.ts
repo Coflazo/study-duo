@@ -1,6 +1,7 @@
 import { storage } from 'wxt/utils/storage';
 import { DEFAULT_SETTINGS, normalizeSettings, type TimerSettings } from './settings';
 import type { Bag } from './phrases';
+import type { Sites } from './sites';
 import { initialState, type TimerState } from './timer';
 
 export const settingsItem = storage.defineItem<TimerSettings>('local:settings', { fallback: DEFAULT_SETTINGS });
@@ -19,3 +20,8 @@ export async function loadState(): Promise<TimerState> {
 export const phraseBagItem = storage.defineItem<Bag>('local:phraseBag', { fallback: {} });
 /** Local date (Date.toDateString) of the last study-block announcement, for the first-block-of-the-day greeting. */
 export const lastFocusDayItem = storage.defineItem<string | null>('local:lastFocusDay', { fallback: null });
+
+/** Filed sites. Read by the background and extension pages; web pages only ever learn their own site's category. */
+export const sitesItem = storage.defineItem<Sites>('local:sites', { fallback: {} });
+/** Domains whose "is this for studying?" prompt was answered or closed. */
+export const promptDismissedItem = storage.defineItem<string[]>('local:sitePromptDismissed', { fallback: [] });

@@ -1,5 +1,7 @@
 export type TimerMode = 'pomodoro' | 'flowtime';
 export type OverlayCorner = 'top-right' | 'bottom-right';
+/** During study blocks: close Blocked sites, or close everything except Study and Not blocked sites. */
+export type SiteMode = 'closeBlocked' | 'allowOnlyStudy';
 
 export interface TimerSettings {
   mode: TimerMode;
@@ -19,6 +21,9 @@ export interface TimerSettings {
   /** The clock in the corner of every page. */
   overlayEnabled: boolean;
   overlayCorner: OverlayCorner;
+  siteMode: SiteMode;
+  /** No "Open anyway" on the blocked page. */
+  hardLock: boolean;
 }
 
 export const DEFAULT_SETTINGS: TimerSettings = {
@@ -34,6 +39,8 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   bellVolume: 0.6,
   overlayEnabled: true,
   overlayCorner: 'top-right',
+  siteMode: 'closeBlocked',
+  hardLock: false,
 };
 
 function num(v: unknown, min: number, max: number, fallback: number): number {
@@ -61,5 +68,7 @@ export function normalizeSettings(raw: unknown): TimerSettings {
     bellVolume: num(r.bellVolume, 0, 1, d.bellVolume),
     overlayEnabled: bool(r.overlayEnabled, d.overlayEnabled),
     overlayCorner: r.overlayCorner === 'bottom-right' ? 'bottom-right' : 'top-right',
+    siteMode: r.siteMode === 'allowOnlyStudy' ? 'allowOnlyStudy' : 'closeBlocked',
+    hardLock: bool(r.hardLock, d.hardLock),
   };
 }
