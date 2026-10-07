@@ -99,3 +99,18 @@ export async function launchBare(): Promise<{ browser: Browser; ctx: BrowserCont
   };
 }
 
+/** Every row of one event-log store (IndexedDB study-duo), read inside the extension. */
+export function readStore(sw: Worker, store: 'sessions' | 'listens' | 'activity' | 'blocks'): Promise<any[]> {
+  return sw.evaluate((store) => new Promise<any[]>((resolve, reject) => {
+    const req = indexedDB.open('study-duo');
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(store)) return db.close(), resolve([]);
+      const all = db.transaction(store).objectStore(store).getAll();
+      all.onsuccess = () => (db.close(), resolve(all.result));
+      all.onerror = () => (db.close(), reject(all.error));
+    };
+  }), store);
+}
+

@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext, type CDPSession, type Page, type Worker } from '@playwright/test';
 import fs from 'node:fs';
-import { EXT_ID, launch, tempProfile } from './extension';
+import { EXT_ID, launch, tempProfile, readStore } from './extension';
 
 declare const chrome: any;
 
@@ -187,6 +187,10 @@ test('Open anyway waits 10 seconds and a reason, lasts for this block only, and 
   await p.getByLabel('Why open video.study-duo.test now?').fill('lecture clip for the exam');
   await confirm.click();
   await expect.poll(() => p.url(), { timeout: 10_000 }).toBe('https://video.study-duo.test/clip');
+  // One attempt, marked unlocked with a reason given; the reason itself is never kept.
+  const attempts = await readStore(sw, 'blocks');
+  expect(attempts).toEqual([{ id: expect.stringMatching(/-video\.study-duo\.test$/), at: expect.any(Number), domain: 'video.study-duo.test', unlocked: true, reasonGiven: true }]);
+  expect(JSON.stringify(attempts)).not.toContain('lecture clip');
 
   // Pause keeps the lock; the unlock still holds inside this block.
   const popup = await ctx.newPage();
