@@ -1,6 +1,6 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/banner-dark.png">
-  <img alt="Study Duo. A study timer that lives in your browser. Offline, free, no account." src="docs/media/banner-light.png" width="100%">
+  <img alt="Study Duo. The corner clock reads 25:00 beside the words Study time. A study timer that lives in your browser." src="docs/media/banner-light.png" width="100%">
 </picture>
 
 A free study timer that lives in your browser.

@@ -1,5 +1,5 @@
 import { capsuleText } from '@/core/capsule';
-import { parseAnnounce } from '@/core/messages';
+import { isPing, parseAnnounce } from '@/core/messages';
 import { DEFAULT_SETTINGS, normalizeSettings } from '@/core/settings';
 import { settingsItem, timerItem } from '@/core/store';
 import { displayMs, initialState, isBreak } from '@/core/timer';
@@ -8,9 +8,12 @@ import { createClock } from '@/overlay/clock';
 import { createSitePrompt } from '@/overlay/site-prompt';
 import type { SiteStatus } from '@/background/site-requests';
 import { isNear } from '@/overlay/proximity';
+import { dropPos, placement } from '@/overlay/position';
 import { CSS, ensureFont } from '@/overlay/styles';
 
 const FRESH_MS = 4_000;
+/** The site prompt sits this far from the clock's edge: clock height plus an 8 px gap. */
+const PROMPT_GAP = 53;
 
 /** Inline !important beats any page rule, including `* { all: unset !important }`. */
 const HOST_STYLE: Array<[string, string]> = [
@@ -54,10 +57,15 @@ export default defineContentScript({
       browser.runtime.sendMessage(category ? { kind: 'site', op: 'file', category } : { kind: 'site', op: 'dismiss' }).catch(() => undefined);
     });
     root.append(clock.el, prompt.el, words.el);
+    // A copy left from before an extension reload or update can no longer hear the extension and would show a
+    // stale time under this one. The background adds this copy only when no clock answered, so the old one goes.
+    document.querySelectorAll('study-duo-overlay').forEach((old) => old.remove());
     document.documentElement.append(host);
 
     const life = new AbortController();
     const on = { capture: true, passive: true, signal: life.signal };
+    let next: ReturnType<typeof setTimeout> | undefined;
+    let freshTimer: ReturnType<typeof setTimeout> | undefined;
     /** After an extension reload or update this copy is orphaned: runtime.id disappears. */
     const alive = () => !life.signal.aborted && browser.runtime?.id !== undefined;
     function teardown() {
@@ -67,17 +75,33 @@ export default defineContentScript({
       host.remove();
     }
 
-    let state = await timerItem.getValue();
-    let settings = normalizeSettings(await settingsItem.getValue());
+    // Answer "is there a working clock here?" before anything slow, so the background never adds a second one.
+    const onMessage = (raw: unknown, sender: { id?: string }, sendResponse: (answer: boolean) => void) => {
+      if (sender.id !== browser.runtime.id) return;
+      if (isPing(raw)) return void sendResponse(alive());
+      const msg = parseAnnounce(raw);
+      if (!msg) return;
+      if (!alive()) return teardown();
+      if (!host.isConnected) document.documentElement.append(host);
+      const canShow = document.visibilityState === 'visible' && !document.fullscreenElement;
+      if (canShow) words.show(msg);
+      sendResponse(canShow);
+    };
+    browser.runtime.onMessage.addListener(onMessage);
+    life.signal.addEventListener('abort', () => browser.runtime.onMessage?.removeListener(onMessage));
+
+    // Filled in after the watchers below are in place, so no change between reading and watching is lost.
+    let state = initialState();
+    let settings = DEFAULT_SETTINGS;
+    let heardTimer = false;
+    let heardSettings = false;
     let closed = false;
     let near = false;
-    let next: ReturnType<typeof setTimeout> | undefined;
     let tickedFor: number | null = null;
     // The site prompt: asked once per page load, shown for unfiled sites during a running block.
     let site: SiteStatus | null = null;
     let asked = false;
     let promptDone = false;
-    let freshTimer: ReturnType<typeof setTimeout> | undefined;
 
     const showing = () => !closed && settings.overlayEnabled && state.status !== 'stopped' && !document.fullscreenElement;
 
@@ -91,7 +115,8 @@ export default defineContentScript({
       if (clock.el.hidden) return;
       clock.el.dataset.phase = isBreak(state.phase) ? 'break' : 'focus';
       clock.el.dataset.status = state.status;
-      clock.el.dataset.corner = settings.overlayCorner;
+      if (!dragging) Object.assign(clock.el.style, placement(settings.overlayPos));
+      clock.el.dataset.idle = settings.overlayIdle;
       // Full brightness for the first seconds of a block so it gets noticed, then as quiet as the user asked.
       clock.el.toggleAttribute('data-fresh', state.status === 'running' && state.startedAt !== null && Date.now() - state.startedAt < FRESH_MS);
       const now = Date.now();
@@ -122,9 +147,10 @@ export default defineContentScript({
       }
       const ask = running && !promptDone && site !== null && site.category === null && !site.dismissed && site.mode === 'closeBlocked';
       if (!ask) return prompt.hide();
+      const pos = settings.overlayPos;
+      Object.assign(prompt.el.style, placement({ ...pos, y: pos.y + PROMPT_GAP })); // below the clock, or above it near the bottom
       if (prompt.el.hidden) {
         ensureFont();
-        prompt.el.dataset.corner = settings.overlayCorner;
         prompt.show(site!.domain);
         // Bright for a moment so it gets noticed, then as quiet as the clock.
         prompt.el.toggleAttribute('data-fresh', true);
@@ -133,7 +159,7 @@ export default defineContentScript({
     }
 
     function setNear(value: boolean) {
-      if (value === near) return;
+      if (value === near || (dragging && !value)) return;
       near = value;
       clock.el.toggleAttribute('data-near', near);
       prompt.el.toggleAttribute('data-near', near);
@@ -154,6 +180,39 @@ export default defineContentScript({
       if (!e.relatedTarget) setNear(false);
     }, on);
 
+    // Drag: the clock follows the pointer from where it was grabbed. On drop the spot is saved for every tab,
+    // measured from the nearest window edges. Only reachable when near, since the body is click-through otherwise.
+    let dragging = false;
+    let grab: { id: number; dx: number; dy: number; moved: boolean } | null = null;
+    clock.el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || clock.close.contains(e.target as Node)) return;
+      const r = clock.el.getBoundingClientRect();
+      grab = { id: e.pointerId, dx: e.clientX - r.left, dy: e.clientY - r.top, moved: false };
+      clock.el.setPointerCapture(e.pointerId);
+      e.preventDefault(); // no text selection or page drag under the clock
+    }, { signal: life.signal });
+    clock.el.addEventListener('pointermove', (e) => {
+      if (!grab || e.pointerId !== grab.id) return;
+      grab.moved = dragging = true;
+      clock.el.toggleAttribute('data-dragging', true);
+      const left = Math.min(Math.max(e.clientX - grab.dx, 0), innerWidth - clock.el.offsetWidth);
+      const top = Math.min(Math.max(e.clientY - grab.dy, 0), innerHeight - clock.el.offsetHeight);
+      Object.assign(clock.el.style, { left: `${left}px`, top: `${top}px`, right: 'auto', bottom: 'auto' });
+    }, { signal: life.signal });
+    const drop = (e: PointerEvent) => {
+      if (!grab || e.pointerId !== grab.id) return;
+      const moved = grab.moved;
+      grab = null;
+      dragging = false;
+      clock.el.removeAttribute('data-dragging');
+      if (!moved) return;
+      const pos = dropPos(clock.el.getBoundingClientRect(), innerWidth, innerHeight);
+      settings = { ...settings, overlayPos: pos }; // this tab at once; the others when the background saves it
+      render();
+      browser.runtime.sendMessage({ kind: 'overlay', op: 'move', pos }).catch(() => undefined);
+    };
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) clock.el.addEventListener(type, drop, { signal: life.signal });
+
     clock.close.addEventListener('click', (e) => {
       e.stopPropagation();
       closed = true;
@@ -165,29 +224,21 @@ export default defineContentScript({
     document.addEventListener('fullscreenchange', render, { signal: life.signal });
     const unwatch = [
       timerItem.watch((v) => {
+        heardTimer = true;
         state = v ?? initialState();
         asked = false; // the lock or the mode may have changed with the phase
         render();
       }),
       settingsItem.watch((v) => {
+        heardSettings = true;
         settings = normalizeSettings(v ?? DEFAULT_SETTINGS);
         render();
       }),
     ];
     life.signal.addEventListener('abort', () => unwatch.forEach((u) => u()));
-
-    const onMessage = (raw: unknown, sender: { id?: string }, sendResponse: (shown: boolean) => void) => {
-      if (sender.id !== browser.runtime.id) return;
-      const msg = parseAnnounce(raw);
-      if (!msg) return;
-      if (!alive()) return teardown();
-      if (!host.isConnected) document.documentElement.append(host);
-      const canShow = document.visibilityState === 'visible' && !document.fullscreenElement;
-      if (canShow) words.show(msg);
-      sendResponse(canShow);
-    };
-    browser.runtime.onMessage.addListener(onMessage);
-    life.signal.addEventListener('abort', () => browser.runtime.onMessage?.removeListener(onMessage));
+    const [storedTimer, storedSettings] = await Promise.all([timerItem.getValue(), settingsItem.getValue()]);
+    if (!heardTimer) state = storedTimer;
+    if (!heardSettings) settings = normalizeSettings(storedSettings);
 
     render();
   },

@@ -1,10 +1,12 @@
 import { ALARM_PHASE_END, ALARM_REFRESH, applyEffects } from '@/background/effects';
 import { createTimerService } from '@/background/timer-service';
-import { allowedFromSender, isFromWebPage, parseMessage, parseSiteMessage, resolveSiteRequest } from '@/core/messages';
+import { allowedFromSender, isFromWebPage, parseMessage, parseMove, parseSiteMessage, resolveSiteRequest } from '@/core/messages';
+import { normalizeSettings } from '@/core/settings';
 import { createSiteMenu, handleSiteRequest, onSiteMenuClick } from '@/background/site-requests';
 import { loadSettings, loadState, musicSeededItem, settingsItem, sitesItem, timerItem } from '@/core/store';
 import { normalizeSites, seedMusicSites } from '@/core/sites';
 import { unlockedItem } from '@/background/site-lock';
+import { ensureOverlay, keepClocksOnOpenTabs } from '@/background/overlay-inject';
 
 export default defineBackground(() => {
   const timer = createTimerService({
@@ -21,6 +23,8 @@ export default defineBackground(() => {
     const base = browser.runtime.getURL('/');
     const msg = parseMessage(raw);
     if (msg && allowedFromSender(msg, isFromWebPage(sender.url, base))) void timer.dispatch(msg.event).catch(console.error);
+    const pos = parseMove(raw);
+    if (pos) void settingsItem.getValue().then((v) => settingsItem.setValue({ ...normalizeSettings(v), overlayPos: pos })).catch(console.error);
     const site = parseSiteMessage(raw);
     const req = site && resolveSiteRequest(site, sender.url, base);
     if (!req) return;
@@ -47,10 +51,9 @@ export default defineBackground(() => {
     // Chrome adds content scripts only to pages loaded after an install or update; give open tabs the clock now.
     if (import.meta.env.BROWSER === 'firefox') return; // Firefox already does
     const tabs = await browser.tabs.query({ url: ['http://*/*', 'https://*/*'] });
-    await Promise.all(
-      tabs.map((t) => t.id === undefined ? undefined : browser.scripting.executeScript({ target: { tabId: t.id }, files: ['/content-scripts/overlay.js'] }).catch(() => undefined)),
-    );
+    await Promise.all(tabs.map((t) => (t.id === undefined ? undefined : ensureOverlay(t.id))));
   }
+  keepClocksOnOpenTabs();
 
   browser.commands.onCommand.addListener((command) => {
     if (command === 'toggle-timer') void timer.dispatch({ type: 'toggle' }).catch(console.error);

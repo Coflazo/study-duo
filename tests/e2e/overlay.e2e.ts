@@ -1,7 +1,8 @@
-import { expect, test, type CDPSession, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import phrases from '../../src/locales/en/phrases.json' with { type: 'json' };
 import { EXT_ID, launch, tempProfile } from './extension';
+import { shadow } from './shadow';
 
 declare const chrome: any;
 
@@ -10,40 +11,6 @@ declare const chrome: any;
 const HOSTILE = `<!doctype html><html><head><style>* { all: unset !important; }</style></head><body>
 <button id="under" style="display:block!important;position:fixed!important;top:0!important;right:0!important;width:260px!important;height:120px!important">under the clock</button>
 </body></html>`;
-
-/** The overlay lives in a closed shadow root; DevTools protocol can still see it. */
-async function shadow(page: Page) {
-  const cdp: CDPSession = await page.context().newCDPSession(page);
-  await cdp.send('DOM.enable');
-  await cdp.send('CSS.enable');
-  const find = async (cls: string): Promise<number | null> => {
-    const { root } = await cdp.send('DOM.getDocument', { depth: -1, pierce: true });
-    const stack: any[] = [root];
-    while (stack.length) {
-      const n = stack.pop();
-      const attrs: string[] = n.attributes ?? [];
-      const i = attrs.indexOf('class');
-      if (i >= 0 && attrs[i + 1]!.split(' ').includes(cls)) return n.nodeId;
-      stack.push(...(n.children ?? []), ...(n.shadowRoots ?? []));
-    }
-    return null;
-  };
-  const call = async (cls: string, fn: string) => {
-    const nodeId = await find(cls);
-    if (nodeId === null) return null;
-    const { object } = await cdp.send('DOM.resolveNode', { nodeId });
-    const { result } = await cdp.send('Runtime.callFunctionOn', { objectId: object.objectId!, functionDeclaration: fn, returnByValue: true });
-    return result.value;
-  };
-  return {
-    style: (cls: string) =>
-      call(cls, 'function () { const s = getComputedStyle(this); return { opacity: s.opacity, pointerEvents: s.pointerEvents, display: s.display }; }'),
-    rect: (cls: string) => call(cls, 'function () { const r = this.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }'),
-    text: (cls: string) => call(cls, 'function () { return this.textContent; }'),
-    prop: (cls: string, js: string) => call(cls, `function () { return ${js}; }`),
-    color: (cls: string) => call(cls, 'function () { return getComputedStyle(this).color; }'),
-  };
-}
 
 test('corner clock and phase words survive a hostile page and never touch the network', async () => {
   const profile = tempProfile();
@@ -78,7 +45,7 @@ test('corner clock and phase words survive a hostile page and never touch the ne
 
   // Bright for the first seconds of the block, then dim, click-through, 16 px from the top right corner.
   await expect.poll(async () => (await dom.style('clock'))?.opacity).toBe('1');
-  await expect.poll(() => dom.style('clock'), { timeout: 8_000 }).toEqual({ opacity: '0.15', pointerEvents: 'none', display: 'flex' });
+  await expect.poll(() => dom.style('clock'), { timeout: 8_000 }).toEqual({ opacity: '0.4', pointerEvents: 'none', display: 'flex' });
   const box = (await dom.rect('clock'))!;
   expect(Math.round(1280 - (box.x + box.w))).toBe(16);
   expect(Math.round(box.y)).toBe(16);
@@ -88,15 +55,17 @@ test('corner clock and phase words survive a hostile page and never touch the ne
     document.querySelector('study-duo-overlay')!.remove();
     document.dispatchEvent(new CustomEvent(`${id}:overlay:wxt:content-script-started`, { detail: { contentScriptName: 'overlay', messageId: 'spoof' } }));
   }, EXT_ID);
-  await expect.poll(() => dom.style('clock'), { timeout: 4_000 }).toEqual({ opacity: '0.15', pointerEvents: 'none', display: 'flex' });
+  await expect.poll(() => dom.style('clock'), { timeout: 4_000 }).toEqual({ opacity: '0.4', pointerEvents: 'none', display: 'flex' });
   // The clock is aria-hidden, so its close button must stay out of the keyboard order.
   expect(await dom.prop('close', 'this.tabIndex')).toBe(-1);
 
-  // The cursor 10 px away brings it up; a click on its body still reaches the page beneath.
+  // The cursor 10 px away brings it up and makes it grabbable (it drags; see drag.e2e.ts), so a click on
+  // its body stays with the clock. Away from the cursor it never takes a click.
   await page.mouse.move(box.x - 10, box.y + box.h / 2);
   await expect.poll(async () => (await dom.style('clock'))!.opacity).toBe('1');
+  expect((await dom.style('clock'))!.pointerEvents).toBe('auto');
   await page.mouse.click(box.x + 20, box.y + box.h / 2);
-  expect(await page.evaluate(() => (window as any).clicks)).toBe(1);
+  expect(await page.evaluate(() => (window as any).clicks ?? 0)).toBe(0);
 
   // The words follow the system theme live: dark mode switches to the lighter break green.
   await page.emulateMedia({ colorScheme: 'dark' });
@@ -124,7 +93,7 @@ test('corner clock and phase words survive a hostile page and never touch the ne
   const close = (await dom.rect('close'))!;
   await page.mouse.click(close.x + close.w / 2, close.y + close.h / 2);
   await expect.poll(async () => (await dom.style('clock'))!.display).toBe('none');
-  expect(await page.evaluate(() => (window as any).clicks)).toBe(1);
+  expect(await page.evaluate(() => (window as any).clicks ?? 0)).toBe(0);
 
   expect(offHost).toEqual([]);
   await ctx.close();

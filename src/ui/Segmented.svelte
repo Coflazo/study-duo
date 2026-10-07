@@ -1,6 +1,7 @@
 <script lang="ts" generics="T extends string">
-  /** Figma Control/Segmented: two or three options as a radio group; the selected one is an ink plate. Arrow keys move the choice. */
-  let { options, value, label, onchange, disabled = [] }: { options: Array<[T, string]>; value: T; label: string; onchange: (v: T) => void; disabled?: T[] } = $props();
+  /** Figma Control/Segmented: two or three options as a radio group; the selected one is an ink plate. Arrow keys move the choice.
+   * With no option selected (a value set elsewhere), the first option takes the tab stop. */
+  let { options, value, label, onchange, disabled = [] }: { options: Array<[T, string]>; value: T | null; label: string; onchange: (v: T) => void; disabled?: T[] } = $props();
 
   function key(e: KeyboardEvent, i: number) {
     const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
@@ -15,7 +16,7 @@
 
 <div class="segmented" role="radiogroup" aria-label={label}>
   {#each options as [v, text], i (v)}
-    <button type="button" role="radio" aria-checked={value === v} tabindex={value === v ? 0 : -1} data-value={v} disabled={disabled.includes(v)} onclick={() => onchange(v)} onkeydown={(e) => key(e, i)}>{text}</button>
+    <button type="button" role="radio" aria-checked={value === v} tabindex={value === v || (i === 0 && !options.some(([o]) => o === value)) ? 0 : -1} data-value={v} disabled={disabled.includes(v)} onclick={() => onchange(v)} onkeydown={(e) => key(e, i)}>{text}</button>
   {/each}
 </div>
 

@@ -22,6 +22,7 @@
   const timer = $derived(live.timer);
   const settings = $derived(live.settings);
   let chosen = $state<string>('');
+  let defaulted = $state(false);
   let site = $state<string | null>(null);
   let sites = $state<Sites>({});
 
@@ -37,8 +38,10 @@
   onMount(async () => {
     unwatchSites = sitesItem.watch((v) => (sites = normalizeSites(v)));
     stop = await data.start();
-    sites = normalizeSites(await sitesItem.getValue());
+    // The picker appears only once its default is set, so the default never lands on top of a choice.
     chosen = defaultTask(open, live.timer);
+    defaulted = true;
+    sites = normalizeSites(await sitesItem.getValue());
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
     site = siteOf(tab?.url);
   });
@@ -57,7 +60,7 @@
 <main>
   <PhasePlate phase={timer.phase} status={timer.status} note={plateNote(timer, settings)} />
 
-  {#if timer.status === 'stopped' && timer.phase === 'focus' && open.length > 0}
+  {#if defaulted && timer.status === 'stopped' && timer.phase === 'focus' && open.length > 0}
     <label class="field">
       <span>Work on</span>
       <select bind:value={chosen}>

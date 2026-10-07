@@ -32,14 +32,18 @@ export function ensureFont(): void {
 
 export const CSS = `${hostTokens}
 .clock {
-  position: fixed; top: 16px; right: 16px; box-sizing: border-box;
+  --w: 160px; --h: 46px; /* its largest size (close button showing); keeps it inside the window */
+  position: fixed; top: 16px; right: 16px; box-sizing: border-box; touch-action: none;
   display: flex; align-items: center; gap: 8px; padding: 8px 10px;
   background: var(--color-bg-board); border-radius: 4px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
   direction: ltr; opacity: 0.15; pointer-events: none; transition: opacity 180ms ease;
 }
 .clock[hidden] { display: none; }
-.clock[data-corner="bottom-right"] { top: auto; bottom: 16px; }
-.clock[data-near] { opacity: 1; padding-right: 6px; }
+.clock[data-idle="soft"] { opacity: 0.4; }
+.clock[data-idle="full"] { opacity: 1; }
+.clock[data-near] { opacity: 1; padding-right: 6px; pointer-events: auto; cursor: grab; }
+/* Picked up: lifted, and it follows the pointer with no easing (the drag itself is the motion). */
+.clock[data-dragging] { opacity: 1; cursor: grabbing; box-shadow: 0 6px 16px rgb(0 0 0 / 0.3); transition: none; }
 .clock[data-fresh] { opacity: 1; }
 .lamp { flex: none; width: 6px; height: 6px; background: var(--color-bg-plate-focus); }
 .clock[data-phase="break"] .lamp { background: var(--color-bg-plate-break); }
@@ -52,7 +56,7 @@ export const CSS = `${hostTokens}
   display: none; place-items: center; width: 24px; height: 24px; margin: 0; padding: 0;
   border: 0; border-radius: 2px; background: none; color: var(--color-text-led); cursor: pointer;
 }
-/* Only the close button ever takes clicks; the clock body lets them through to the page, near or not. */
+/* Away from the pointer the clock lets every click through to the page; near it, the body drags and the button closes. */
 .clock[data-near] .close { display: grid; pointer-events: auto; }
 .close:hover { background: rgb(255 255 255 / 0.08); }
 .close:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
@@ -80,6 +84,7 @@ export const CSS = `${hostTokens}
 }
 
 .prompt {
+  --w: min(320px, calc(100vw - 32px)); --h: 96px;
   position: fixed; top: 69px; right: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px;
   max-inline-size: min(320px, calc(100vw - 32px)); padding: 10px 8px 10px 12px; direction: ltr;
   background: var(--color-bg-board); border-radius: 4px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
@@ -87,7 +92,6 @@ export const CSS = `${hostTokens}
   opacity: 0.15; pointer-events: none; transition: opacity 180ms ease;
 }
 .prompt[hidden] { display: none; }
-.prompt[data-corner="bottom-right"] { top: auto; bottom: 69px; }
 .prompt[data-near], .prompt[data-fresh] { opacity: 1; }
 .prompt[data-near] { pointer-events: auto; }
 .prompt-head { display: flex; align-items: center; gap: 8px; }

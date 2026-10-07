@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
-import { EXT_ID, launch, tempProfile } from './extension';
+import { EXT_ID, launch, tempProfile, holdSessionLog } from './extension';
 
 declare const chrome: any;
 
@@ -22,9 +22,13 @@ test('dashboard: Today runs the timer, shows the plan, and navigates by keyboard
   await expect(p.getByRole('heading', { name: 'To-do' })).toBeVisible();
   await expect(p.getByText('1 left today')).toBeVisible();
 
-  // "No task" stays chosen; the default is set once, not forced back.
+  // "No task" stays chosen, even when the session log loads slowly: the default never lands on top of a choice.
+  const held = holdSessionLog(sw, 2_000);
+  await p.waitForTimeout(100); // the hold is in place before the page asks
+  await p.reload();
   await p.getByLabel('Work on').selectOption('');
-  await p.waitForTimeout(400);
+  await held;
+  await p.waitForTimeout(300);
   await expect(p.getByLabel('Work on')).toHaveValue('');
   await p.getByLabel('Work on').selectOption('t1');
   await p.getByRole('button', { name: 'Start' }).click();
