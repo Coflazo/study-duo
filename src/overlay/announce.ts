@@ -1,5 +1,5 @@
 import type { AnnounceMessage } from '@/core/messages';
-import { ICONS } from './icons';
+import { ICONS } from '@/ui/icons';
 import { ensureFont } from './styles';
 
 const ENTER = 400;
