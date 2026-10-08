@@ -31,14 +31,14 @@ Also: the minutes left on the toolbar icon, a bell and a short line in the middl
 
 Measured on 8 October 2026: each extension alone in a fresh browser, free version, default settings, no sign-in. [Full results and method](bench/results/2026-10-08.md).
 
-| | Download | Script added to every page | Outside servers contacted on install | Account needed to install |
-|---|---|---|---|---|
-| Study Duo 0.2.1 | 283 KB | 67 KB | 0 | No |
-| LeechBlock NG 1.7.3 | 425 KB | 5 KB | 0 | No |
-| Forest 6.5.0 | 14.2 MB | 309 KB | 0 | No |
-| BlockSite 7.1.1 | 18.8 MB | 6.7 MB | 56 | No |
+| | Download | Script added to every page | CPU per idle minute | Outside servers contacted on install | Account needed to install |
+|---|---|---|---|---|---|
+| Study Duo 0.2.1 | 283 KB | 67 KB | 0.11 s, block running | 0 | No |
+| LeechBlock NG 1.7.3 | 425 KB | 5 KB | 0.41 s | 0 | No |
+| Forest 6.5.0 | 14.2 MB | 309 KB | 0.11 s | 0 | No |
+| BlockSite 7.1.1 | 18.8 MB | 6.7 MB | 0.36 s | 56 | No |
 
-Study Duo is not the lightest on CPU: with a block running, its corner clock uses more than the others ([#41](https://github.com/Coflazo/study-duo/issues/41)).
+While a block runs, the dimmed corner clock shows minutes and wakes once a minute, which took Study Duo from 1.27 s to 0.11 s of CPU per idle minute ([#41](https://github.com/Coflazo/study-duo/issues/41), [results](bench/results/2026-10-08-clock-fix.md)). The other rows are measured idle.
 
 ## Get Study Duo
 
