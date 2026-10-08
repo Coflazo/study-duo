@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { recordsBetween } from '@/core/log';
 import { DEFAULT_SETTINGS } from '@/core/settings';
-import { listeningItem, timerItem } from '@/core/store';
+import { timerItem } from '@/core/store';
+import { listeningItem } from '@/core/session-store';
 import { initialState, reduce } from '@/core/timer';
 import { hearTab } from './music';
 

@@ -1,6 +1,7 @@
 import { localDayRange, sessionsBetween, type SessionRecord } from '@/core/sessions';
 import { DEFAULT_SETTINGS, normalizeSettings, type TimerSettings } from '@/core/settings';
-import { logVersionItem, settingsItem, timerItem } from '@/core/store';
+import { settingsItem, timerItem } from '@/core/store';
+import { logVersionItem } from '@/core/session-store';
 import { displayMs, initialState, type TimerEvent, type TimerState } from '@/core/timer';
 import { normalizeTodos, todosItem, type Todo } from '@/core/todos';
 

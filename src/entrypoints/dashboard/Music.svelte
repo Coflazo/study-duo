@@ -6,7 +6,7 @@
   import { foldListen, type OpenListen } from '@/core/music';
   import { NOISES, type NoiseKind } from '@/core/noise';
   import { localDayRange, sessionId } from '@/core/sessions';
-  import { listeningItem, soundItem } from '@/core/store';
+  import { listeningItem, soundItem } from '@/core/session-store';
   import { readTags, tagsOrName, type Tags } from '@/core/tags';
   import { clockTime } from '@/core/today-view';
   import type { createLive } from '@/ui/live.svelte';

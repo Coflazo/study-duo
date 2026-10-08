@@ -31,11 +31,12 @@ export function ensureFont(): void {
 }
 
 export const CSS = `${hostTokens}
+:host { --edge: 0 0 0 1px rgb(255 255 255 / 0.16); }
 .clock {
   --w: 160px; --h: 46px; /* its largest size (close button showing); keeps it inside the window */
   position: fixed; top: 16px; right: 16px; box-sizing: border-box; touch-action: none;
   display: flex; align-items: center; gap: 8px; padding: 8px 10px;
-  background: var(--color-bg-board); border-radius: 4px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+  background: var(--color-bg-board); border-radius: 4px; box-shadow: var(--edge), 0 2px 8px rgb(0 0 0 / 0.25); /* the light edge keeps it apart from dark pages */
   direction: ltr; opacity: 0.15; pointer-events: none; transition: opacity 180ms ease;
 }
 .clock[hidden] { display: none; }
@@ -43,7 +44,7 @@ export const CSS = `${hostTokens}
 .clock[data-idle="full"] { opacity: 1; }
 .clock[data-near] { opacity: 1; padding-right: 6px; pointer-events: auto; cursor: grab; }
 /* Picked up: lifted, and it follows the pointer with no easing (the drag itself is the motion). */
-.clock[data-dragging] { opacity: 1; cursor: grabbing; box-shadow: 0 6px 16px rgb(0 0 0 / 0.3); transition: none; }
+.clock[data-dragging] { opacity: 1; cursor: grabbing; box-shadow: var(--edge), 0 6px 16px rgb(0 0 0 / 0.3); transition: none; }
 .clock[data-fresh] { opacity: 1; }
 .lamp { flex: none; width: 6px; height: 6px; background: var(--color-bg-plate-focus); }
 .clock[data-phase="break"] .lamp { background: var(--color-bg-plate-break); }
@@ -87,7 +88,7 @@ export const CSS = `${hostTokens}
   --w: min(320px, calc(100vw - 32px)); --h: 96px;
   position: fixed; top: 69px; right: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px;
   max-inline-size: min(320px, calc(100vw - 32px)); padding: 10px 8px 10px 12px; direction: ltr;
-  background: var(--color-bg-board); border-radius: 4px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+  background: var(--color-bg-board); border-radius: 4px; box-shadow: var(--edge), 0 2px 8px rgb(0 0 0 / 0.25);
   font-family: '${FONT_FAMILY}', var(--font-family-ui); color: var(--neutral-50);
   opacity: 0.15; pointer-events: none; transition: opacity 180ms ease;
 }

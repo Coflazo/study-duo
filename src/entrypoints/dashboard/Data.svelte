@@ -4,7 +4,8 @@
   import type { StoreName } from '@/core/db';
   import { countAll, deleteAll, exportAll } from '@/core/log';
   import { normalizeSettings, type Measure, type TimerSettings } from '@/core/settings';
-  import { listeningItem, settingsItem, soundItem, trackerItem } from '@/core/store';
+  import { settingsItem } from '@/core/store';
+  import { listeningItem, soundItem, trackerItem } from '@/core/session-store';
   import type { createLive } from '@/ui/live.svelte';
   import NumberField from '@/ui/NumberField.svelte';
   import SignButton from '@/ui/SignButton.svelte';

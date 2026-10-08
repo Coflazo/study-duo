@@ -3,7 +3,8 @@ import { foldListen, isMusicHost, type NowPlaying } from '@/core/music';
 import { sessionId } from '@/core/sessions';
 import { normalizeSettings } from '@/core/settings';
 import { hostOf } from '@/core/sites';
-import { listeningItem, settingsItem, timerItem } from '@/core/store';
+import { settingsItem, timerItem } from '@/core/store';
+import { listeningItem } from '@/core/session-store';
 
 
 let queue: Promise<void> = Promise.resolve();

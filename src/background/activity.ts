@@ -2,7 +2,8 @@ import { track, type TrackerEvent } from '@/core/activity';
 import { addRecords } from '@/core/log';
 import { normalizeSettings } from '@/core/settings';
 import { hostOf, normalizeSites } from '@/core/sites';
-import { settingsItem, sitesItem, timerItem, trackerItem } from '@/core/store';
+import { settingsItem, sitesItem, timerItem } from '@/core/store';
+import { trackerItem } from '@/core/session-store';
 
 /** Why the user counts as away: the browser lost focus, the computer went idle or locked. */
 const awayItem = storage.defineItem<{ window: boolean; idle: boolean }>('session:activityAway', { fallback: { window: false, idle: false } });

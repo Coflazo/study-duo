@@ -3,6 +3,7 @@
   import { blockKeyItem, lockActive, unlockedItem } from '@/background/site-lock';
   import { parseBlockedHash } from '@/core/blocked';
   import { capsuleText } from '@/core/capsule';
+  import { clockTime } from '@/core/today-view';
   import { DEFAULT_SETTINGS, normalizeSettings } from '@/core/settings';
   import { settingsItem, timerItem } from '@/core/store';
   import { displayMs, initialState } from '@/core/timer';
@@ -26,7 +27,7 @@
   const shown = $derived(displayMs(timer, settings, now));
   const progress = $derived(timer.plannedMs ? 1 - shown.ms / timer.plannedMs : 0);
   const label = $derived(
-    timer.status === 'paused' ? 'Paused' : timer.endsAt ? `Ends ${new Date(timer.endsAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : '',
+    timer.status === 'paused' ? 'Paused' : timer.endsAt ? `Ends ${clockTime(timer.endsAt)}` : '',
   );
   const waitLeft = $derived(Math.max(0, WAIT_S - Math.floor((now - opened) / 1000)));
   const site = target?.domain ?? 'This site';

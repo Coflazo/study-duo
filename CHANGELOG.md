@@ -4,6 +4,13 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Fixed
+
+- The corner clock stays above dialogs and pop-ups that pages open (Figma, ChatGPT and others put them in the browser's top layer, above everything else).
+- A light edge around the corner clock keeps it visible on dark sites.
+- Web pages no longer log a storage error four times on every load (the clock's script read session storage it may not use).
+- The blocked page, the Timeline week and to-do due dates follow your browser's clock and date order like the rest of the app.
+
 ## [0.2.0] - 2026-10-08
 
 Connections, moving to another computer, and songs from desktop apps. Every connection is off until you turn it on.
