@@ -14,6 +14,7 @@
   import SignButton from '@/ui/SignButton.svelte';
   import TimetableRow from '@/ui/TimetableRow.svelte';
   import RatingCard from './RatingCard.svelte';
+  import SleeveCard from '@/ui/SleeveCard.svelte';
   import { askForRating } from '@/ml/ask';
   import UpdateNotice from '@/ui/UpdateNotice.svelte';
 
@@ -90,6 +91,7 @@
     <RatingCard onrate={(r) => rate(r)} onskip={() => rate('skip')} />
   {:else}
     <LedBoard text={capsuleText(shown.ms, shown.countsUp)} {progress} label={boardLabel(timer, settings)} paused={timer.status === 'paused'} />
+    <SleeveCard />
     <section aria-labelledby="today-title">
       <h2 id="today-title">Today <span>{blocksDone} of {settings.dailyGoal} blocks</span></h2>
       <ul>
