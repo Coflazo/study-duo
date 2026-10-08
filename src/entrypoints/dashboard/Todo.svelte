@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import { addTodo, editTodo, moveAmongOpen, removeTodo, toggleTodo, updateTodos, type Todo } from '@/core/todos';
+  import { setDismissed } from '@/core/connections';
   import { ICONS } from '@/ui/icons';
   import type { createLive } from '@/ui/live.svelte';
   import { send } from '@/ui/live.svelte';
@@ -9,6 +10,7 @@
 
   let { data }: { data: ReturnType<typeof createLive> } = $props();
   const live = $derived(data.live);
+  const fromFeed = $derived(live.todos.filter((t) => t.feedUid && !t.done).length);
 
   let text = $state('');
   let course = $state('');
@@ -88,6 +90,7 @@
     menuFor = null;
     const index = live.todos.findIndex((x) => x.id === t.id);
     await updateTodos((list) => removeTodo(list, t.id));
+    if (t.feedUid) await setDismissed(t.feedUid, true);
     deleted = { todo: $state.snapshot(t), index };
     clearTimeout(undoTimer);
     undoTimer = setTimeout(() => (deleted = null), 8_000);
@@ -97,12 +100,13 @@
     const { todo, index } = deleted;
     deleted = null;
     await updateTodos((list) => [...list.slice(0, index), todo, ...list.slice(index)]);
+    if (todo.feedUid) await setDismissed(todo.feedUid, false);
   }
 </script>
 
 <svelte:window onclick={closeMenu} onkeydown={closeMenu} />
 
-<header><h1>To-do</h1><span>{open.length} left, {doneToday.length} done today</span></header>
+<header><h1>To-do</h1><span>{open.length} left, {doneToday.length} done today{fromFeed ? ` · ${fromFeed} from your course calendar` : ''}</span></header>
 
 <form class="add" onsubmit={add}>
   <div class="inputs">
@@ -133,7 +137,7 @@
 {:else}
   <ul>
     {#each open as t, i (t.id)}
-      <TodoRow todo={t} onNow={t.id === onNow} ontoggle={() => updateTodos((list) => toggleTodo(list, t.id, Date.now()))}>
+      <TodoRow todo={t} onNow={t.id === onNow} now={live.now} ontoggle={() => updateTodos((list) => toggleTodo(list, t.id, Date.now()))}>
         {#snippet content()}
           {#if editing === t.id}
             <input

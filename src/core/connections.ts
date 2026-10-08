@@ -78,3 +78,10 @@ export function normalizeConnections(raw: unknown): Connections {
     lastfm: { ...statusOf(fm), user: str(fm.user, userName), key: str(fm.key, lastfmKey) },
   };
 }
+
+/** Remembers (or, on undo, forgets) a deleted course deadline, so the next check does not add it again. */
+export async function setDismissed(uid: string, dismissed: boolean): Promise<void> {
+  const c = normalizeConnections(await connectionsItem.getValue());
+  const rest = c.deadlines.dismissed.filter((x) => x !== uid);
+  await connectionsItem.setValue({ ...c, deadlines: { ...c.deadlines, dismissed: dismissed ? [...rest, uid] : rest } });
+}

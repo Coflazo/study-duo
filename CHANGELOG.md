@@ -4,6 +4,14 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+
+- Connections, a new dashboard screen, each connection off until you turn it on:
+  - Course deadlines: paste your course calendar link (Canvas: Calendar, then Calendar feed; Moodle or any .ics link works) and what is due in the next 8 weeks becomes to-dos with their due date, checked every 6 hours. Lectures are left out; a deadline you delete stays deleted; your edits stay.
+  - Listening history: connect ListenBrainz (no key) or Last.fm (your own free API key), and songs your phone and desktop apps played during study blocks count, like the songs in your tabs.
+  - A QR code that opens a page on your phone explaining how to send what you play to ListenBrainz or Last.fm.
+- To-do rows show due dates, in red when less than a day is left or the date has passed.
+
 ### Changed
 
 - Releases are published by the repository owner with `scripts/publish-release.sh`, from the zips the release workflow built and attested. No CI job can write to the repository any more.

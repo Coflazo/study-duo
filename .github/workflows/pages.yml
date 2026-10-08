@@ -27,7 +27,7 @@ jobs:
       - name: Assemble the install page with the extension's own tokens and fonts
         run: |
           mkdir -p _site/fonts
-          cp site/index.html _site/
+          cp site/*.html _site/
           cp src/ui/tokens.css _site/tokens.css
           cp public/fonts/atkinson-next-latin.woff2 public/fonts/atkinson-mono-latin.woff2 public/fonts/OFL.txt _site/fonts/
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0

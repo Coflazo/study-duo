@@ -56,9 +56,9 @@ Works in Chrome, Edge, Brave, Arc, Opera and Vivaldi. Firefox is coming later.
 - **Time on the icon:** the minutes left show on the toolbar icon.
 - **Bell and big words:** a soft bell and a short line like "Break's over" in the middle of the screen when a block starts or ends.
 - **Website lock:** during study time, chosen sites stay closed. Or allow only the sites you need, plus your music.
-- **To-do list:** pick what you're working on before you start.
-- **Music:** it notices what's playing on YouTube Music, Spotify, Apple Music or SoundCloud in your browser, and it can play songs you've downloaded, even offline.
-- **Calendar:** every study block and break is saved to a timeline you can export to any calendar app. Google Calendar sync is optional.
+- **To-do list:** pick what you're working on before you start. Paste your course calendar link (Canvas, Moodle or any .ics) and your deadlines show up with their due dates.
+- **Music:** it notices what's playing on YouTube Music, Spotify, Apple Music or SoundCloud in your browser, and it can play songs you've downloaded, even offline. Connect ListenBrainz or Last.fm and songs from your phone count too.
+- **Calendar:** every study block and break is saved to a timeline you can export to any calendar app.
 - **Your best hours:** after a few weeks it shows which hours of which days you focus best, and which music helps you most.
 
 ## How your best hours are worked out
@@ -88,19 +88,19 @@ Everything happens on your computer. After each study block you rate your focus 
 Study Duo has no servers and no account, and it sends nothing about you anywhere. Your history stays in your browser on your computer, and you can delete all of it with one button. The code is public, so anyone can check it.
 
 <details>
-<summary>What Study Duo stores, and what the planned connections would send</summary>
+<summary>What Study Duo stores, and what the optional connections send</summary>
 
 Stored on your computer only: your settings, to-do list, study and break sessions, focus ratings, the songs that played, and how much time you spent on each website (just the site name, like youtube.com, never the pages you read).
 
-Version 0.1.0 has no connections at all. These are planned for a later version, each off until you turn it on:
+Optional connections, each off until you turn it on in Connections:
 
 | Connection | What is sent, and to whom |
 |---|---|
-| Google Calendar | Start and end times of your sessions, into a separate "Study Duo" calendar in your own Google account |
-| Last.fm or ListenBrainz | A request for your own recent songs, to that service |
-| Deadline feed | A request for the calendar link you paste, for example from Canvas |
+| Course deadlines | A request for the calendar link you paste (for example from Canvas), to the site that hosts it, every 6 hours |
+| ListenBrainz or Last.fm | A request for your own recent songs, to that service, every 30 minutes (Last.fm also gets your API key) |
+| Google Calendar (coming later) | Start and end times of your sessions, into a separate "Study Duo" calendar in your own Google account |
 
-With all of them off, Study Duo makes no internet requests at all; the extension's own rules block any it might try. Full details: [PRIVACY.md](PRIVACY.md).
+With all of them off, Study Duo makes no internet requests at all: one small part of the code makes every request, and it refuses any address that isn't a connection you switched on. Full details: [PRIVACY.md](PRIVACY.md).
 
 </details>
 
@@ -115,7 +115,7 @@ With all of them off, Study Duo makes no internet requests at all; the extension
 | Notifications | To tell you a block ended when the browser is in the background |
 | Offscreen (Chrome) | To play the bell and your music when the Study Duo window is closed |
 
-Study Duo is switched off in private (Incognito) windows, so nothing from them is recorded. Planned connections will ask for their own permission only when you switch them on.
+Study Duo is switched off in private (Incognito) windows, so nothing from them is recorded.
 
 </details>
 

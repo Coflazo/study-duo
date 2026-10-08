@@ -34,7 +34,8 @@
     "wxt": "^0.21.3"
   },
   "dependencies": {
-    "idb": "^8.0.4"
+    "idb": "^8.0.4",
+    "qrcode-generator": "2.0.4"
   },
   "license": "MIT",
   "overrides": {

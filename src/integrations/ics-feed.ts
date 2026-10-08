@@ -16,7 +16,6 @@ const DEADLINE_WORDS = /\b(due|deadline|assignment|homework|quiz|exam|test|submi
 const STOPWORDS = new Set(['of', 'and', 'the', 'for', 'to', 'in', 'a', 'an', 'on', 'with', 'en', 'de', 'het', 'van', 'voor']);
 
 /** Tabs and line breaks become spaces; other control characters go. */
-// eslint-disable-next-line no-control-regex
 const clean = (s: string) => s.replace(/[\t\n\r]+/g, ' ').replace(/[\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim();
 
 /** RFC 5545 TEXT unescaping: \n becomes a space here (titles are one line), \, \; \\ become themselves. */

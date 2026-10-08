@@ -10,9 +10,10 @@
   import Music from './Music.svelte';
   import Insights from './Insights.svelte';
   import Timeline from './Timeline.svelte';
+  import Connections from './Connections.svelte';
   import Data from './Data.svelte';
 
-  const ROUTES = ['today', 'todo', 'insights', 'timeline', 'music', 'sites', 'settings', 'data'] as const;
+  const ROUTES = ['today', 'todo', 'insights', 'timeline', 'music', 'sites', 'connections', 'settings', 'data'] as const;
   type Route = (typeof ROUTES)[number];
   const routeOf = (hash: string): Route => (ROUTES as readonly string[]).includes(hash.slice(1)) ? (hash.slice(1) as Route) : 'today';
 
@@ -43,6 +44,8 @@
       <Insights {data} />
     {:else if route === 'timeline'}
       <Timeline {data} />
+    {:else if route === 'connections'}
+      <Connections {data} />
     {:else if route === 'music'}
       <Music {data} />
     {:else if route === 'data'}

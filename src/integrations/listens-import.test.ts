@@ -3,6 +3,9 @@ import type { ListenRecord } from '@/core/db';
 import type { SessionRecord } from '@/core/sessions';
 import { attachToSessions, fromLastfm, fromListenBrainz, lastfmUrl, listenBrainzUrl, mergeImported } from './listens-import';
 
+/** A made-up Last.fm key: 32 hex characters, uniform so no scanner mistakes it for a real one. */
+const KEY = 'a'.repeat(32);
+
 const T = Date.UTC(2026, 9, 8, 9, 0);
 const MIN = 60_000;
 const s = (id: string, start: number, mins: number, phase: SessionRecord['phase'] = 'focus'): SessionRecord => ({ id, phase, startedAt: start, endedAt: start + mins * MIN, plannedMs: mins * MIN, activeMs: mins * MIN, pausedMs: 0, completed: true, taskId: null, rating: null, ratingSkipped: false });
@@ -65,6 +68,6 @@ describe('mergeImported', () => {
 describe('request addresses', () => {
   it('builds them from validated parts only', () => {
     expect(listenBrainzUrl('ana_b', T)).toBe(`https://api.listenbrainz.org/1/user/ana_b/listens?min_ts=${T / 1000}&count=1000`);
-    expect(lastfmUrl('ana_b', '0123456789abcdef0123456789abcdef', T, 2)).toBe(`https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=ana_b&api_key=0123456789abcdef0123456789abcdef&from=${T / 1000}&limit=200&page=2&format=json`);
+    expect(lastfmUrl('ana_b', KEY, T, 2)).toBe(`https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=ana_b&api_key=${KEY}&from=${T / 1000}&limit=200&page=2&format=json`);
   });
 });

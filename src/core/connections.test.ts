@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONNECTIONS, feedUrl, lastfmKey, normalizeConnections, userName } from './connections';
 
+/** A made-up Last.fm key: 32 hex characters, uniform so no scanner mistakes it for a real one. */
+const KEY = 'a'.repeat(32);
+
 describe('cleaning what the user types', () => {
   it('accepts https and webcal feed links, nothing else', () => {
     expect(feedUrl(' webcal://canvas.uva.nl/feeds/calendars/user_x.ics ')).toBe('https://canvas.uva.nl/feeds/calendars/user_x.ics');
@@ -15,7 +18,7 @@ describe('cleaning what the user types', () => {
     expect(userName(' ana_b.92 ')).toBe('ana_b.92');
     expect(userName('ana b')).toBeNull();
     expect(userName('a/../b')).toBeNull();
-    expect(lastfmKey('0123456789ABCDEF0123456789abcdef')).toBe('0123456789abcdef0123456789abcdef');
+    expect(lastfmKey(KEY.toUpperCase())).toBe(KEY);
     expect(lastfmKey('xyz')).toBeNull();
   });
 
@@ -26,5 +29,18 @@ describe('cleaning what the user types', () => {
       listenbrainz: { ...DEFAULT_CONNECTIONS.listenbrainz, user: 'ok', count: 0 },
       lastfm: { ...DEFAULT_CONNECTIONS.lastfm, user: 'x', key: null },
     });
+  });
+});
+
+describe('setDismissed', () => {
+  it('remembers a deleted deadline and forgets it again on undo', async () => {
+    const { fakeBrowser } = await import('wxt/testing/fake-browser');
+    const { connectionsItem, setDismissed } = await import('./connections');
+    fakeBrowser.reset();
+    await setDismissed('event-assignment-1', true);
+    await setDismissed('event-assignment-1', true);
+    expect(normalizeConnections(await connectionsItem.getValue()).deadlines.dismissed).toEqual(['event-assignment-1']);
+    await setDismissed('event-assignment-1', false);
+    expect(normalizeConnections(await connectionsItem.getValue()).deadlines.dismissed).toEqual([]);
   });
 });

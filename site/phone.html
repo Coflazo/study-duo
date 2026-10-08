@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Study Duo on your phone</title>
+  <meta name="description" content="How to let Study Duo count the music your phone plays during study blocks, through ListenBrainz or Last.fm.">
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    @font-face { font-family: 'Atkinson Hyperlegible Next'; src: url('fonts/atkinson-next-latin.woff2') format('woff2'); font-weight: 200 800; font-display: swap; }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: var(--color-bg-canvas); color: var(--color-text-primary); font: 400 16px/1.5 var(--font-family-ui); }
+    main { max-inline-size: 640px; margin: 0 auto; padding: 40px 16px 56px; }
+    .brand { display: flex; align-items: center; gap: 10px; margin: 0 0 20px; font-weight: 700; font-size: 18px; }
+    .brand span { inline-size: 10px; block-size: 10px; background: var(--color-bg-plate-focus); }
+    h1 { margin: 0 0 12px; font-size: clamp(28px, 7vw, 36px); line-height: 1.15; font-weight: 800; }
+    h2 { margin: 32px 0 8px; font-size: 18px; line-height: 24px; font-weight: 700; }
+    p, ol { margin: 0 0 12px; }
+    ol { padding-inline-start: 1.25em; }
+    li + li { margin-block-start: 6px; }
+    .lede, .small { color: var(--color-text-secondary); }
+    .small { font-size: 14px; }
+    .card { padding: 16px; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-bg-panel); }
+    a { color: inherit; text-underline-offset: 3px; }
+    a:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="brand"><span aria-hidden="true"></span>Study Duo</p>
+    <h1>Count the music on your phone</h1>
+    <p class="lede">Study Duo runs in your computer's browser, so it can't see the apps on your phone. Your phone can send each song it plays to a free listening history instead, and Study Duo reads that history for the songs that played during your study blocks.</p>
+
+    <h2>1. Make a free account</h2>
+    <p><a href="https://listenbrainz.org">ListenBrainz</a> is free and open source and needs no key. <a href="https://www.last.fm">Last.fm</a> works too, but Study Duo then needs a free API key from <a href="https://www.last.fm/api">last.fm/api</a>.</p>
+
+    <h2>2. Send what your phone plays</h2>
+    <div class="card">
+      <p><strong>Spotify, on any phone:</strong> in ListenBrainz, open your settings, choose Connect services and link Spotify. ListenBrainz then records what you play on Spotify by itself.</p>
+      <p><strong>Android, any music app:</strong> install Pano Scrobbler (open source, with a free version) and sign in with ListenBrainz or Last.fm. It sends what any app plays.</p>
+      <p><strong>iPhone, Apple Music:</strong> iPhones don't let apps see what other apps play, so use an Apple Music scrobbler for Last.fm from the App Store. Several exist; some cost money.</p>
+    </div>
+
+    <h2>3. Tell Study Duo your username</h2>
+    <ol>
+      <li>On your computer, open Study Duo's dashboard and go to Connections.</li>
+      <li>Type your ListenBrainz username and press Connect (for Last.fm, your username and API key).</li>
+    </ol>
+    <p class="small">Study Duo asks that service for your own recent songs every 30 minutes and keeps only the ones that played during a study block or break. It sends nothing about you. Turn it off any time with Disconnect.</p>
+
+    <p class="small"><a href="./">Install Study Duo</a> · <a href="https://github.com/Coflazo/study-duo/blob/main/PRIVACY.md">Privacy</a> · <a href="https://github.com/Coflazo/study-duo">Source code</a></p>
+  </main>
+</body>
+</html>

@@ -11,7 +11,6 @@ const TYPICAL_MS = 210_000;
 /** The browser may have caught the same play on a music site; within this gap it is the same play. */
 const SAME_PLAY_MS = 3 * 60_000;
 
-// eslint-disable-next-line no-control-regex
 const text = (v: unknown) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, MAX_TEXT) : '');
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {});
 const hash = (s: string) => {
