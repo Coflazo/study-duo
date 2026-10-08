@@ -1,7 +1,8 @@
 import { ALARM_PHASE_END, ALARM_REFRESH, applyEffects } from '@/background/effects';
 import { createTimerService } from '@/background/timer-service';
 import { allowedFromSender, isFromWebPage, parseCounts, parseMessage, parseMove, parseSiteMessage, parseSound, resolveSiteRequest } from '@/core/messages';
-import { focusSound } from '@/background/sound';
+import { playerCommands } from '@/background/player';
+import { parsePlayer, soundToPlayer } from '@/core/player';
 import { normalizeSettings } from '@/core/settings';
 import { forgetListens, purgeOlderThan } from '@/core/log';
 import { createSiteMenu, handleSiteRequest, onSiteMenuClick } from '@/background/site-requests';
@@ -31,8 +32,11 @@ export default defineBackground(() => {
     const base = browser.runtime.getURL('/');
     const msg = parseMessage(raw);
     if (msg && allowedFromSender(msg, isFromWebPage(sender.url, base))) void timer.dispatch(msg.event).catch(console.error);
+    // Focus sound buttons and player commands, from Study Duo's own pages: one player decides what plays.
     const sound = parseSound(raw);
-    if (sound && !isFromWebPage(sender.url, base) && (raw as { target?: unknown }).target !== 'offscreen') void focusSound(sound).catch(console.error);
+    if (sound && !isFromWebPage(sender.url, base) && (raw as { target?: unknown }).target !== 'offscreen') void playerCommands(soundToPlayer(sound)).catch(console.error);
+    const player = parsePlayer(raw);
+    if (player && !isFromWebPage(sender.url, base)) void playerCommands([player]).catch(console.error);
     const song = parseNowPlaying(raw);
     if ((song || isMusicStop(raw)) && sender.tab?.id !== undefined && isFromWebPage(sender.url, base)) void hearTab(sender.tab.id, sender.url, song);
     const counts = parseCounts(raw);
