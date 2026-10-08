@@ -25,12 +25,23 @@ fail() {
   exit 1
 }
 
+# STUDY_DUO_BASE_URL is for tests and mirrors: HTTPS, or plain HTTP only to this computer.
+check_base() {
+  [ "$BASE" = "$DEFAULT_BASE" ] && return 0
+  case "$BASE" in
+    https://* | http://127.0.0.1:* | http://localhost:*) say "Note: STUDY_DUO_BASE_URL is set, so this downloads from $BASE instead of GitHub." ;;
+    *) fail "STUDY_DUO_BASE_URL must start with https:// (or http://127.0.0.1 for a local test server)." ;;
+  esac
+}
+
 download() {
-  # Only the real release URL is forced to HTTPS; tests point STUDY_DUO_BASE_URL at a local server.
   if command -v curl >/dev/null 2>&1; then
-    if [ "$BASE" = "$DEFAULT_BASE" ]; then curl -fsSL --proto '=https' --tlsv1.2 "$1" -o "$2"; else curl -fsSL "$1" -o "$2"; fi
+    case "$BASE" in
+      https://*) curl -fsSL --proto '=https' --tlsv1.2 "$1" -o "$2" ;;
+      *) curl -fsSL "$1" -o "$2" ;;
+    esac
   elif command -v wget >/dev/null 2>&1; then
-    if [ "$BASE" = "$DEFAULT_BASE" ]; then wget -q --https-only "$1" -O "$2"; else wget -q "$1" -O "$2"; fi
+    wget -q "$1" -O "$2"
   else
     fail "needs curl or wget to download."
   fi
@@ -98,6 +109,7 @@ main() {
     fail "this looks like WSL. Run the Windows line in PowerShell instead: powershell -c \"irm https://raw.githubusercontent.com/$REPO/main/install.ps1 | iex\""
   fi
   command -v unzip >/dev/null 2>&1 || fail "needs unzip (for example: sudo apt install unzip)."
+  check_base
 
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' EXIT INT TERM

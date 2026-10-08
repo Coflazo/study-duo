@@ -67,6 +67,11 @@ try {
   if ((Invoke-Installer @('-Uninstall')) -ne 0) { throw 'FAIL uninstall exit code' }
   if (Test-Path $dest) { throw 'FAIL uninstall' }
   Write-Host 'ok   uninstalls'
+
+  $env:STUDY_DUO_BASE_URL = 'http://example.com/release'
+  if ((Invoke-Installer) -eq 0) { throw 'FAIL accepted a plain-HTTP download address on another computer' }
+  if (Test-Path $dest) { throw 'FAIL a refused address still installed' }
+  Write-Host 'ok   refuses a plain-HTTP download address that is not this computer'
 } finally {
   Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
   Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue

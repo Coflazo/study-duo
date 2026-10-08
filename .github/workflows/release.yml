@@ -4,19 +4,19 @@ on:
   push:
     tags: ['v*.*.*']
 
+# Dependency code (npm ci, tests, the build) runs only in `build`, which can read and nothing else. `publish` holds
+# the rights to sign provenance and create the release, and runs no package code at all.
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
+  contents: read
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
@@ -35,16 +35,38 @@ jobs:
           cp build/study-duo-*-firefox.zip dist/study-duo-firefox.zip
           cp build/study-duo-*-sources.zip dist/study-duo-sources.zip
           cd dist && sha256sum study-duo-*.zip > SHA256SUMS && cat SHA256SUMS
+      - name: Release notes from CHANGELOG
+        run: |
+          awk -v v="${GITHUB_REF_NAME#v}" 'index($0, "## [" v "]") == 1 {on=1; next} on && (/^## \[/ || /^\[[^]]*\]: /) {exit} on {print}' CHANGELOG.md > dist/notes.md
+          test -s dist/notes.md
+          printf '\nInstall or update: see https://coflazo.github.io/study-duo\nCheck a download: `gh attestation verify study-duo-chromium.zip --repo %s`\n' "$GITHUB_REPOSITORY" >> dist/notes.md
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: dist
+      - name: The checksums still match what was built
+        run: cd dist && sha256sum -c SHA256SUMS
       - name: Attest where the zips came from
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/study-duo-*.zip
-      - name: Release notes from CHANGELOG
-        run: |
-          awk -v v="${GITHUB_REF_NAME#v}" 'index($0, "## [" v "]") == 1 {on=1; next} on && (/^## \[/ || /^\[[^]]*\]: /) {exit} on {print}' CHANGELOG.md > notes.md
-          test -s notes.md
-          printf '\nInstall or update: see https://coflazo.github.io/study-duo\nCheck a download: `gh attestation verify study-duo-chromium.zip --repo %s`\n' "$GITHUB_REPOSITORY" >> notes.md
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --title "Study Duo $GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+        run: gh release create "$GITHUB_REF_NAME" dist/study-duo-*.zip dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" --title "Study Duo $GITHUB_REF_NAME" --notes-file dist/notes.md --verify-tag

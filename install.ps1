@@ -33,7 +33,14 @@ function Install-StudyDuo {
     return
   }
 
-  if ($base -eq $defaultBase) {
+  # STUDY_DUO_BASE_URL is for tests and mirrors: HTTPS, or plain HTTP only to this computer.
+  if ($base -ne $defaultBase) {
+    if ($base -notmatch '^(https://|http://127\.0\.0\.1:|http://localhost:)') {
+      throw 'STUDY_DUO_BASE_URL must start with https:// (or http://127.0.0.1 for a local test server).'
+    }
+    Write-Host "Note: STUDY_DUO_BASE_URL is set, so this downloads from $base instead of GitHub."
+  }
+  if ($base -like 'https://*') {
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
   }
   $tmp = Join-Path ([IO.Path]::GetTempPath()) ('study-duo-' + [guid]::NewGuid())

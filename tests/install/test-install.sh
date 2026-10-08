@@ -56,3 +56,7 @@ pass "works piped into sh, as curl | sh does"
 sh "$ROOT/install.sh" --uninstall >/dev/null
 [ ! -d "$DEST" ] || die "uninstall"
 pass "uninstalls"
+
+if STUDY_DUO_BASE_URL="http://example.com/release" sh "$ROOT/install.sh" >/dev/null 2>&1; then die "accepted a plain-HTTP download address on another computer"; fi
+[ ! -d "$DEST" ] || die "a refused address still installed"
+pass "refuses a plain-HTTP download address that is not this computer"

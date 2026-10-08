@@ -1,8 +1,17 @@
 import type { SessionRecord } from './sessions';
 
-/** TEXT values (RFC 5545 3.3.11): backslash, semicolon, comma and newline are escaped. */
+/**
+ * TEXT values (RFC 5545 3.3.11): backslash, semicolon, comma and newline are escaped. A lone CR counts as a line break
+ * too (some calendar apps split on it), and other control characters are dropped: song titles come from web pages.
+ */
 export function escapeText(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r\n|\r|\n/g, '\\n')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f]/g, '');
 }
 
 /** Folds a content line at 75 octets (RFC 5545 3.1): CRLF and one space, never splitting a UTF-8 character. */

@@ -47,3 +47,10 @@ describe('foldListen', () => {
     expect(foldListen(open, { ...song, title: 'Next' }, T + 3000, 'music.youtube.com', null).closed).toBeNull();
   });
 });
+
+describe('parseNowPlaying with hostile titles (security review L1)', () => {
+  it('turns control characters into spaces', () => {
+    const now = parseNowPlaying({ kind: 'music', op: 'now', title: 'x\rURL:evil\nBEGIN', artist: 'a\u0000b', album: '', playing: true });
+    expect(now).toEqual({ title: 'x URL:evil BEGIN', artist: 'a b', album: '', playing: true });
+  });
+});

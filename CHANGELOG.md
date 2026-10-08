@@ -66,6 +66,11 @@ The first release. Everything runs in your browser, offline, with no account.
 - Only site names are stored, never full addresses, typed text or page content. The extension makes no network requests.
 - The page overlay lives in a closed shadow root with constructed styles and survives pages that delete it or fake a script restart.
 - The blocked page refuses to work inside a frame and only ever opens http(s) addresses.
+- Only Study Duo's own redirects can log a blocked attempt: they carry a random key kept per browser session, so a page that opens or frames the blocked page writes nothing.
+- Study Duo does not run in private (Incognito) windows.
+- Calendar export escapes semicolons and every kind of line break, and song titles lose control characters, so a song title cannot add lines to an .ics file.
+- Releases are built in a job that can only read the repository; a separate job with no package code attests the zips and publishes them.
+- The installers accept a different download address only over HTTPS, or plain HTTP to this computer for tests, and say so when one is set.
 
 [Unreleased]: https://github.com/Coflazo/study-duo/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/Coflazo/study-duo/releases/tag/v0.1.0

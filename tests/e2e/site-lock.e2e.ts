@@ -93,6 +93,8 @@ const MUSIC = ['music.youtube.com', 'open.spotify.com', 'music.apple.com', 'soun
 const sitesIn = (sw: Worker) =>
   sw.evaluate(async (music) => Object.fromEntries(Object.entries((await chrome.storage.local.get('sites')).sites ?? {}).filter(([d]) => !music.includes(d))), MUSIC);
 const BLOCKED = `chrome-extension://${EXT_ID}/blocked.html#`;
+/** A redirected tab's address without the per-session key (?k=) the redirect carries. */
+const at = (p: { url(): string }) => p.url().replace(/\?k=[\w-]+/, '');
 
 async function fileThroughSettings(ctx: BrowserContext) {
   const s = await ctx.newPage();
@@ -130,7 +132,7 @@ test('closes Blocked sites during a block, keeps exceptions open, and opens ever
 
   const p = await ctx.newPage();
   await p.goto('https://www.video.study-duo.test/watch').catch(() => undefined);
-  await expect.poll(() => p.url()).toContain(`${BLOCKED}https://www.video.study-duo.test/watch`);
+  await expect.poll(() => at(p)).toContain(`${BLOCKED}https://www.video.study-duo.test/watch`);
   for (const host of ['music.video.study-duo.test', 'learn.study-duo.test', 'other.study-duo.test']) {
     await p.goto(`https://${host}/`);
     expect(p.url(), host).toBe(`https://${host}/`);
@@ -140,7 +142,7 @@ test('closes Blocked sites during a block, keeps exceptions open, and opens ever
   await settings.getByRole('radio', { name: 'Allow only Study' }).click();
   await expect.poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getSessionRules()).some((r: any) => r.priority === 1))).toBe(true);
   await p.goto('https://other.study-duo.test/').catch(() => undefined);
-  await expect.poll(() => p.url()).toContain(`${BLOCKED}https://other.study-duo.test/`);
+  await expect.poll(() => at(p)).toContain(`${BLOCKED}https://other.study-duo.test/`);
   await p.goto('https://learn.study-duo.test/');
   expect(p.url()).toBe('https://learn.study-duo.test/');
   // Intranet names, localhost and IP addresses cannot be filed, so Allow only Study leaves them open.
@@ -175,7 +177,7 @@ test('Open anyway waits 10 seconds and a reason, lasts for this block only, and 
 
   const p = await ctx.newPage();
   await p.goto('https://video.study-duo.test/clip').catch(() => undefined);
-  await expect.poll(() => p.url()).toContain(BLOCKED);
+  await expect.poll(() => at(p)).toContain(BLOCKED);
   const later = p.getByRole('button', { name: /^Open anyway/ });
   await expect(later).toBeDisabled();
   await expect(later).toHaveText(/Open anyway in \d+ s/);
@@ -206,7 +208,7 @@ test('Open anyway waits 10 seconds and a reason, lasts for this block only, and 
   await popup.getByRole('button', { name: 'Start' }).click();
   await expect.poll(() => sw.evaluate(async () => (await chrome.declarativeNetRequest.getSessionRules()).length)).toBeGreaterThan(0);
   await p.goto('https://video.study-duo.test/clip').catch(() => undefined);
-  await expect.poll(() => p.url()).toContain(BLOCKED);
+  await expect.poll(() => at(p)).toContain(BLOCKED);
 
   expect(offHost).toEqual([]);
   await ctx.close();
@@ -264,7 +266,7 @@ test('blocking YouTube keeps YouTube Music open, because music players are filed
   fs.rmSync(profile, { recursive: true, force: true });
 });
 
-test('a page that frames the blocked page cannot write fake blocked attempts', async () => {
+test('a page that frames or opens the blocked page cannot write fake blocked attempts', async () => {
   const { profile, ctx, sw } = await setup();
   await sw.evaluate(() => chrome.storage.local.set({ sites: { 'video.study-duo.test': 'blocked' } }));
   await startBlock(ctx, sw);
@@ -273,6 +275,11 @@ test('a page that frames the blocked page cannot write fake blocked attempts', a
   );
   const p = await ctx.newPage();
   await p.goto('https://framer.study-duo.test/');
+  await p.waitForTimeout(1_500);
+  expect(await readStore(sw, 'blocks')).toEqual([]);
+  // Opening it at its fixed address, without the session key only Study Duo's redirects carry, writes nothing either.
+  await p.goto(`${BLOCKED}https://reddit.com/`);
+  await p.goto(`chrome-extension://${EXT_ID}/blocked.html?k=guess#https://reddit.com/`);
   await p.waitForTimeout(1_500);
   expect(await readStore(sw, 'blocks')).toEqual([]);
   // A real visit still counts.
