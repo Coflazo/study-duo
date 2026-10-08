@@ -12,6 +12,7 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
   - A QR code that opens a page on your phone explaining how to send what you play to ListenBrainz or Last.fm.
 - To-do rows show due dates, in red when less than a day is left or the date has passed.
 - Desktop apps (Connections): with the optional desktop helper, songs from desktop players (Music, VLC and any player the system's media controls know) count like the songs in your tabs. Install it with the install line plus `--helper` (Windows: `-Helper`); it is a short script that only reports the song, only to Study Duo.
+- Move to another computer (Your data): settings, site lists and to-dos as one small file, or as QR codes that the other computer reads with its camera. A preview shows what comes in before anything changes, including hard lock and how many sites are blocked; hard lock refuses a move in during a locked block. History, how long it is kept, what Study Duo measures and connections stay where they are. The camera runs only while the Scan panel is open and visible.
 
 ### Security
 

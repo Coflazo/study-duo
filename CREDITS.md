@@ -18,5 +18,7 @@ Study Duo is built on other people's open work. Thank you.
 
 - **WXT** (MIT) builds the extension for every browser.
 - **idb** by Jake Archibald (ISC) wraps IndexedDB.
+- **qrcode-generator** by Kazuhiko Arase (MIT) draws the QR codes. QR Code is a registered trademark of DENSO WAVE INCORPORATED.
+- **jsQR** by Cosmo Wolfe (Apache License 2.0) reads move codes from the camera; it loads only when you press Scan. https://github.com/cozmo/jsQR
 - The seven-segment digits are drawn from scratch as SVG, modelled on platform departure boards.
 - Design direction chosen with the Impeccable design skill; research sources for the default settings are listed in the README.

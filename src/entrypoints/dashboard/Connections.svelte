@@ -1,12 +1,12 @@
 <script lang="ts">
   /** Figma Dashboard / Connections (82:153): course deadlines from a calendar link, listening history, the phone QR. */
   import { onDestroy, onMount } from 'svelte';
-  import qrcode from 'qrcode-generator';
   import { connectionsItem, DEFAULT_CONNECTIONS, feedUrl, lastfmKey, loadConnections, normalizeConnections, saveConnections, userName, type Connections } from '@/core/connections';
   import { clockTime } from '@/core/today-view';
   import type { createLive } from '@/ui/live.svelte';
   import SignButton from '@/ui/SignButton.svelte';
   import { helperItem, type HelperState } from '@/core/helper';
+  import { qrPath } from '@/ui/qr';
 
   let { data }: { data: ReturnType<typeof createLive> } = $props();
   const live = $derived(data.live);
@@ -103,15 +103,7 @@
   };
 
   // The phone page's address as a QR code, drawn here: nothing is fetched to make it.
-  const qr = (() => {
-    const q = qrcode(0, 'M');
-    q.addData(PHONE_PAGE);
-    q.make();
-    const n = q.getModuleCount();
-    let d = '';
-    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += `M${c} ${r}h1v1h-1z`;
-    return { n, d };
-  })();
+  const qr = qrPath(PHONE_PAGE);
 </script>
 
 <h1 class="screen-title">Connections</h1>

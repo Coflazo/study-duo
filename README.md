@@ -73,6 +73,7 @@ Then turn on **Desktop apps** in Study Duo's Connections. The helper is a short 
 - **To-do list:** pick what you're working on before you start. Paste your course calendar link (Canvas, Moodle or any .ics) and your deadlines show up with their due dates.
 - **Music:** it notices what's playing on YouTube Music, Spotify, Apple Music or SoundCloud in your browser, and it can play songs you've downloaded, even offline. Connect ListenBrainz or Last.fm and songs from your phone count too.
 - **Calendar:** every study block and break is saved to a timeline you can export to any calendar app.
+- **Move to another computer:** take your settings, site lists and to-dos along as one small file, or as QR codes the other computer's camera reads. No account, no server.
 - **Your best hours:** after a few weeks it shows which hours of which days you focus best, and which music helps you most.
 
 ## How your best hours are worked out

@@ -3,6 +3,8 @@ import { loosens } from './hard-lock';
 import { normalizeSettings, type SiteMode, type TimerSettings } from './settings';
 import { normalizeDomain, normalizeSites, type SiteCategory, type Sites } from './sites';
 import { promptDismissedItem, settingsItem, sitesItem, timerItem } from './store';
+import { normalizeTodos, todosItem, updateTodos } from './todos';
+import { mergeTodos, type MoveBundle } from './transfer';
 
 /** Thrown when a change would loosen the site lock during a hard-locked study block. */
 export class HardLockError extends Error {
@@ -60,4 +62,19 @@ export async function dismissPrompt(domain: string): Promise<void> {
   const d = canonical(domain);
   const list = await promptDismissedItem.getValue();
   if (!list.includes(d)) await promptDismissedItem.setValue([...list, d].slice(-500));
+}
+
+/**
+ * Moves a bundle in from another computer, through the same hard-lock guard as every site change. Settings and site
+ * lists are replaced, except how long history is kept and what is measured: those belong with the history, which
+ * stays here. To-dos are added. Returns how many to-dos were added.
+ */
+export async function moveIn(b: MoveBundle): Promise<number> {
+  const { settings: here } = await guard({ sites: b.sites, siteMode: b.settings.siteMode, hardLock: b.settings.hardLock });
+  const ids = new Set(normalizeTodos(await todosItem.getValue()).map((t) => t.id));
+  const added = b.todos.filter((t) => !ids.has(t.id)).length;
+  await settingsItem.setValue(normalizeSettings({ ...b.settings, retentionDays: here.retentionDays, measure: here.measure }));
+  await sitesItem.setValue(normalizeSites(b.sites));
+  await updateTodos((list) => mergeTodos(list, b.todos));
+  return added;
 }

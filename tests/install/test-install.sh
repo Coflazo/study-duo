@@ -92,5 +92,5 @@ if sh "$ROOT/install.sh" --helper >/dev/null 2>&1; then die "accepted a tampered
 pass "refuses a helper that does not match its checksum"
 
 sh "$ROOT/install.sh" --uninstall >/dev/null
-[ ! -e "$M" ] && [ ! -e "$H" ] || die "uninstall left the helper behind"
+if [ -e "$M" ] || [ -e "$H" ]; then die "uninstall left the helper behind"; fi
 pass "uninstall removes the helper and its registration"
