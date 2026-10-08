@@ -8,7 +8,7 @@ function folder(name: string, tree: Record<string, Uint8Array | Record<string, u
     name,
     async *values() {
       for (const [n, v] of Object.entries(tree)) {
-        if (v instanceof Uint8Array) yield { kind: 'file' as const, name: n, getFile: async () => new File([v], n, { lastModified: 1_700_000_000_000 }) };
+        if (v instanceof Uint8Array) yield { kind: 'file' as const, name: n, getFile: async () => new File([v as Uint8Array<ArrayBuffer>], n, { lastModified: 1_700_000_000_000 }) };
         else yield folder(n, v as Record<string, Uint8Array | Record<string, unknown>>);
       }
     },
@@ -17,7 +17,7 @@ function folder(name: string, tree: Record<string, Uint8Array | Record<string, u
 
 const latin1 = (s: string) => [...s].map((c) => c.charCodeAt(0));
 const syncsafe = (n: number) => [(n >> 21) & 127, (n >> 14) & 127, (n >> 7) & 127, n & 127];
-function mp3(title: string, artist: string, album: string): Uint8Array {
+function mp3(title: string, artist: string, album: string): Uint8Array<ArrayBuffer> {
   const frames = ([['TIT2', title], ['TPE1', artist], ['TALB', album]] as const).flatMap(([id, text]) => {
     const data = [0, ...latin1(text)];
     return [...latin1(id), 0, 0, 0, data.length, 0, 0, ...data];
