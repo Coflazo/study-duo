@@ -41,6 +41,9 @@ export default defineContentScript({
     if (!(document.documentElement instanceof HTMLElement)) return; // raw SVG or XML documents
     const host = document.createElement('study-duo-overlay');
     for (const [k, v] of HOST_STYLE) host.style.setProperty(k, v, 'important');
+    // A manual popover lives in the browser's top layer, the only place above page dialogs and popovers (no z-index
+    // reaches there). Its inline styles above override the browser's popover look.
+    host.setAttribute('popover', 'manual');
     const root = host.attachShadow({ mode: 'closed' });
     try {
       // Constructed sheets are not subject to the page's style-src CSP.
@@ -64,7 +67,18 @@ export default defineContentScript({
     // A copy left from before an extension reload or update can no longer hear the extension and would show a
     // stale time under this one. The background adds this copy only when no clock answered, so the old one goes.
     document.querySelectorAll('study-duo-overlay').forEach((old) => old.remove());
-    document.documentElement.append(host);
+    /** Attached, and on top of the top layer: shown again after anything the page put there since. */
+    function raise() {
+      if (!host.isConnected) document.documentElement.append(host);
+      if (typeof host.showPopover !== 'function') return; // an older browser: the z-index still applies
+      try {
+        if (host.matches(':popover-open')) host.hidePopover();
+        host.showPopover();
+      } catch {
+        // a page that blocks popovers: the z-index still applies
+      }
+    }
+    raise();
 
     const life = new AbortController();
     const on = { capture: true, passive: true, signal: life.signal };
@@ -86,7 +100,7 @@ export default defineContentScript({
       const msg = parseAnnounce(raw);
       if (!msg) return;
       if (!alive()) return teardown();
-      if (!host.isConnected) document.documentElement.append(host);
+      if (!host.isConnected) raise();
       const canShow = document.visibilityState === 'visible' && !document.fullscreenElement;
       if (canShow) words.show(msg);
       sendResponse(canShow);
@@ -113,7 +127,7 @@ export default defineContentScript({
       clearTimeout(next);
       if (!alive()) return teardown();
       // Pages that rebuild <html> (hydration, document.open) drop unknown nodes; put the clock back.
-      if (!host.isConnected) document.documentElement.append(host);
+      if (!host.isConnected) raise();
       clock.el.hidden = !showing();
       renderPrompt();
       if (clock.el.hidden) return;
@@ -226,6 +240,13 @@ export default defineContentScript({
 
     document.addEventListener('visibilitychange', render, { signal: life.signal });
     document.addEventListener('fullscreenchange', render, { signal: life.signal });
+    // A dialog or popover the page opens joins the top layer above the clock; step back on top of it.
+    document.addEventListener('toggle', (e) => e.target !== host && (e as ToggleEvent).newState === 'open' && raise(), on);
+    const dialogs = new MutationObserver((changes) => {
+      if (changes.some((c) => c.target !== host && (c.target as Element).hasAttribute?.('open'))) raise();
+    });
+    dialogs.observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['open'] });
+    life.signal.addEventListener('abort', () => dialogs.disconnect());
     const unwatch = [
       timerItem.watch((v) => {
         heardTimer = true;

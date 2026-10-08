@@ -4,6 +4,11 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Fixed
+
+- The corner clock stays above dialogs and pop-ups that pages open (Figma, ChatGPT and others put them in the browser's top layer, above everything else).
+- A light edge around the corner clock keeps it visible on dark sites.
+
 ## [0.2.0] - 2026-10-08
 
 Connections, moving to another computer, and songs from desktop apps. Every connection is off until you turn it on.
