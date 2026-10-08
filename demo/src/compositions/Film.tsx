@@ -672,23 +672,42 @@ function EndCard({ t }: { t: number }) {
 
 /* ------------------------------------------------------------ captions -- */
 
-/** Phrase pills: white, ink text, bottom centre, on screen exactly while the voice says them. */
+/**
+ * Captions: white text on the film itself, no plate, bottom centre, on screen while the voice says them.
+ * Back-to-back phrases hand over in sequence, never stacked: the outgoing one lifts away a beat before the
+ * next line starts, then the incoming one rises into place (exit 5 frames, entrance 9: exits run faster).
+ */
 export function Captions({ t }: { t: number }) {
   const shown = CAPTIONS.map((c, i) => {
     const next = CAPTIONS[i + 1];
-    const until = next && next.s - c.e < 18 ? next.s : c.e + 10;
-    return { ...c, until };
-  }).filter((c) => t >= c.s - 3 && t < c.until + 3);
+    const joined = next !== undefined && next.s - c.e < 18;
+    return { ...c, leave: joined ? next.s - 6 : c.e + 6 };
+  }).filter((c) => t >= c.s - 3 && t < c.leave + 5);
   const sub = t >= LINE["insights-1"].s && t < BEAT.insights.e;
   return (
     <>
       {shown.map((c) => {
-        const o = ramp(t, c.s - 3, 4, EASE.out) * (1 - ramp(t, c.until, 3, EASE.out));
+        const inT = ramp(t, c.s - 3, 9, EASE.out);
+        const outT = ramp(t, c.leave, 5, EASE.out);
         return (
-          <div key={`${c.s}`} style={{ position: "absolute", left: 0, right: 0, top: PILL_Y, display: "flex", justifyContent: "center", opacity: o }}>
-            <div style={{ padding: "13px 30px 15px", borderRadius: 99, background: "white", color: "var(--ink)", font: `600 36px/1.15 ${TYPE}`, letterSpacing: -0.3, boxShadow: "0 8px 30px rgb(0 0 0 / 0.35)" }}>
-              {c.text}
-            </div>
+          <div
+            key={`${c.s}`}
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: PILL_Y + 13,
+              textAlign: "center",
+              font: `600 38px/1.15 ${TYPE}`,
+              letterSpacing: -0.3,
+              color: "white",
+              // Legibility if a line ever crosses light footage; a soft edge, not a plate.
+              textShadow: "0 1px 2px rgb(0 0 0 / 0.45), 0 2px 14px rgb(0 0 0 / 0.35)",
+              opacity: inT * (1 - outT),
+              transform: `translateY(${(mix(inT, 10, 0) + mix(outT, 0, -8)).toFixed(2)}px)`,
+            }}
+          >
+            {c.text}
           </div>
         );
       })}
