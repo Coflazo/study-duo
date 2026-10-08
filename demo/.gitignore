@@ -1,0 +1,7 @@
+node_modules
+out
+.cache
+.DS_Store
+
+# demo footage is rebuilt by tests/e2e/demo-capture.e2e.ts
+public/footage

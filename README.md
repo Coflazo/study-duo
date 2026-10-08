@@ -7,6 +7,10 @@ A free study timer that lives in your browser.
 
 It shows a small digital clock in the corner of every page, keeps distracting websites closed while you study, rings a soft bell when it's time for a break, and over a few weeks learns which hours and which music help you focus best. No account. Works without internet. Everything stays on your computer.
 
+<a href="docs/media/demo.mp4"><img alt="A 45-second tour: tabs pile up during a study session; Study Duo starts a block on Problem set 5, puts a clock in the corner of the page, keeps reddit.com closed, rings in a break and asks for a focus rating, then shows a heat map of best hours from one simulated student." src="docs/media/demo.gif" width="100%"></a>
+
+45 seconds, no sound. [Watch it as a video (MP4, 1080p)](docs/media/demo.mp4). The insights at the end come from one simulated student, not a real person's data.
+
 ## Get Study Duo (about 2 minutes)
 
 **The easy way:** open **[coflazo.github.io/study-duo](https://coflazo.github.io/study-duo)**. It shows the right line for your computer with a copy button. Then do step 3 below.

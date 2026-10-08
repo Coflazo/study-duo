@@ -1,0 +1,27 @@
+/* Study Duo tokens (src/ui/tokens.css in the extension). --ground is neutral-950, the dark field the film opens,
+ * closes and loops on. */
+
+:root {
+  --ground: #0f1113;
+  --brand: #d52b1e;
+  --red: #d52b1e;
+  --green: #2e7d4f;
+  --paper: #fbfbf9;
+  --canvas: #f3f3f0;
+  --sunken: #e6e7e3;
+  --line: #d2d4cf;
+  --ink: #17191c;
+  --ink-2: #4e524e;
+  --ink-3: #8d918b;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
