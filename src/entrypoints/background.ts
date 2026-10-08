@@ -13,6 +13,7 @@ import { acceptCounts, trackActivity } from '@/background/activity';
 import { hearTab, trackMusic } from '@/background/music';
 import { isMusicStop, parseNowPlaying } from '@/core/music';
 import { parseSyncRequest, syncConnection, syncDue, trackConnections } from '@/background/connections';
+import { trackHelper } from '@/background/helper';
 
 export default defineBackground(() => {
   const timer = createTimerService({
@@ -75,6 +76,7 @@ export default defineBackground(() => {
   trackActivity();
   trackMusic();
   trackConnections();
+  trackHelper();
   void syncDue().catch(console.error);
 
   // Retention (Your data): drop history older than the kept period, at every worker start and when it changes.

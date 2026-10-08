@@ -49,6 +49,20 @@ Works in Chrome, Edge, Brave, Arc, Opera and Vivaldi. Firefox is coming later.
 
 **Removing it:** click **Remove** on the Study Duo card in your extensions page, then delete the **Study Duo** folder in your home folder (or run the same line with `--uninstall` on a Mac or Linux, `-Uninstall` on Windows).
 
+**Songs from desktop apps (optional):** Study Duo sees songs on music websites by itself. To count songs from desktop players too (Music, VLC, foobar2000 and others), add the small desktop helper by running the install line with `--helper`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Coflazo/study-duo/main/install.sh | sh -s -- --helper
+```
+
+On Windows:
+
+```powershell
+powershell -c "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Coflazo/study-duo/main/install.ps1))) -Helper"
+```
+
+Then turn on **Desktop apps** in Study Duo's Connections. The helper is a short script you can read first ([helper/](helper/)); it only reports the song title, artist, album and app, and only to Study Duo. `--uninstall` removes it too.
+
 ## What it does
 
 - **Timer:** 25 minutes of study, 5 minutes of break, a longer break every fourth round. Change any of it.
