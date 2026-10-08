@@ -1,3 +1,5 @@
+import { fadeCurve, FADE_SECONDS, highPass, seamlessLoop } from './fade';
+
 export const NOISES = ['white', 'pink', 'brown'] as const;
 export type NoiseKind = (typeof NOISES)[number];
 
@@ -32,26 +34,60 @@ export function noiseSamples(kind: NoiseKind, length: number, random: () => numb
   return out;
 }
 
-/** Loops a few seconds of noise with a gentle fade in; stop fades out. Runs where audio may play on (offscreen page). */
-export function startNoise(ctx: AudioContext, kind: NoiseKind, volume: number): { setVolume(v: number): void; stop(): void } {
+/** Brings the loudest sample back to 0.9 after filtering. */
+function normalize(x: Float32Array): Float32Array {
+  let peak = 0;
+  for (const v of x) peak = Math.max(peak, Math.abs(v));
+  if (peak > 0) for (let i = 0; i < x.length; i++) x[i] = (x[i]! / peak) * 0.9;
+  return x;
+}
+
+/**
+ * Loops six seconds of noise with no click at the seam, fading in and out along an ear-shaped curve (white 1 s, pink
+ * 1.4 s, brown 1.8 s). Brown noise loses its slow drift first, which would thump at every loop. Runs where audio may
+ * play on (the offscreen page, or Firefox's background page).
+ */
+export function startNoise(ctx: AudioContext, kind: NoiseKind, volume: number): { setVolume(v: number): void; stop(): number } {
   const seconds = 6;
-  const buffer = ctx.createBuffer(1, ctx.sampleRate * seconds, ctx.sampleRate);
-  buffer.copyToChannel(noiseSamples(kind, buffer.length) as Float32Array<ArrayBuffer>, 0);
+  const overlap = Math.round(ctx.sampleRate / 2);
+  let samples = noiseSamples(kind, ctx.sampleRate * seconds + overlap);
+  if (kind === 'brown') samples = normalize(highPass(samples, ctx.sampleRate, 20));
+  const loop = seamlessLoop(samples, overlap);
+  const buffer = ctx.createBuffer(1, loop.length, ctx.sampleRate);
+  buffer.copyToChannel(loop as Float32Array<ArrayBuffer>, 0);
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   source.loop = true;
   const gain = ctx.createGain();
+  const fade = FADE_SECONDS[kind];
   gain.gain.setValueAtTime(0, ctx.currentTime);
-  gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 1.5);
+  gain.gain.setValueCurveAtTime(fadeCurve(64, 'in', volume), ctx.currentTime, fade);
   source.connect(gain).connect(ctx.destination);
   source.start();
+  /** Stops whatever the gain was doing, holding its value now, so a new move starts from what is heard. */
+  const hold = (now: number) => {
+    if (typeof gain.gain.cancelAndHoldAtTime === 'function') gain.gain.cancelAndHoldAtTime(now);
+    else {
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(gain.gain.value, now);
+    }
+  };
   return {
     setVolume(v) {
-      gain.gain.setTargetAtTime(v, ctx.currentTime, 0.1);
+      const now = ctx.currentTime;
+      hold(now);
+      gain.gain.setTargetAtTime(v, now, 0.08);
     },
     stop() {
-      gain.gain.setTargetAtTime(0, ctx.currentTime, 0.2);
-      source.stop(ctx.currentTime + 1);
+      const now = ctx.currentTime;
+      hold(now);
+      try {
+        gain.gain.setValueCurveAtTime(fadeCurve(64, 'out', gain.gain.value || volume), now, fade);
+      } catch {
+        gain.gain.setTargetAtTime(0, now, fade / 4); // a browser that refuses the curve still fades
+      }
+      source.stop(now + fade + 0.05);
+      return fade + 0.05;
     },
   };
 }

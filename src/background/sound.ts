@@ -24,9 +24,8 @@ export async function focusSound(cmd: SoundCommand): Promise<void> {
     } else if (cmd.op === 'stop') {
       const done = firefox;
       firefox = null;
-      done?.noise.stop();
       // Close the context once the fade-out has finished; an open one keeps the audio service awake (#41).
-      if (done) setTimeout(() => void done.ctx.close().catch(() => undefined), 1500);
+      if (done) setTimeout(() => void done.ctx.close().catch(() => undefined), done.noise.stop() * 1000 + 100);
     } else firefox?.noise.setVolume(cmd.volume);
   } else {
     await ensureOffscreen();
