@@ -80,7 +80,7 @@
       {:else}
         <ul>
           {#each [...open, ...doneToday] as t (t.id)}
-            <TodoRow todo={t} onNow={t.id === onNow} ontoggle={() => updateTodos((list) => toggleTodo(list, t.id, Date.now()))} />
+            <TodoRow todo={t} onNow={t.id === onNow} now={live.now} ontoggle={() => updateTodos((list) => toggleTodo(list, t.id, Date.now()))} />
           {/each}
         </ul>
       {/if}

@@ -153,3 +153,15 @@ describe('a year of real-sized data (review 6)', () => {
     expect((used.user + used.system) / 1000).toBeLessThan(1000);
   }, 60_000);
 });
+
+describe('Spotify plays (Spotify User Guidelines: no Spotify content in a machine learning model)', () => {
+  it('never reach the model: a strong Spotify effect is not learned or shown', () => {
+    const { sessions, listens } = simulate(TYPICAL, { days: 60, seed: 4 });
+    const spotify = listens.map((l) => ({ ...l, host: 'open.spotify.com' }));
+    const withSpotify = computeInsights({ sessions, listens: spotify, activity: [], blocks: [], measure: DEFAULT_SETTINGS.measure, random: seeded(1).u });
+    const silent = computeInsights({ sessions, listens: [], activity: [], blocks: [], measure: DEFAULT_SETTINGS.measure, random: seeded(1).u });
+    expect(withSpotify.music).toEqual([]);
+    expect(withSpotify.cells).toEqual(silent.cells);
+    expect(withSpotify.tryNext).toBe(silent.tryNext);
+  });
+});

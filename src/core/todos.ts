@@ -7,6 +7,10 @@ export interface Todo {
   doneAt: number | null;
   /** Optional if-then plan for when the block gets hard ("If I get stuck, I will..."). */
   ifThen: string | null;
+  /** When it is due, epoch ms; set for deadlines from a course calendar. */
+  due?: number;
+  /** The calendar event this to-do came from, so later checks update it instead of adding it again. */
+  feedUid?: string;
 }
 
 export const todosItem = storage.defineItem<Todo[]>('local:todos', { fallback: [] });
@@ -76,7 +80,10 @@ export function normalizeTodos(raw: unknown): Todo[] {
     if (id === null || t === null || seen.has(id)) continue;
     seen.add(id);
     const done = o.done === true;
-    out.push({ id, text: t, course: course(o.course), done, doneAt: done && typeof o.doneAt === 'number' ? o.doneAt : null, ifThen: text(o.ifThen, 160) });
+    const item: Todo = { id, text: t, course: course(o.course), done, doneAt: done && typeof o.doneAt === 'number' ? o.doneAt : null, ifThen: text(o.ifThen, 160) };
+    if (typeof o.due === 'number' && Number.isFinite(o.due)) item.due = o.due;
+    if (typeof o.feedUid === 'string' && o.feedUid.length > 0 && o.feedUid.length <= 200) item.feedUid = o.feedUid;
+    out.push(item);
   }
   return out;
 }

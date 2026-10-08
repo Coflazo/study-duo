@@ -10,6 +10,7 @@
     ['timeline', 'Timeline', ICONS.calendar],
     ['music', 'Music', ICONS.musicNotes],
     ['sites', 'Site lock', ICONS.lock],
+    ['connections', 'Connections', ICONS.plugsConnected],
     ['settings', 'Settings', ICONS.gear],
     ['data', 'Your data', ICONS.shieldCheck],
   ] as const;
