@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readTags, tagsOrName } from './tags';
+import { dominantColor, readCover, readTags, tagsOrName } from './tags';
 
 const latin1 = (s: string) => [...s].map((c) => c.charCodeAt(0));
 const utf16 = (s: string) => [0xff, 0xfe, ...[...s].flatMap((c) => [c.charCodeAt(0) & 0xff, c.charCodeAt(0) >> 8])];
@@ -48,5 +48,53 @@ describe('tagsOrName', () => {
     expect(tagsOrName(null, '03 - Says.mp3')).toEqual({ title: 'Says', artist: '', album: '', genre: '' });
     expect(tagsOrName(null, 'lecture-notes.flac')).toMatchObject({ title: 'lecture-notes' });
     expect(tagsOrName({ title: '', artist: 'A', album: '', genre: '' }, 'x.mp3')).toMatchObject({ title: 'x', artist: 'A' });
+  });
+});
+
+describe('readCover', () => {
+  const png = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3];
+  const apic = (type: number, mime: string, desc: number[], data: number[], enc = 0) => [enc, ...latin1(mime), 0, type, ...desc, ...data];
+
+  it('reads the front cover from an ID3 APIC frame', () => {
+    const file = id3(3, [['TIT2', 0, latin1('Says')], ['APIC', 0, apic(3, 'image/png', [0], png).slice(1)]]);
+    expect(readCover(file)).toEqual({ mime: 'image/png', bytes: new Uint8Array(png) });
+  });
+
+  it('prefers the front cover when a file has several pictures', () => {
+    const back = [0xff, 0xd8, 0xff, 9];
+    const file = id3(4, [['APIC', 0, apic(4, 'image/jpeg', [0], back).slice(1)], ['APIC', 0, apic(3, 'image/png', [0], png).slice(1)]]);
+    expect(readCover(file)?.mime).toBe('image/png');
+  });
+
+  it('skips a UTF-16 description, which ends in two zero bytes', () => {
+    const file = id3(3, [['APIC', 1, apic(3, 'image/png', [0xff, 0xfe, 0x41, 0, 0, 0], png, 1).slice(1)]]);
+    expect(readCover(file)?.bytes).toEqual(new Uint8Array(png));
+  });
+
+  it('reads the front cover from a FLAC PICTURE block', () => {
+    const mime = latin1('image/png');
+    const pic = [...be32(3), ...be32(mime.length), ...mime, ...be32(0), ...be32(1), ...be32(1), ...be32(24), ...be32(0), ...be32(png.length), ...png];
+    const file = new Uint8Array([...latin1('fLaC'), 0x86, (pic.length >> 16) & 255, (pic.length >> 8) & 255, pic.length & 255, ...pic]).buffer;
+    expect(readCover(file)).toEqual({ mime: 'image/png', bytes: new Uint8Array(png) });
+  });
+
+  it('refuses anything that is not a picture, and files with no cover', () => {
+    const file = id3(3, [['APIC', 0, apic(3, 'text/html', [0], latin1('<script>')).slice(1)]]);
+    expect(readCover(file)).toBeNull();
+    expect(readCover(id3(3, [['TIT2', 0, latin1('Says')]]))).toBeNull();
+    expect(readCover(new ArrayBuffer(4))).toBeNull();
+  });
+});
+
+describe('dominantColor', () => {
+  it('finds the colour most of a cover is, ignoring near-white and near-black edges', () => {
+    const px = (r: number, g: number, b: number, n: number) => Array.from({ length: n }, () => [r, g, b, 255]).flat();
+    const rgba = new Uint8ClampedArray([...px(30, 47, 92, 60), ...px(250, 250, 250, 30), ...px(5, 5, 5, 10)]);
+    expect(dominantColor(rgba)).toBe('#1e2f5c');
+  });
+
+  it('falls back to a neutral grey for an empty or blank picture', () => {
+    expect(dominantColor(new Uint8ClampedArray([]))).toBe('#8a8f96');
+    expect(dominantColor(new Uint8ClampedArray([255, 255, 255, 255]))).toBe('#8a8f96');
   });
 });
