@@ -4,6 +4,8 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-08
+
 ### Added
 
 - Google Calendar sync. Sign in with Google once (Connections), and every study block and break goes into its own Study Duo calendar the moment it ends: the task and course, the block number of the day, your focus rating, and the Study sites and songs of that block (a switch leaves those out; Spotify songs never go). Retries never make copies, a rating given later updates the event, events you delete stay deleted, and Disconnect hands the sign-in back to Google.
@@ -126,7 +128,8 @@ The first release. Everything runs in your browser, offline, with no account.
 - Releases are built in a job that can only read the repository; a separate job with no package code attests the zips and publishes them.
 - The installers accept a different download address only over HTTPS, or plain HTTP to this computer for tests, and say so when one is set.
 
-[Unreleased]: https://github.com/Coflazo/study-duo/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/Coflazo/study-duo/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/Coflazo/study-duo/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/Coflazo/study-duo/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Coflazo/study-duo/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Coflazo/study-duo/releases/tag/v0.1.0
