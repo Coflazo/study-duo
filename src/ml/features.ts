@@ -19,7 +19,13 @@ export interface Vocabulary {
   artists: number;
   tracks: number;
 }
-const DEFAULT_VOCAB: Vocabulary = { genres: 15, artists: 30, tracks: 50 };
+const DEFAULT_VOCAB: Vocabulary = { genres: 10, artists: 15, tracks: 25 };
+/** Per-day differences in 3-hour steps (06-08, 09-11, 12-14, 15-17, 18-20, 21-22): coarse on purpose, and cheap. */
+export const DAY_STEPS = 6;
+export const dayStepOf = (bin: number) => Math.min(DAY_STEPS - 1, Math.floor(bin / 3));
+/** Planned block lengths the block-length suggestion chooses between. */
+export const LENGTHS = [25, 35, 45, 50] as const;
+export const lengthOf = (minutes: number) => (minutes <= 30 ? 25 : minutes <= 40 ? 35 : minutes <= 47 ? 45 : 50);
 
 export interface FeatureInput {
   sessions: SessionRecord[];
@@ -39,7 +45,8 @@ export interface FeatureSet {
 /**
  * The time columns for a block in this hour bin on this day. Cumulative coding ("this hour or later"): each weight is
  * the step from one hour to the next, so the Gaussian prior on it is a random walk along the day and neighbouring hours
- * share evidence. Global steps, plus steps that differ for weekdays or weekends, plus steps that differ for the day.
+ * share evidence. Global hourly steps, plus hourly steps that differ for weekdays or weekends, plus 3-hour steps that
+ * differ for the day itself.
  */
 export function cellWeights(day: number, bin: number): Record<string, number> {
   const out: Record<string, number> = {};
@@ -47,8 +54,8 @@ export function cellWeights(day: number, bin: number): Record<string, number> {
   for (let h = 0; h <= bin; h++) {
     if (h > 0) out[`hour:${h}`] = 1;
     out[`${category}:${h}`] = 1;
-    out[`day:${day}:${h}`] = 1;
   }
+  for (let k = 0; k <= dayStepOf(bin); k++) out[`day:${day}:${k}`] = 1;
   return out;
 }
 
@@ -64,7 +71,7 @@ function vocabulary(minutes: Map<string, number>, cap: number): string[] {
 
 /**
  * Features of each study block for the insights model. Everything describes the block itself or was known when it
- * started (hour, day, block of the day, planned length, leisure in the hour before), plus what played during it.
+ * started (hour, day, block of the day, planned length bucket, leisure in the hour before), plus what played during it.
  * Nothing here comes from the focus index inputs (site shares, switches, blocked attempts): the index is built from
  * those, and the hour and music model must not learn from its own label.
  */
@@ -104,12 +111,13 @@ export function buildFeatures(input: FeatureInput, cap: Vocabulary = DEFAULT_VOC
   group('intercept', ['intercept'], 1e-4);
   group('hour', bins.slice(1).map((h) => `hour:${h}`)); // the level is the intercept
   group('category', [...bins.map((h) => `weekday:${h}`), ...bins.map((h) => `weekend:${h}`)]);
-  group('day', DAYS.flatMap((_, d) => bins.map((h) => `day:${d}:${h}`)));
+  group('day', DAYS.flatMap((_, d) => Array.from({ length: DAY_STEPS }, (_, k) => `day:${d}:${k}`)));
   group('source', SOURCES.map((s) => `source:${s}`));
   group('genre', genres.map((g) => `genre:${g}`));
   group('artist', artists.map((a) => `artist:${a}`));
   group('track', tracks.map((t) => `track:${t}`));
-  group('controls', ['control:block of the day', 'control:planned length', 'control:leisure before']);
+  group('controls', ['control:block of the day', 'control:leisure before']);
+  group('length', LENGTHS.map((m) => `length:${m}`));
   const at = new Map(columns.map((c, i) => [c, i]));
 
   const p = columns.length;
@@ -146,7 +154,7 @@ export function buildFeatures(input: FeatureInput, cap: Vocabulary = DEFAULT_VOC
     const dayStart = new Date(b.startedAt).setHours(0, 0, 0, 0);
     const before = focus.filter((o) => o.startedAt >= dayStart && o.startedAt < b.startedAt).length;
     set('control:block of the day', before / 4);
-    set('control:planned length', ((b.plannedMs ?? 25 * MIN) / MIN - 25) / 25);
+    set(`length:${lengthOf((b.plannedMs ?? 25 * MIN) / MIN)}`, 1);
     let leisure = 0;
     for (const a of input.activity) {
       if (a.category === 'study' || a.category === 'unobserved') continue;

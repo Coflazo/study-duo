@@ -33,10 +33,10 @@ describe('buildFeatures', () => {
     expect(f.design.y[0]).toBe(1);
     const row = (name: string) => f.design.x[f.columns.indexOf(name)];
     // "this hour or later": 09:30 sets the steps up to its bin, nothing after it
-    for (const name of ['hour:1', 'hour:3', 'weekday:0', 'weekday:3', 'day:1:0', 'day:1:3']) expect(row(name)).toBe(1);
-    for (const name of ['hour:4', 'weekday:4', 'weekend:0', 'day:1:4', 'day:2:0']) expect(row(name)).toBe(0);
+    for (const name of ['hour:1', 'hour:3', 'weekday:0', 'weekday:3', 'day:1:0', 'day:1:1', 'length:25']) expect(row(name)).toBe(1);
+    for (const name of ['hour:4', 'weekday:4', 'weekend:0', 'day:1:2', 'day:2:0', 'length:50']) expect(row(name)).toBe(0);
     expect(row('source:silence')).toBe(1);
-    expect(cellWeights(1, 3)).toEqual({ 'hour:1': 1, 'hour:2': 1, 'hour:3': 1, 'weekday:0': 1, 'weekday:1': 1, 'weekday:2': 1, 'weekday:3': 1, 'day:1:0': 1, 'day:1:1': 1, 'day:1:2': 1, 'day:1:3': 1 });
+    expect(cellWeights(1, 3)).toEqual({ 'hour:1': 1, 'hour:2': 1, 'hour:3': 1, 'weekday:0': 1, 'weekday:1': 1, 'weekday:2': 1, 'weekday:3': 1, 'day:1:0': 1, 'day:1:1': 1 });
   });
 
   it('turns songs during a block into time shares, the rest is silence', () => {
@@ -62,6 +62,7 @@ describe('buildFeatures', () => {
     const sessions = Array.from({ length: 6 }, (_, i) => block(TUE_0930 + i * 60 * MIN, 4));
     const listens = sessions.map((s, i) => listen(s.startedAt, 25 - i, { artist: `Artist ${i}`, title: `Song ${i}` }));
     const f = buildFeatures({ sessions, listens, activity: [] }, { artists: 2, tracks: 2, genres: 2 });
+    expect(f.columns.length).toBeLessThan(160);
     expect(f.columns.filter((c) => c.startsWith('artist:'))).toEqual(['artist:artist 0', 'artist:artist 1', 'artist:other']);
     expect(f.design.x[5 * f.columns.length + f.columns.indexOf('artist:other')]).toBeCloseTo(20 / 25);
   });
@@ -75,7 +76,8 @@ describe('buildFeatures', () => {
     expect(f.blocks.map((b) => b.id)).toEqual([first.id, third.id]);
     const v = (r: number, name: string) => f.design.x[r * f.columns.length + f.columns.indexOf(name)];
     expect(v(1, 'control:block of the day')).toBe(2 / 4); // third block today
-    expect(v(1, 'control:planned length')).toBe(1); // (50 - 25) / 25
+    expect(v(1, 'length:50')).toBe(1);
+    expect(v(1, 'length:25')).toBe(0);
     expect(v(1, 'control:leisure before')).toBeCloseTo(20 / 60);
     const imputed = buildFeatures({ sessions: [first, second, third], listens: [], activity, imputed: new Map([[second.id, { y: 0.6, w: 0.4 }]]) });
     expect(imputed.design.rows).toBe(3);
