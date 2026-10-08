@@ -1,0 +1,37 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:icalendar-ruby
+X-WR-CALNAME:Student Calendar (Canvas)
+BEGIN:VEVENT
+DTEND:20261009T215900Z
+DTSTART:20261009T215900Z
+SUMMARY:Homework 3: Bayes\, priors and posteriors [Foundations of Probabilit
+ y Theory and Statistics]
+URL;VALUE=URI:https://canvas.uva.nl/courses/123/assignments/456
+UID:event-assignment-456
+END:VEVENT
+BEGIN:VEVENT
+DTEND:20261012T130000Z
+DTSTART:20261012T110000Z
+SUMMARY:Lecture 6 [Foundations of Probability Theory and Statistics]
+UID:event-calendar-event-789
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20261016
+DTEND;VALUE=DATE:20261017
+SUMMARY:Project proposal due [STAT2001 Applied Statistics]
+UID:event-calendar-event-790
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=Europe/Amsterdam:20261024T235900
+DTEND;TZID=Europe/Amsterdam:20261024T235900
+SUMMARY:Quiz 4 [Linear Algebra]
+UID:event-assignment-457
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID="Europe/Amsterdam":20261101T235900
+DTEND;TZID="Europe/Amsterdam":20261101T235900
+SUMMARY:Essay draft [Academic Writing]
+UID:event-assignment-458
+END:VEVENT
+END:VCALENDAR
