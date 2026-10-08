@@ -41,7 +41,7 @@ jobs:
           subject-path: dist/study-duo-*.zip
       - name: Release notes from CHANGELOG
         run: |
-          awk -v v="${GITHUB_REF_NAME#v}" 'index($0, "## [" v "]") == 1 {on=1; next} on && /^## \[/ {exit} on {print}' CHANGELOG.md > notes.md
+          awk -v v="${GITHUB_REF_NAME#v}" 'index($0, "## [" v "]") == 1 {on=1; next} on && (/^## \[/ || /^\[[^]]*\]: /) {exit} on {print}' CHANGELOG.md > notes.md
           test -s notes.md
           printf '\nInstall or update: see https://coflazo.github.io/study-duo\nCheck a download: `gh attestation verify study-duo-chromium.zip --repo %s`\n' "$GITHUB_REPOSITORY" >> notes.md
       - name: Publish the release
