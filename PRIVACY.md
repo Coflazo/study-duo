@@ -44,4 +44,4 @@ If you install it (the install line with `--helper`) and turn on Desktop apps in
 
 ## Contact
 
-Questions: open an issue on this repository.
+Questions: open an issue at [github.com/Coflazo/study-duo/issues](https://github.com/Coflazo/study-duo/issues).
