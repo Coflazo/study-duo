@@ -1,4 +1,4 @@
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 import { simulate, TYPICAL } from '../../src/ml/synthetic';
@@ -72,12 +72,19 @@ async function page(ctx: BrowserContext, view = VIEW) {
   return p;
 }
 const shot = (p: Page, name: string, opts: Parameters<Page['screenshot']>[0] = {}) => p.screenshot({ path: `${OUT}/${name}.png`, ...opts });
+/** Where things sit in the shots (CSS px in the page or popup), so the film's pointer lands on the real buttons. */
+const boxes: Record<string, { x: number; y: number; width: number; height: number }> = {};
+async function mark(name: string, loc: Locator) {
+  const b = await loc.boundingBox();
+  if (!b) throw new Error(`no box for ${name}`);
+  boxes[name] = b;
+}
 
 test('shoot the demo footage', async () => {
-  test.setTimeout(300_000);
+  test.setTimeout(420_000);
   fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(OUT, { recursive: true });
-  const { ctx, sw } = await launch(tempProfile(), [], 2); // 2x stills: sharp in the film, and close-ups crop from them
+  const { ctx, sw } = await launch(tempProfile(), ['--autoplay-policy=no-user-gesture-required'], 2); // 2x stills: sharp in the film, and close-ups crop from them
   const now = Date.now();
   await ctx.route('**/*', (r) => {
     const u = new URL(r.request().url());
@@ -117,6 +124,7 @@ test('shoot the demo footage', async () => {
   await expect(popup.getByRole('combobox').locator('option:checked')).toHaveText(/Problem set 5/); // the nearest deadline comes first
   await popup.waitForTimeout(500);
   await shot(popup, 'popup-ready');
+  await mark('popup.start', popup.getByRole('button', { name: 'Start' }));
   await popup.getByRole('button', { name: 'Start' }).click();
   await expect.poll(() => sw.evaluate(async () => (await (globalThis as any).chrome.storage.local.get('timer')).timer?.status)).toBe('running');
   await popup.waitForTimeout(400);
@@ -139,10 +147,60 @@ test('shoot the demo footage', async () => {
   await shot(blocked, 'blocked-10');
   await blocked.waitForTimeout(1000);
   await shot(blocked, 'blocked-9');
+  // The ten-second wait runs out, then "Open anyway" asks why first.
+  await expect(blocked.getByRole('button', { name: 'Open anyway', exact: true })).toBeEnabled({ timeout: 12_000 });
+  await blocked.waitForTimeout(300);
+  await shot(blocked, 'blocked-open');
+  await mark('blocked.openAnyway', blocked.getByRole('button', { name: 'Open anyway', exact: true }));
+  await blocked.getByRole('button', { name: 'Open anyway', exact: true }).click();
+  await expect(blocked.getByLabel('Why open reddit.com now?')).toBeVisible();
+  await blocked.waitForTimeout(300);
+  await shot(blocked, 'blocked-why');
+  await blocked.getByLabel('Why open reddit.com now?').fill('one quick post');
+  await blocked.waitForTimeout(200);
+  await shot(blocked, 'blocked-reason');
+  await mark('blocked.reason', blocked.getByLabel('Why open reddit.com now?'));
+  await mark('blocked.back', blocked.getByRole('button', { name: 'Back to work' }));
   await blocked.close();
   await notes.bringToFront();
   await notes.waitForTimeout(300);
   await shot(notes, 'clock-back'); // the clock a few seconds on, after "Back to work"
+
+  // 4b. Music, while the block runs: white, pink and brown noise, then two songs from this computer.
+  const music = await page(ctx);
+  await music.goto(`${DASH}#music`);
+  await expect(music.getByRole('heading', { name: 'Music', level: 1 })).toBeVisible();
+  const sounds = music.getByRole('heading', { name: 'Focus sounds' });
+  await sounds.evaluate((h) => window.scrollTo(0, h.getBoundingClientRect().top + window.scrollY - 40));
+  await music.waitForTimeout(300);
+  await shot(music, 'music-silence');
+  for (const name of ['White', 'Pink', 'Brown']) await mark(`music.${name.toLowerCase()}`, music.getByRole('radio', { name }));
+  await mark('music.play', music.getByRole('button', { name: 'Play' }).first());
+  await mark('music.sounds', music.getByRole('region', { name: 'Focus sounds' }));
+  await mark('music.choose', music.getByRole('button', { name: 'Choose files' }));
+  await music.getByRole('radio', { name: 'White' }).click();
+  await music.getByRole('button', { name: 'Play' }).first().click();
+  for (const [kind, name] of [['white', 'White'], ['pink', 'Pink'], ['brown', 'Brown']] as const) {
+    await music.getByRole('radio', { name }).click();
+    await expect(music.getByText(`${name} noise is playing`)).toBeVisible();
+    await music.waitForTimeout(5_600); // over 5 seconds, so it counts as a listen
+    await shot(music, `music-${kind}`);
+  }
+  await music.getByRole('button', { name: 'Stop' }).click();
+  await expect(music.getByText('Silence')).toBeVisible();
+  await music.locator('input[type=file]').setInputFiles([
+    path.resolve('demo/public/audio/chopin-nocturne-op15-1.mp3'),
+    path.resolve('demo/public/audio/chopin-waltz-op69-1.mp3'),
+  ]);
+  await expect(music.getByText('2 songs')).toBeVisible();
+  await expect(music.getByRole('button', { name: 'Pause' })).toBeVisible({ timeout: 8_000 });
+  const files = music.getByRole('heading', { name: 'Your files' });
+  await files.evaluate((h) => window.scrollTo(0, h.getBoundingClientRect().top + window.scrollY - 40));
+  await music.waitForTimeout(800);
+  await shot(music, 'music-files');
+  await mark('music.files', music.getByRole('region', { name: 'Your files' }));
+  await mark('music.listens', music.getByRole('region', { name: "Today's listens" }));
+  await music.close(); // closing mid-song still saves the listen
 
   // 5. The block ends three seconds from now. Stills as fast as the page allows from just before the end until the
   //    phase words have faded, each named by its time from the end in ms, so the film plays the overlay's real fade.
@@ -167,13 +225,21 @@ test('shoot the demo footage', async () => {
   await rate.goto(`chrome-extension://${EXT_ID}/popup.html`);
   await rate.waitForTimeout(600);
   await shot(rate, 'popup-rating');
+  await mark('popup.rate4', rate.getByRole('radio', { name: '4' }));
   await rate.getByRole('radio', { name: '4' }).click();
   await rate.waitForTimeout(500);
   await shot(rate, 'popup-rated');
   await rate.close();
 
   // 6. Insights from eight weeks of simulated students, shifted by whole days so their hours stay true.
-  const { sessions, listens } = simulate(TYPICAL, { days: 56, seed: 7 });
+  const { sessions, listens: raw } = simulate(TYPICAL, { days: 56, seed: 7 });
+  // The simulated student's tracks, renamed to the two recordings the film plays (demo/public/audio).
+  const TITLES: Record<string, { title: string; artist: string }> = {
+    'piano piece': { title: 'Nocturne in F major, Op. 15 No. 1', artist: 'Chopin' },
+    'neutral song': { title: 'Waltz in A-flat major, Op. 69 No. 1', artist: 'Chopin' },
+    'lyrics song': { title: 'A song with lyrics', artist: 'A singer' },
+  };
+  const listens = raw.map((l) => ({ ...l, ...TITLES[l.title] }));
   const last = Math.max(...sessions.map((s) => s.endedAt));
   const shift = Math.ceil((now - last) / 86_400_000) * 86_400_000 - 86_400_000;
   await sw.evaluate(
@@ -195,12 +261,41 @@ test('shoot the demo footage', async () => {
   await dash.goto(`${DASH}#insights`);
   await dash.waitForTimeout(5000);
   await shot(dash, 'insights');
+  await mark('insights.map', dash.getByRole('region', { name: 'Focus by hour' }));
   await dash.evaluate(() => window.scrollTo(0, 260));
   await dash.waitForTimeout(300);
   await shot(dash, 'insights-lower');
+  const musicRows = dash.getByRole('heading', { name: 'Music and focus' });
+  await musicRows.evaluate((h) => window.scrollTo(0, h.getBoundingClientRect().top + window.scrollY - 120));
+  await dash.waitForTimeout(300);
+  await shot(dash, 'insights-music');
+  await mark('insights.music', dash.getByRole('region', { name: 'Music and focus' }));
+  await mark('insights.next', dash.getByRole('region', { name: 'Try next' }));
+
+  // 7. Timeline: the simulated weeks as blocks, then the calendar file it exports.
+  await dash.goto(`${DASH}#timeline`);
+  await expect(dash.getByRole('heading', { name: 'Timeline', level: 1 })).toBeVisible();
+  await dash.waitForTimeout(1200);
+  await shot(dash, 'timeline');
+  await mark('timeline.export', dash.getByRole('button', { name: 'Export to calendar' }));
+  const download = dash.waitForEvent('download');
+  await dash.getByRole('button', { name: 'Export to calendar' }).click();
+  fs.writeFileSync(`${OUT}/ics.json`, JSON.stringify(fs.readFileSync((await (await download).path())!, 'utf8').split(/\r?\n/)));
+
+  // 8. Move: settings and to-dos as QR codes.
+  await dash.goto(`${DASH}#data`);
+  await dash.getByRole('button', { name: 'Show codes' }).click();
+  const qr = dash.getByRole('img', { name: /^Move code 1 of \d+$/ });
+  await expect(qr).toBeVisible();
+  await qr.evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 220));
+  await dash.waitForTimeout(500);
+  await shot(dash, 'move');
+  await mark('move.qr', qr);
   await dash.goto(`${DASH}#todo`);
   await dash.waitForTimeout(800);
   await shot(dash, 'todo');
+  await mark('todo.first', dash.getByText('Problem set 5', { exact: true }));
+  fs.writeFileSync(`${OUT}/boxes.json`, JSON.stringify(boxes, null, 1));
   await ctx.close();
   console.log('footage', fs.readdirSync(OUT).length, 'items');
 });
