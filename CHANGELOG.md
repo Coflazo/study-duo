@@ -11,7 +11,7 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
   - Listening history: connect ListenBrainz (no key) or Last.fm (your own free API key), and songs your phone and desktop apps played during study blocks count, like the songs in your tabs.
   - A QR code that opens a page on your phone explaining how to send what you play to ListenBrainz or Last.fm.
 - To-do rows show due dates, in red when less than a day is left or the date has passed.
-- Move to another computer (Your data): settings, site lists and to-dos as one small file, or as QR codes that the other computer reads with its camera. A preview shows what comes in before anything changes; history and connections stay where they are. The camera runs only while the Scan panel is open.
+- Move to another computer (Your data): settings, site lists and to-dos as one small file, or as QR codes that the other computer reads with its camera. A preview shows what comes in before anything changes, including hard lock and how many sites are blocked; hard lock refuses a move in during a locked block. History, how long it is kept, what Study Duo measures and connections stay where they are. The camera runs only while the Scan panel is open and visible.
 
 ### Security
 

@@ -14,7 +14,7 @@ Everything Study Duo records is stored in your browser, in the extension's own s
 - songs that played while the timer ran (a study block or a break, never otherwise): title, artist and album from music sites (YouTube Music, YouTube, Spotify, Apple Music, SoundCloud, Tidal, Deezer, Amazon Music) as the site tells your browser, from your own files, and which focus sound played. On YouTube that is the video title and channel, so a lecture video playing during a block is kept too; turn off Songs you play in Your data to keep none;
 - only if you turn it on (off by default): how many keys, clicks and scrolls per minute during study blocks, never which key, and never in password fields.
 
-Study Duo never uses your microphone or screenshots. It uses the camera only while you scan move codes in Your data, Move to another computer: the picture is read in memory to find the code, never kept or sent, and the camera turns off when the codes are read, when you press Cancel and when you leave the screen.
+Study Duo never uses your microphone or screenshots. It uses the camera only while you scan move codes in Your data, Move to another computer: the picture is read in memory to find the code, never kept or sent, and the camera turns off when the codes are read, when you press Cancel, and when you leave the screen or switch to another tab.
 
 **Your data** in the dashboard lists each of these with its own switch, shows how much is stored, keeps history for a period you choose (a year unless you change it), exports everything as one file, and deletes everything.
 

@@ -8,8 +8,9 @@
   import { normalizeSettings } from '@/core/settings';
   import { normalizeSites } from '@/core/sites';
   import { settingsItem, sitesItem } from '@/core/store';
-  import { normalizeTodos, todosItem, updateTodos } from '@/core/todos';
-  import { buildBundle, decodeBundle, encodeBundle, FrameCollector, mergeTodos, parseBundle, toFrames, type MoveBundle } from '@/core/transfer';
+  import { normalizeTodos, todosItem } from '@/core/todos';
+  import { HardLockError, moveIn as applyMove } from '@/core/site-store';
+  import { buildBundle, decodeBundle, encodeBundle, FrameCollector, parseBundle, toFrames, type MoveBundle } from '@/core/transfer';
   import { clockTime } from '@/core/today-view';
   import { qrPath } from '@/ui/qr';
   import SignButton from '@/ui/SignButton.svelte';
@@ -26,6 +27,8 @@
   let cycle: ReturnType<typeof setInterval> | undefined;
   let scanLoop: ReturnType<typeof setInterval> | undefined;
   let stream: MediaStream | null = null;
+  /** Each Scan press is one run; a stream that arrives for an old run (Cancel during the camera prompt) is stopped at once. */
+  let scanRun = 0;
 
   const code = $derived(frames.length ? qrPath(frames[shown] ?? '') : null);
 
@@ -79,17 +82,21 @@
     const collector = new FrameCollector();
     progress = collector.progress();
     mode = 'scanning';
+    const run = ++scanRun;
+    let s: MediaStream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
     } catch {
-      stopScan();
+      if (run === scanRun) stopScan();
       message = 'The camera is off or not allowed. Use a move file instead.';
       return;
     }
-    if (mode !== 'scanning') return stopScan(); // Cancel was pressed while the browser asked
-    video!.srcObject = stream;
+    if (run !== scanRun) return s.getTracks().forEach((t) => t.stop()); // cancelled while the browser asked
+    stream = s;
+    video!.srcObject = s;
     await video!.play().catch(() => undefined);
     const { default: jsQR } = await import('jsqr'); // only loaded when someone scans
+    if (run !== scanRun) return;
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
     clearInterval(scanLoop);
@@ -111,6 +118,7 @@
     }, 200);
   }
   function stopScan() {
+    scanRun++;
     clearInterval(scanLoop);
     stream?.getTracks().forEach((t) => t.stop());
     stream = null;
@@ -121,23 +129,27 @@
   async function moveIn() {
     const b = preview;
     if (!b) return;
-    const here = new Set(normalizeTodos(await todosItem.getValue()).map((t) => t.id));
-    const added = b.todos.filter((t) => !here.has(t.id)).length;
-    await settingsItem.setValue(normalizeSettings(b.settings));
-    await sitesItem.setValue(normalizeSites(b.sites));
-    await updateTodos((list) => mergeTodos(list, b.todos));
-    preview = null;
-    message = `Moved in: your settings and site lists, and ${added} ${added === 1 ? 'to-do' : 'to-dos'} added.`;
+    try {
+      const added = await applyMove($state.snapshot(b) as MoveBundle);
+      preview = null;
+      message = `Moved in: your settings and site lists, and ${added} ${added === 1 ? 'to-do' : 'to-dos'} added.`;
+    } catch (e) {
+      message = e instanceof HardLockError ? 'Hard lock is on until this study block ends. Nothing changed; move in after the block.' : 'Moving in failed. Nothing changed.';
+    }
   }
+  const blockedCount = (b: MoveBundle) => Object.values(b.sites).filter((c) => c === 'blocked').length;
 
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const madeWhen = (t: number) => (new Date(t).toDateString() === new Date().toDateString() ? `today at ${clockTime(t)}` : new Date(t).toLocaleDateString([], { day: 'numeric', month: 'long' }));
 
-  // Leaving the page or the screen always turns the camera off.
+  // Leaving the page, the screen or the tab always turns the camera off.
   const onHide = () => stopScan();
+  const onVisibility = () => document.hidden && stopScan();
   window.addEventListener('pagehide', onHide);
+  document.addEventListener('visibilitychange', onVisibility);
   onDestroy(() => {
     window.removeEventListener('pagehide', onHide);
+    document.removeEventListener('visibilitychange', onVisibility);
     stopScan();
     stopShowing();
   });
@@ -186,7 +198,8 @@
   {#if preview}
     <div class="panel" role="region" aria-label="Ready to move in">
       <p class="label">Ready to move in</p>
-      <p class="help">From another computer, made {madeWhen(preview.at)}: your settings, {plural(Object.keys(preview.sites).length, 'site', 'sites')} and {plural(preview.todos.length, 'to-do', 'to-dos')}. Settings and site lists here will be replaced; the to-dos are added to yours.</p>
+      <p class="help">From another computer, made {madeWhen(preview.at)}: your settings, {plural(Object.keys(preview.sites).length, 'site', 'sites')} ({blockedCount(preview)} blocked) and {plural(preview.todos.length, 'to-do', 'to-dos')}. Study blocks will {preview.settings.siteMode === 'allowOnlyStudy' ? 'allow only Study sites' : 'close Blocked sites'}, and hard lock will be {preview.settings.hardLock ? 'on' : 'off'}.</p>
+      <p class="help">Settings and site lists here will be replaced and the to-dos added to yours. Your history, how long it is kept and what Study Duo measures stay as they are here.</p>
       <div class="buttons"><SignButton label="Move in" onclick={moveIn} /><SignButton label="Cancel" kind="secondary" onclick={() => (preview = null)} /></div>
     </div>
   {/if}

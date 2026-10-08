@@ -38,7 +38,8 @@ test('a move file carries settings, site lists and to-dos to a fresh profile, af
   await b.goto(DATA);
   await b.locator('input[type="file"][accept*="json"]').setInputFiles(file);
   const preview = b.getByRole('region', { name: 'Ready to move in' });
-  await expect(preview).toContainText('your settings, 2 sites and 1 to-do');
+  await expect(preview).toContainText('your settings, 2 sites (1 blocked) and 1 to-do');
+  await expect(preview).toContainText('Study blocks will close Blocked sites, and hard lock will be off');
   expect((await local(to.sw, 'settings'))?.focusMin ?? 25).toBe(25); // nothing changes before Move in
   await preview.getByRole('button', { name: 'Move in' }).click();
   await expect(b.getByText('Moved in: your settings and site lists, and 1 to-do added.')).toBeVisible();
@@ -79,6 +80,26 @@ test('the camera runs only while the Scan panel is open', async () => {
   await expect.poll(() => p.evaluate(() => (window as any).__stream?.getVideoTracks()[0]?.readyState)).toBe('live');
   await p.evaluate(() => (location.hash = 'today'));
   await expect.poll(() => p.evaluate(() => (window as any).__stream.getTracks().every((t: MediaStreamTrack) => t.readyState === 'ended'))).toBe(true);
+
+  // Cancel while the browser is still asking for the camera, then Scan again: no stream is left running (review).
+  await p.evaluate(() => (location.hash = 'data'));
+  await p.evaluate(() => {
+    const md = navigator.mediaDevices;
+    const original = md.getUserMedia.bind(md);
+    (window as any).__streams = [];
+    md.getUserMedia = async (c) => {
+      await new Promise((r) => setTimeout(r, 800));
+      const s = await original(c);
+      (window as any).__streams.push(s);
+      return s;
+    };
+  });
+  await p.getByRole('button', { name: 'Scan' }).click();
+  await p.getByRole('button', { name: 'Cancel' }).click();
+  await p.getByRole('button', { name: 'Scan' }).click();
+  await expect.poll(() => p.evaluate(() => (window as any).__streams.length)).toBe(2);
+  await p.getByRole('button', { name: 'Cancel' }).click();
+  await expect.poll(() => p.evaluate(() => (window as any).__streams.every((s: MediaStream) => s.getTracks().every((t) => t.readyState === 'ended')))).toBe(true);
   await ctx.close();
   fs.rmSync(profile, { recursive: true, force: true });
 });

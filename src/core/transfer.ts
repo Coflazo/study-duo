@@ -19,6 +19,9 @@ export interface MoveBundle {
 
 /** The largest bundle accepted, before and after decompression (a few thousand to-dos fit easily). */
 const MAX_BYTES = 1_000_000;
+/** Each blocked site is one rule, and browsers enforce at most 1,000 such rules; past that, blocking would stop. */
+export const MAX_BLOCKED = 900;
+const MAX_SITES = 4_500;
 
 export function buildBundle(parts: { settings: TimerSettings; sites: Sites; todos: Todo[] }, at: number): MoveBundle {
   return { app: 'study-duo', kind: 'move', version: 1, at, settings: parts.settings, sites: parts.sites, todos: parts.todos };
@@ -29,13 +32,16 @@ export function parseBundle(raw: unknown): MoveBundle | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
   if (r.app !== 'study-duo' || r.kind !== 'move' || r.version !== 1) return null;
+  const sites = normalizeSites(r.sites);
+  const entries = Object.values(sites);
+  if (entries.length > MAX_SITES || entries.filter((c) => c === 'blocked').length > MAX_BLOCKED) return null;
   return {
     app: 'study-duo',
     kind: 'move',
     version: 1,
     at: typeof r.at === 'number' && Number.isFinite(r.at) ? r.at : 0,
     settings: normalizeSettings(r.settings),
-    sites: normalizeSites(r.sites),
+    sites,
     todos: normalizeTodos(r.todos),
   };
 }
@@ -72,6 +78,16 @@ async function readCapped(stream: ReadableStream<Uint8Array>): Promise<Uint8Arra
 }
 
 const streamOf = (bytes: Uint8Array) => new Blob([bytes as Uint8Array<ArrayBuffer>]).stream();
+/** The input in 4 KB pieces, so decompression stops soon after the cap instead of unpacking everything first. */
+const sliced = (bytes: Uint8Array<ArrayBuffer>) => {
+  let at = 0;
+  return new ReadableStream<Uint8Array<ArrayBuffer>>({
+    pull(c) {
+      if (at >= bytes.length) return c.close();
+      c.enqueue(bytes.subarray(at, (at += 4096)));
+    },
+  });
+};
 
 /** A bundle as compact text for QR codes: JSON, deflated by the browser, in URL-safe base64. */
 export async function encodeBundle(bundle: MoveBundle): Promise<string> {
@@ -85,7 +101,7 @@ export async function encodeBundle(bundle: MoveBundle): Promise<string> {
 export async function decodeBundle(text: string): Promise<MoveBundle | null> {
   if (text.length > (MAX_BYTES * 4) / 3 || !/^[A-Za-z0-9_-]*$/.test(text)) return null;
   try {
-    const json = await readCapped(streamOf(fromBase64url(text)).pipeThrough(new DecompressionStream('deflate-raw')));
+    const json = await readCapped(sliced(fromBase64url(text)).pipeThrough(new DecompressionStream('deflate-raw')));
     return json ? parseBundle(JSON.parse(new TextDecoder().decode(json))) : null;
   } catch {
     return null;
