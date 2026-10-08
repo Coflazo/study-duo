@@ -76,3 +76,5 @@ try {
   Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
   Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue
 }
+# Every check passed. The last one leaves $LASTEXITCODE at 1 on purpose (a refused address), and CI shells exit with it.
+exit 0
