@@ -4,6 +4,8 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-08
+
 ### Fixed
 
 - The corner clock stays above dialogs and pop-ups that pages open (Figma, ChatGPT and others put them in the browser's top layer, above everything else).
@@ -111,6 +113,7 @@ The first release. Everything runs in your browser, offline, with no account.
 - Releases are built in a job that can only read the repository; a separate job with no package code attests the zips and publishes them.
 - The installers accept a different download address only over HTTPS, or plain HTTP to this computer for tests, and say so when one is set.
 
-[Unreleased]: https://github.com/Coflazo/study-duo/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Coflazo/study-duo/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/Coflazo/study-duo/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Coflazo/study-duo/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Coflazo/study-duo/releases/tag/v0.1.0
