@@ -1,6 +1,6 @@
 # Privacy
 
-Study Duo has no server and sends nothing about you anywhere. What it records stays in your browser, on your computer.
+Study Duo has no server. What it records stays in your browser, on your computer, and unless you switch on a connection it sends nothing anywhere.
 
 ## What stays on your computer
 
@@ -20,17 +20,23 @@ Study Duo never uses your camera, microphone or screenshots.
 
 Study Duo does not run in private (Incognito) windows, so nothing from them is recorded.
 
-## Planned connections
+## Optional connections
 
-Version 0.1.0 has none, and its content security policy blocks every network request. Later versions may add these, each off until you turn it on, each sending only what is listed, directly from your browser to that service:
+These are off until you turn them on in Connections. Each one sends only what is listed, directly from your browser to that service, with no cookies and no referrer:
 
-| Connection | What is sent | Where |
-|---|---|---|
-| Google Calendar sync | Session titles, start and end times, and your focus rating | Your Google account, into a separate "Study Duo" calendar |
-| Last.fm or ListenBrainz | A request for your own recent listens | Last.fm or ListenBrainz |
-| Deadline feed | A request for the feed URL you pasted | The site that hosts that feed |
+| Connection | What is sent | Where | How often |
+|---|---|---|---|
+| Course deadlines | A request for the calendar link you pasted | The site that hosts it (for example your school's Canvas) | Every 6 hours, and when you press Check now |
+| ListenBrainz | A request for your own recent listens, by your username | api.listenbrainz.org | Every 30 minutes |
+| Last.fm | A request for your own recent tracks, with your username and your API key | ws.audioscrobbler.com | Every 30 minutes |
 
-Those services handle the data under their own privacy policies. Turning a connection off stops all requests to it and removes its permission.
+What comes back stays on your computer: deadlines become to-dos with their due date, and songs are kept only when they played during a study block or break, like the songs in your tabs. With Songs you play off in Your data, no listening history is asked for at all. Disconnecting stops all requests to that service at once; the to-dos and songs already brought in stay until you delete them.
+
+Like any web request, each one also shows that service your IP address, that you use a browser, and when your browser is open. The course link and the Last.fm key are kept in the extension's own database, which web pages cannot read.
+
+One part of the code makes every request, and it refuses any address that does not belong to a connection you switched on. With all of them off, Study Duo makes no internet requests. Those services handle requests under their own privacy policies.
+
+Google Calendar sync is planned for a later version.
 
 ## Contact
 

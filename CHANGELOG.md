@@ -4,6 +4,21 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+
+- Connections, a new dashboard screen, each connection off until you turn it on:
+  - Course deadlines: paste your course calendar link (Canvas: Calendar, then Calendar feed; Moodle or any .ics link works) and what is due in the next 8 weeks becomes to-dos with their due date, checked every 6 hours. Lectures are left out; a deadline you delete stays deleted; your edits stay.
+  - Listening history: connect ListenBrainz (no key) or Last.fm (your own free API key), and songs your phone and desktop apps played during study blocks count, like the songs in your tabs.
+  - A QR code that opens a page on your phone explaining how to send what you play to ListenBrainz or Last.fm.
+- To-do rows show due dates, in red when less than a day is left or the date has passed.
+
+### Security
+
+- One part of the code makes every connection request: GET over HTTPS to the services you switched on only, with no cookies, no referrer and no redirects, a time limit and a size limit. A test fails if any other file reaches the network.
+- The course link (it carries a private token) and the Last.fm key are kept in the extension's own database, which web pages and content scripts cannot open; storage holds only the host name.
+- Disconnecting stops the very next request, even in the middle of a check.
+- Calendar feeds are read in time proportional to their size, whatever they contain (each value is cut to 500 characters before parsing).
+
 ### Fixed
 
 - Songs from Spotify's web player no longer feed your insights, as Spotify's User Guidelines require; they still show in Music, the timeline and calendar exports.

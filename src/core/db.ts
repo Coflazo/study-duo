@@ -47,6 +47,8 @@ export interface Schema extends DBSchema {
   listens: { key: string; value: ListenRecord; indexes: { startedAt: number } };
   activity: { key: string; value: ActivityRecord; indexes: { startedAt: number } };
   blocks: { key: string; value: BlockedAttempt; indexes: { at: number } };
+  /** Connection secrets (a course feed link holds a private token, a Last.fm key): web pages and content scripts cannot open this database, unlike storage.local. Not part of the history, its export or retention. */
+  secrets: { key: string; value: { id: string; value: string } };
 }
 
 export const STORES = ['sessions', 'listens', 'activity', 'blocks'] as const;
@@ -55,7 +57,7 @@ export type StoreName = (typeof STORES)[number];
 export const TIME_INDEX = { sessions: 'endedAt', listens: 'startedAt', activity: 'startedAt', blocks: 'at' } as const;
 
 const DB = 'study-duo';
-const VERSION = 2;
+const VERSION = 3;
 
 /** One database for the whole event log. A newer version than this code knows is refused, never altered. */
 function openDb(): Promise<IDBPDatabase<Schema>> {
@@ -67,6 +69,7 @@ function openDb(): Promise<IDBPDatabase<Schema>> {
         db.createObjectStore('activity', { keyPath: 'id' }).createIndex('startedAt', 'startedAt');
         db.createObjectStore('blocks', { keyPath: 'id' }).createIndex('at', 'at');
       }
+      if (oldVersion < 3) db.createObjectStore('secrets', { keyPath: 'id' });
     },
   });
 }

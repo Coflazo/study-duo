@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { Todo } from '@/core/todos';
+  import { dueLabel } from '@/core/due';
 
   /** Figma List/Todo Row: a checkbox, the task, its course tag; the task of the running block carries the red rail and "On now". */
-  let { todo, onNow = false, ontoggle, actions, content }: { todo: Todo; onNow?: boolean; ontoggle: () => void; actions?: Snippet; content?: Snippet } = $props();
+  let { todo, onNow = false, now = Date.now(), ontoggle, actions, content }: { todo: Todo; onNow?: boolean; now?: number; ontoggle: () => void; actions?: Snippet; content?: Snippet } = $props();
+  const due = $derived(todo.due === undefined ? null : dueLabel(todo.due, now));
 </script>
 
 <li class="row" class:now={onNow} class:done={todo.done}>
@@ -11,6 +13,7 @@
   {#if content}{@render content()}{:else}<span class="text">{todo.text}{#if todo.ifThen}<small>If I get stuck, I will {todo.ifThen}</small>{/if}</span>{/if}
   {#if onNow}<span class="now-label">On now</span>{/if}
   {#if todo.course}<span class="course">{todo.course}</span>{/if}
+  {#if due && !todo.done}<span class="due" class:soon={due.soon}>{due.text}</span>{/if}
   {#if actions}{@render actions()}{/if}
 </li>
 
@@ -34,4 +37,6 @@
   .now-label { font: 400 12px/16px var(--font-family-ui); color: var(--color-text-focus); white-space: nowrap; }
   .course { padding: 2px 6px; border-radius: 2px; background: var(--color-bg-sunken); font: 500 12px/16px var(--font-family-mono); white-space: nowrap; }
   .now .course { background: var(--color-bg-panel); }
+  .due { font: 400 12px/16px var(--font-family-mono); color: var(--color-text-secondary); white-space: nowrap; }
+  .due.soon { color: var(--color-text-focus); }
 </style>
