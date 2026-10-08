@@ -7,8 +7,6 @@ A free study timer that lives in your browser.
 
 It shows a small digital clock in the corner of every page, keeps distracting websites closed while you study, rings a soft bell when it's time for a break, and over a few weeks learns which hours and which music help you focus best. No account. Works without internet. Everything stays on your computer.
 
-> **Not ready yet.** Study Duo is still being built. The steps below will work as soon as the first version is out.
-
 ## Get Study Duo (about 2 minutes)
 
 **The easy way:** open **[coflazo.github.io/study-duo](https://coflazo.github.io/study-duo)**. It shows the right line for your computer with a copy button. Then do step 3 below.
@@ -49,7 +47,7 @@ Works in Chrome, Edge, Brave, Arc, Opera and Vivaldi. Firefox is coming later.
 
 **Getting a newer version:** paste the same line again, then click the round arrow on the Study Duo card in your extensions page. Your history stays.
 
-**Removing it:** click **Remove** on the Study Duo card in your extensions page.
+**Removing it:** click **Remove** on the Study Duo card in your extensions page, then delete the **Study Duo** folder in your home folder (or run the same line with `--uninstall` on a Mac or Linux, `-Uninstall` on Windows).
 
 ## What it does
 
@@ -122,7 +120,16 @@ Monday to Friday are treated as one group and Saturday and Sunday as another, so
 <details>
 <summary>Prefer to install by hand, or want to read the install script first?</summary>
 
-Read [install.sh](install.sh) (Mac, Linux) or [install.ps1](install.ps1) (Windows) before running them. To skip the Terminal completely: download the latest zip from [Releases](https://github.com/Coflazo/study-duo/releases), unzip it, then do step 3 above and choose the unzipped folder. The `SHA256SUMS` file next to the zip lets you check the download.
+Read [install.sh](install.sh) (Mac, Linux) or [install.ps1](install.ps1) (Windows) before running them. To skip the Terminal completely: download `study-duo-chromium.zip` from the [latest release](https://github.com/Coflazo/study-duo/releases/latest), unzip it, then do step 3 above and choose the unzipped folder.
+
+To check the download yourself, compare its checksum with the `SHA256SUMS` file next to it:
+
+```sh
+shasum -a 256 study-duo-chromium.zip          # Mac, Linux
+Get-FileHash study-duo-chromium.zip           # Windows PowerShell
+```
+
+GitHub Actions built every zip from this repository's source and signed a record of that. With the [GitHub CLI](https://cli.github.com) you can check it: `gh attestation verify study-duo-chromium.zip --repo Coflazo/study-duo`. The installers do this for you when `gh` is installed and signed in.
 
 </details>
 

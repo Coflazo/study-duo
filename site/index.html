@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Get Study Duo</title>
+  <meta name="description" content="Study Duo is a study timer that lives in your browser. Offline, free, no account. Install it with one line.">
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    @font-face { font-family: 'Atkinson Hyperlegible Next'; src: url('fonts/atkinson-next-latin.woff2') format('woff2'); font-weight: 200 800; font-display: swap; }
+    @font-face { font-family: 'Atkinson Hyperlegible Mono'; src: url('fonts/atkinson-mono-latin.woff2') format('woff2'); font-weight: 200 800; font-display: swap; }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: var(--color-bg-canvas); color: var(--color-text-primary); font: 400 16px/1.5 var(--font-family-ui); }
+    main { max-inline-size: 680px; margin: 0 auto; padding: 56px 16px 64px; }
+    .brand { display: flex; align-items: center; gap: 10px; margin: 0 0 24px; font-weight: 700; font-size: 20px; }
+    .brand span { inline-size: 10px; block-size: 10px; background: var(--color-bg-plate-focus); }
+    h1 { margin: 0 0 12px; font-size: clamp(32px, 7vw, 40px); line-height: 1.1; font-weight: 800; }
+    h2 { margin: 32px 0 12px; font-size: 18px; line-height: 24px; font-weight: 700; }
+    p { margin: 0 0 12px; }
+    .lede, .hint, .small { color: var(--color-text-secondary); }
+    .lede { font-size: 18px; margin-block-end: 24px; }
+    .hint, .small { font-size: 14px; }
+    .hint { margin-block-start: 8px; }
+    .tabs { display: inline-flex; padding: 2px; border: 2px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-bg-panel); }
+    .tabs button { padding: 8px 14px; border: 0; border-radius: 2px; background: transparent; color: var(--color-text-primary); font: 600 14px/20px var(--font-family-ui); cursor: pointer; }
+    .tabs button[aria-checked='true'] { background: var(--color-bg-action); color: var(--color-text-on-action); }
+    button:focus-visible, a:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+    .board { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 12px 14px 20px; border-radius: var(--radius-md); background: var(--color-bg-board); outline: 1px solid var(--color-border-subtle); }
+    .board code { flex: 1 1 280px; min-inline-size: 0; color: var(--color-text-led); font: 500 15px/22px var(--font-family-mono); overflow-wrap: anywhere; }
+    .copy { flex: none; min-inline-size: 88px; block-size: 44px; padding: 0 16px; border: 2px solid var(--color-text-led); border-radius: var(--radius-md); background: transparent; color: var(--color-text-led); font: 700 16px/20px var(--font-family-ui); cursor: pointer; }
+    .copy:active { transform: scale(0.97); }
+    ol { margin: 0 0 12px; padding-inline-start: 1.25em; }
+    li + li { margin-block-start: 4px; }
+    a { color: inherit; text-underline-offset: 3px; }
+    .links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-block-start: 32px; font-size: 14px; }
+    @media (prefers-reduced-motion: reduce) { .copy:active { transform: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="brand"><span aria-hidden="true"></span>Study Duo</p>
+    <h1>Get Study Duo</h1>
+    <p class="lede">A study timer that lives in your browser. Offline, free, no account. About two minutes.</p>
+
+    <div class="tabs" role="radiogroup" aria-label="Your computer">
+      <button type="button" role="radio" data-os="mac" aria-checked="true">macOS</button>
+      <button type="button" role="radio" data-os="windows" aria-checked="false" tabindex="-1">Windows</button>
+      <button type="button" role="radio" data-os="linux" aria-checked="false" tabindex="-1">Linux</button>
+    </div>
+
+    <h2 id="step1">1. Paste this in <span data-terminal>Terminal</span> and press <span data-enter>Return</span></h2>
+    <div class="board">
+      <code id="command">curl -fsSL https://raw.githubusercontent.com/Coflazo/study-duo/main/install.sh | sh</code>
+      <button type="button" class="copy" id="copy" aria-describedby="step1">Copy</button>
+    </div>
+    <p class="hint" id="open-terminal">Open Terminal: press Cmd+Space, type Terminal, press Return.</p>
+
+    <h2>2. Then three clicks in your browser, once</h2>
+    <ol>
+      <li>Turn on Developer mode on the extensions page that opens.</li>
+      <li>Click Load unpacked.</li>
+      <li>Choose the Study Duo folder; its path is already on your clipboard.</li>
+    </ol>
+
+    <h2>What the line does, and nothing else</h2>
+    <p class="small">It downloads the latest release from GitHub over HTTPS, stops unless its checksum matches, unzips it into a visible folder called Study Duo in your home folder, copies that path and opens your browser's extensions page. No admin rights. You can <a href="https://github.com/Coflazo/study-duo/blob/main/install.sh" data-script>read the script first</a>.</p>
+    <p class="small">To update, run the same line again, then press reload on the Study Duo card. Your data stays.</p>
+
+    <p class="links">
+      <a href="https://github.com/Coflazo/study-duo#is-it-safe">Install by hand</a>
+      <a href="https://github.com/Coflazo/study-duo/blob/main/PRIVACY.md">Privacy</a>
+      <a href="https://github.com/Coflazo/study-duo">Source code</a>
+      <a href="https://github.com/Coflazo/study-duo/releases/latest">Releases</a>
+    </p>
+  </main>
+  <script>
+    // One line per system: no single command works in both a POSIX shell and Windows PowerShell 5.1.
+    const OS = {
+      mac: { cmd: 'curl -fsSL https://raw.githubusercontent.com/Coflazo/study-duo/main/install.sh | sh', terminal: 'Terminal', enter: 'Return', open: 'Open Terminal: press Cmd+Space, type Terminal, press Return.', script: 'install.sh' },
+      linux: { cmd: 'curl -fsSL https://raw.githubusercontent.com/Coflazo/study-duo/main/install.sh | sh', terminal: 'a terminal', enter: 'Enter', open: 'Open a terminal: press Ctrl+Alt+T on most systems.', script: 'install.sh' },
+      windows: { cmd: 'powershell -c "irm https://raw.githubusercontent.com/Coflazo/study-duo/main/install.ps1 | iex"', terminal: 'PowerShell', enter: 'Enter', open: 'Open PowerShell: press the Windows key, type PowerShell, press Enter.', script: 'install.ps1' },
+    };
+    const tabs = [...document.querySelectorAll('[role=radio]')];
+    let current = 'mac';
+    function show(os, focus) {
+      const o = OS[os];
+      current = os;
+      document.getElementById('command').textContent = o.cmd;
+      document.getElementById('open-terminal').textContent = o.open;
+      document.querySelector('[data-terminal]').textContent = o.terminal;
+      document.querySelector('[data-enter]').textContent = o.enter;
+      document.querySelector('[data-script]').href = 'https://github.com/Coflazo/study-duo/blob/main/' + o.script;
+      for (const t of tabs) {
+        const on = t.dataset.os === os;
+        t.setAttribute('aria-checked', String(on));
+        t.tabIndex = on ? 0 : -1;
+        if (on && focus) t.focus();
+      }
+    }
+    const ua = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent;
+    show(/win/i.test(ua) ? 'windows' : /linux|x11|cros/i.test(ua) && !/android/i.test(navigator.userAgent) ? 'linux' : 'mac');
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => show(t.dataset.os));
+      t.addEventListener('keydown', (e) => {
+        const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+        if (!step) return;
+        e.preventDefault();
+        show(tabs[(i + step + tabs.length) % tabs.length].dataset.os, true);
+      });
+    });
+    const copy = document.getElementById('copy');
+    copy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(document.getElementById('command').textContent);
+        copy.textContent = 'Copied';
+      } catch {
+        getSelection().selectAllChildren(document.getElementById('command'));
+        copy.textContent = current === 'mac' ? 'Press Cmd+C' : 'Press Ctrl+C';
+      }
+      setTimeout(() => (copy.textContent = 'Copy'), 2000);
+    });
+  </script>
+</body>
+</html>
