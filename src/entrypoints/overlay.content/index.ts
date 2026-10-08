@@ -255,6 +255,25 @@ export default defineContentScript({
     });
     dialogs.observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['open'] });
     life.signal.addEventListener('abort', () => dialogs.disconnect());
+    // A page that removes unknown nodes under <html> gets the clock back at once, not at the next minute's render;
+    // at most once a second, so a page that keeps removing it cannot make it loop.
+    let lastReturn = 0;
+    let returning: ReturnType<typeof setTimeout> | undefined;
+    const putBack = () => {
+      returning = undefined;
+      if (host.isConnected || life.signal.aborted) return;
+      lastReturn = Date.now();
+      raiseIfAlive();
+    };
+    const removed = new MutationObserver(() => {
+      if (host.isConnected || returning) return;
+      returning = setTimeout(putBack, Math.max(0, lastReturn + 1000 - Date.now()));
+    });
+    removed.observe(document.documentElement, { childList: true });
+    life.signal.addEventListener('abort', () => {
+      removed.disconnect();
+      clearTimeout(returning);
+    });
     const unwatch = [
       timerItem.watch((v) => {
         heardTimer = true;
