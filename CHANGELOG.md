@@ -19,6 +19,10 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 - Disconnecting stops the very next request, even in the middle of a check.
 - Calendar feeds are read in time proportional to their size, whatever they contain (each value is cut to 500 characters before parsing).
 
+### Fixed
+
+- Songs from Spotify's web player no longer feed your insights, as Spotify's User Guidelines require; they still show in Music, the timeline and calendar exports.
+
 ### Changed
 
 - Releases are published by the repository owner with `scripts/publish-release.sh`, from the zips the release workflow built and attested. No CI job can write to the repository any more.

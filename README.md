@@ -70,6 +70,7 @@ Everything happens on your computer. After each study block you rate your focus 
 - **Weekdays learn from each other, and so do weekends.** A day with few blocks borrows from the days like it, so one odd Tuesday doesn't redraw your map.
 - **Your quiet signals can stand in for a rating.** Once they predict your ratings well (after 15 rated blocks), time on study sites and how often you wander off fill in the blocks you didn't rate, and Study Duo asks less.
 - **It suggests things to try.** A sound and a block length, picked to keep learning what works for you.
+- **Spotify's web player doesn't count.** Spotify's rules forbid feeding what it plays into a model like this one, so those songs show in Music and the timeline but stay out of your insights.
 
 <details>
 <summary>The details, for the curious</summary>

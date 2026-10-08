@@ -117,7 +117,7 @@
       {:else}
         <div class="row"><div class="text"><p class="label">Nothing is playing in your tabs</p></div></div>
       {/each}
-      <div class="row"><div class="text"><p class="label">How this works</p><p class="help">Study Duo notices songs on YouTube Music, Spotify, Apple Music, SoundCloud and other music sites, from what the site tells your browser. It keeps the title, artist and album, never the address, and only while the timer runs.</p></div></div>
+      <div class="row"><div class="text"><p class="label">How this works</p><p class="help">Study Duo notices songs on YouTube Music, Spotify, Apple Music, SoundCloud and other music sites, from what the site tells your browser. It keeps the title, artist and album, never the address, and only while the timer runs. Spotify's web player is shown here but never used for your insights, as Spotify's rules ask.</p></div></div>
     </section>
 
     <section aria-labelledby="sounds-title">
