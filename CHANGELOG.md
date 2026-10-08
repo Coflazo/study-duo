@@ -4,6 +4,10 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Fixed
+
+- Videos you watch on YouTube are no longer kept as songs. Only music players count (YouTube Music, Spotify, Apple Music, SoundCloud, Tidal, Deezer, Amazon Music), and the YouTube video titles kept by earlier versions are deleted when Study Duo updates.
+
 ## [0.2.2] - 2026-10-08
 
 ### Added

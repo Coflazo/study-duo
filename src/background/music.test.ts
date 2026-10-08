@@ -19,12 +19,20 @@ beforeEach(() => {
 describe('hearTab', () => {
   it('records songs only while the timer runs, so a music tab never becomes a watch history', async () => {
     const t0 = Date.now();
-    await hearTab(1, 'https://www.youtube.com/watch?v=jfKfPfyJRdk', song, t0);
+    await hearTab(1, 'https://music.youtube.com/watch?v=jfKfPfyJRdk', song, t0);
     expect(await listeningItem.getValue()).toEqual({});
     await timerItem.setValue(reduce(initialState(), { type: 'start' }, DEFAULT_SETTINGS, t0).state);
-    await hearTab(1, 'https://www.youtube.com/watch?v=jfKfPfyJRdk', song, t0 + 3_000);
-    await hearTab(1, 'https://www.youtube.com/watch?v=jfKfPfyJRdk', { ...song, playing: false }, t0 + 60_000);
+    await hearTab(1, 'https://music.youtube.com/watch?v=jfKfPfyJRdk', song, t0 + 3_000);
+    await hearTab(1, 'https://music.youtube.com/watch?v=jfKfPfyJRdk', { ...song, playing: false }, t0 + 60_000);
     expect((await recordsBetween('listens', 0, Infinity)).map((l) => l.title)).toEqual(['lofi hip hop radio']);
+  });
+
+  it('never keeps a video watched on YouTube itself, even during a block', async () => {
+    const t0 = Date.now();
+    await timerItem.setValue(reduce(initialState(), { type: 'start' }, DEFAULT_SETTINGS, t0).state);
+    await hearTab(3, 'https://www.youtube.com/watch?v=abc', { ...song, title: 'A football clip' }, t0 + 1_000);
+    await hearTab(3, 'https://www.youtube.com/watch?v=abc', { ...song, title: 'A football clip', playing: false }, t0 + 60_000);
+    expect(await recordsBetween('listens', 0, Infinity)).toEqual([]);
   });
 
   it('never lets a stop message eat the next song report (reloading a playing tab)', async () => {

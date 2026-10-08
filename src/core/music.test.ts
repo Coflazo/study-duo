@@ -1,13 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { foldListen, isMusicHost, parseNowPlaying, type OpenListen } from './music';
+import { foldListen, isMusicHost, isYouTubeVideoHost, parseNowPlaying, type OpenListen } from './music';
 
 const T = 1_800_000_000_000;
 const song = { title: 'Says', artist: 'Nils Frahm', album: 'Spaces', playing: true };
 
 describe('isMusicHost', () => {
-  it('knows the music players and YouTube, by whole labels', () => {
-    for (const h of ['music.youtube.com', 'open.spotify.com', 'music.apple.com', 'soundcloud.com', 'www.youtube.com', 'youtube.com', 'm.youtube.com']) expect(isMusicHost(h)).toBe(true);
+  it('knows the music players, by whole labels', () => {
+    for (const h of ['music.youtube.com', 'open.spotify.com', 'music.apple.com', 'soundcloud.com']) expect(isMusicHost(h)).toBe(true);
     for (const h of ['notyoutube.com', 'spotify.com.evil.example', 'github.com', null]) expect(isMusicHost(h)).toBe(false);
+  });
+
+  it('never counts videos on YouTube itself as music', () => {
+    for (const h of ['www.youtube.com', 'youtube.com', 'm.youtube.com']) expect(isMusicHost(h)).toBe(false);
+  });
+});
+
+describe('isYouTubeVideoHost', () => {
+  it('is YouTube, but not YouTube Music', () => {
+    for (const h of ['www.youtube.com', 'youtube.com', 'm.youtube.com']) expect(isYouTubeVideoHost(h)).toBe(true);
+    for (const h of ['music.youtube.com', 'notyoutube.com', 'open.spotify.com', 'file']) expect(isYouTubeVideoHost(h)).toBe(false);
   });
 });
 
