@@ -122,3 +122,16 @@ describe('late input counts', () => {
   });
 });
 
+describe('away from a moment in the past', () => {
+  it('starts away when the user left, not when Chrome noticed, and never before the record began', () => {
+    let s = track(IDLE_TRACKER, { type: 'focus', host: 'khanacademy.org' }, 0, SITES).state;
+    s = track(s, { type: 'timer', phase: 'focus' }, 0, SITES).state;
+    const r = track(s, { type: 'away' }, 10 * MIN - 60_000, SITES); // idle detected at 10 min, after 60 s without input
+    expect(r.closed[0]).toMatchObject({ category: 'study', startedAt: 0, endedAt: 9 * MIN });
+    expect(r.state.open).toMatchObject({ category: 'unobserved', startedAt: 9 * MIN });
+    const early = track(s, { type: 'away' }, -5 * MIN, SITES); // went idle before the block began
+    expect(early.closed).toEqual([]);
+    expect(early.state.open).toMatchObject({ category: 'unobserved', startedAt: 0 });
+  });
+});
+

@@ -1,3 +1,4 @@
+import { IDLE_TRACKER, type TrackerState } from './activity';
 import type { OpenListen } from './music';
 import type { NoiseKind } from './noise';
 import { storage } from 'wxt/utils/storage';
@@ -37,4 +38,6 @@ export const listeningItem = storage.defineItem<Record<string, OpenListen>>('ses
 export const soundItem = storage.defineItem<{ noise: NoiseKind; volume: number; startedAt: number; sessionId: string | null } | null>('session:focusSound', { fallback: null });
 /** Bumped after the background writes sessions, so open pages reload Today exactly then (no polling). */
 export const logVersionItem = storage.defineItem<number>('session:logVersion', { fallback: 0 });
+/** The activity tracker's state between events (session only; the worker sleeps, the browser session does not). */
+export const trackerItem = storage.defineItem<TrackerState>('session:activityTracker', { fallback: IDLE_TRACKER });
 

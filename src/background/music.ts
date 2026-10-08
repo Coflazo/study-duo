@@ -15,9 +15,13 @@ export function hearTab(tabId: number, url: string | undefined, now: NowPlaying 
     .then(async () => {
       const host = hostOf(url);
       if (now && !isMusicHost(host)) return; // only music sites may report songs
-      if (now && at - (lastReport.get(tabId) ?? 0) < 2_000) return;
-      lastReport.set(tabId, at);
+      if (now) {
+        if (at - (lastReport.get(tabId) ?? 0) < 2_000) return; // a stop never blocks the next song
+        lastReport.set(tabId, at);
+      }
       const [listening, timer, settings] = await Promise.all([listeningItem.getValue(), timerItem.getValue(), settingsItem.getValue().then(normalizeSettings)]);
+      // Songs count only while the timer runs (a block or a break): a music tab never becomes a watch history.
+      if (timer.status === 'stopped') now = null;
       const key = String(tabId);
       const open = listening[key] ?? null;
       const inSession = timer.status !== 'stopped' && timer.startedAt !== null ? sessionId({ phase: timer.phase, startedAt: timer.startedAt }) : null;

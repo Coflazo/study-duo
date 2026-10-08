@@ -49,7 +49,16 @@ export function blockSignals({ block, activity, blocks, previous, measure }: Blo
   if (measure.sites) {
     const observed = ms(inBlock.filter((r) => r.category !== 'unobserved'));
     if (observed >= MIN) out.studyShare = ms(inBlock.filter((r) => r.category === 'study')) / observed;
-    if (block.activeMs >= MIN) out.offSwitchesPerHour = inBlock.filter((r) => r.category === 'blocked' || r.category === 'unfiled').length / (block.activeMs / (60 * MIN));
+    // A switch is arriving on an off-task site from somewhere else; a pause or time away on the same site is not one.
+    let switches = 0;
+    let last: string | null = null;
+    for (const r of inBlock) {
+      if (r.category === 'unobserved') continue;
+      const where = `${r.category}:${r.domain ?? ''}`;
+      if ((r.category === 'blocked' || r.category === 'unfiled') && where !== last) switches++;
+      last = where;
+    }
+    if (block.activeMs >= MIN) out.offSwitchesPerHour = switches / (block.activeMs / (60 * MIN));
     let longest = 0;
     let run = 0;
     let runEnd = -Infinity;

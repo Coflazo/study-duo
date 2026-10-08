@@ -6,7 +6,8 @@ let ctx: AudioContext | null = null;
 let noise: ReturnType<typeof startNoise> | null = null;
 
 browser.runtime.onMessage.addListener((raw, sender) => {
-  if (sender.id !== browser.runtime.id) return;
+  // Content scripts share the extension id; only the extension's own pages (the background) may drive audio.
+  if (sender.id !== browser.runtime.id || !sender.url?.startsWith(browser.runtime.getURL('/'))) return;
   const audio = (ctx ??= new AudioContext());
   const bell = parseOffscreenMessage(raw);
   if (bell) return void audio.resume().then(() => playBell(audio, bell.bell, bell.volume));

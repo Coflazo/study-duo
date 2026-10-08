@@ -263,3 +263,21 @@ test('blocking YouTube keeps YouTube Music open, because music players are filed
   await ctx.close();
   fs.rmSync(profile, { recursive: true, force: true });
 });
+
+test('a page that frames the blocked page cannot write fake blocked attempts', async () => {
+  const { profile, ctx, sw } = await setup();
+  await sw.evaluate(() => chrome.storage.local.set({ sites: { 'video.study-duo.test': 'blocked' } }));
+  await startBlock(ctx, sw);
+  await ctx.route('https://framer.study-duo.test/**', (r) =>
+    r.fulfill({ contentType: 'text/html', body: `<iframe src="chrome-extension://${EXT_ID}/blocked.html#https://reddit.com/"></iframe><iframe src="chrome-extension://${EXT_ID}/blocked.html#https://news.example/"></iframe>` }),
+  );
+  const p = await ctx.newPage();
+  await p.goto('https://framer.study-duo.test/');
+  await p.waitForTimeout(1_500);
+  expect(await readStore(sw, 'blocks')).toEqual([]);
+  // A real visit still counts.
+  await p.goto('https://video.study-duo.test/clip').catch(() => undefined);
+  await expect.poll(async () => (await readStore(sw, 'blocks')).map((b) => b.domain)).toEqual(['video.study-duo.test']);
+  await ctx.close();
+  fs.rmSync(profile, { recursive: true, force: true });
+});

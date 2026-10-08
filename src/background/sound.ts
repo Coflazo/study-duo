@@ -31,7 +31,9 @@ export async function focusSound(cmd: SoundCommand): Promise<void> {
   const [now, timer, settings] = await Promise.all([soundItem.getValue(), timerItem.getValue(), settingsItem.getValue().then(normalizeSettings)]);
   const at = Date.now();
   if (cmd.op === 'volume') return void (now && (await soundItem.setValue({ ...now, volume: cmd.volume })));
-  if (now && settings.measure.music) {
+  const timerRuns = timer.status !== 'stopped';
+  // Like songs, a focus sound is kept only if it played while the timer ran.
+  if (now && settings.measure.music && (now.sessionId !== null || timerRuns)) {
     const open = { host: 'sound', title: NAMES[now.noise], artist: '', album: '', startedAt: now.startedAt, sessionId: now.sessionId };
     const { closed } = foldListen(open, null, at, 'sound', null);
     if (closed) await addRecords('listens', [closed]);

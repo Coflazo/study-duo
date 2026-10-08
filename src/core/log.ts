@@ -1,3 +1,4 @@
+import { logVersionItem } from './store';
 import { STORES, TIME_INDEX, withDb, type ActivityRecord, type BlockedAttempt, type ListenRecord, type StoreName } from './db';
 import type { SessionRecord } from './sessions';
 
@@ -53,10 +54,11 @@ export function exportAll(now: number): Promise<ExportFile> {
   }));
 }
 
-export function deleteAll(): Promise<void> {
-  return withDb(async (db) => {
+export async function deleteAll(): Promise<void> {
+  await withDb(async (db) => {
     for (const store of STORES) await db.clear(store);
   });
+  await logVersionItem.setValue(Date.now()); // open pages drop what they showed
 }
 
 /** How many rows each store holds, for Your data. */
