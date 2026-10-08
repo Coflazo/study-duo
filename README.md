@@ -132,7 +132,7 @@ Optional connections, each off until you turn it on in Connections:
 |---|---|
 | Course deadlines | A request for the calendar link you paste (for example from Canvas), to the site that hosts it, every 6 hours |
 | ListenBrainz or Last.fm | A request for your own recent songs, to that service, every 30 minutes (Last.fm also gets your API key) |
-| Google Calendar (coming later) | Start and end times of your sessions, into a separate "Study Duo" calendar in your own Google account |
+| Google Calendar | Each study block and break as an event in a separate "Study Duo" calendar in your own Google account: times, task, focus rating, and (unless you switch it off) the study sites and songs |
 
 With all of them off, Study Duo makes no internet requests at all: one small part of the code makes every request, and it refuses any address that isn't a connection you switched on. Full details: [PRIVACY.md](PRIVACY.md).
 

@@ -7,6 +7,8 @@
   import SignButton from '@/ui/SignButton.svelte';
   import { helperErrorText, helperItem, type HelperState } from '@/core/helper';
   import { qrPath } from '@/ui/qr';
+  import Toggle from '@/ui/Toggle.svelte';
+  import { googleToken } from '@/background/google-auth';
 
   let { data }: { data: ReturnType<typeof createLive> } = $props();
   const live = $derived(data.live);
@@ -19,8 +21,9 @@
   let lbUser = $state('');
   let fmUser = $state('');
   let fmKey = $state('');
-  let busy = $state<Record<Kind, boolean>>({ deadlines: false, listenbrainz: false, lastfm: false });
-  let invalid = $state<Record<Kind, string>>({ deadlines: '', listenbrainz: '', lastfm: '' });
+  let busy = $state<Record<Kind, boolean>>({ deadlines: false, listenbrainz: false, lastfm: false, google: false });
+  let invalid = $state<Record<Kind, string>>({ deadlines: '', listenbrainz: '', lastfm: '', google: '' });
+  let googleNote = $state('');
 
   let helper = $state<HelperState>({ on: false, app: null, error: null });
   let helperNote = $state('');
@@ -46,6 +49,35 @@
   async function helperOff() {
     await helperItem.setValue({ on: false, app: null, error: null });
     await browser.permissions.remove({ permissions: ['nativeMessaging'] }).catch(() => false);
+  }
+
+  // Google Calendar: permission and sign-in at the click (browsers require both), then the background makes the calendar.
+  async function googleOn() {
+    googleNote = '';
+    const granted = await browser.permissions.request({ permissions: ['identity'] }).catch(() => false);
+    if (!granted) {
+      googleNote = 'Study Duo needs your permission to sign in with Google.';
+      return;
+    }
+    busy.google = true;
+    try {
+      if (!(await googleToken(true))) {
+        googleNote = 'The Google sign-in did not finish. Try again.';
+        return;
+      }
+      await browser.runtime.sendMessage({ kind: 'calendar', op: 'connect' });
+    } finally {
+      busy.google = false;
+    }
+  }
+  async function googleOff() {
+    busy.google = true;
+    try {
+      await browser.runtime.sendMessage({ kind: 'calendar', op: 'disconnect' });
+      await browser.permissions.remove({ permissions: ['identity'] }).catch(() => false);
+    } finally {
+      busy.google = false;
+    }
   }
 
   /** Saves a change on top of the stored connections, secrets included (they never pass through this page's state). */
@@ -99,6 +131,7 @@
     const c = conn[kind];
     if (busy[kind]) return 'Checking now…';
     if (c.lastSync === null) return 'Not checked yet.';
+    if (kind === 'google') return `Last sent at ${clockTime(c.lastSync)}.`;
     return `Checked at ${clockTime(c.lastSync)}. It checks again every ${kind === 'deadlines' ? '6 hours' : '30 minutes'}.`;
   };
 
@@ -109,6 +142,37 @@
 <h1 class="screen-title">Connections</h1>
 <div class="columns">
   <div>
+    <section aria-labelledby="google-title">
+      <h2 class="section-title" id="google-title">Google Calendar</h2>
+      {#if conn.google.on && conn.google.calendarId}
+        <div class="row">
+          <div class="text">
+            <p class="label">Every block and break goes into your Study Duo calendar</p>
+            <p class="help" aria-live="polite">Each one is added the moment it ends. {conn.google.count} so far. {checked('google')}</p>
+            {#if conn.google.error}<p class="help error" role="status">{conn.google.error}</p>{/if}
+          </div>
+          <SignButton label="Check now" kind="secondary" disabled={busy.google} onclick={() => check('google')} />
+          <SignButton label="Disconnect" kind="secondary" disabled={busy.google} onclick={googleOff} />
+        </div>
+        <div class="row">
+          <div class="text">
+            <p class="label">Sites and songs in each event</p>
+            <p class="help">Off: events say only the task, the block number and your focus rating. Spotify songs are never included.</p>
+          </div>
+          <Toggle checked={conn.google.details} label="Sites and songs in each event" onchange={(v) => save((c) => ({ ...c, google: { ...c.google, details: v } }))} />
+        </div>
+      {:else}
+        <div class="row">
+          <div class="text">
+            <p class="label">Log every block and break in Google Calendar</p>
+            <p class="help">Sign in with Google once. Study Duo makes its own Study Duo calendar and adds each block and break when it ends: the task, your focus rating, and the sites and songs you used. It cannot see or change your other calendars, and only Google receives this.</p>
+            {#if conn.google.error}<p class="help error" role="status">{conn.google.error}</p>{/if}
+            {#if googleNote}<p class="help error" role="alert">{googleNote}</p>{/if}
+          </div>
+          <SignButton label={busy.google ? 'Signing in…' : 'Sign in with Google'} kind="primary" disabled={busy.google} onclick={googleOn} />
+        </div>
+      {/if}
+    </section>
     <section aria-labelledby="deadlines-title">
       <h2 class="section-title" id="deadlines-title">Course deadlines</h2>
       {#if conn.deadlines.host}

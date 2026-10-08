@@ -7,22 +7,24 @@ import { updateTodos } from '@/core/todos';
 import { mergeDeadlines } from '@/integrations/deadlines';
 import { parseFeed } from '@/integrations/ics-feed';
 import { attachToSessions, fromLastfm, fromListenBrainz, lastfmPages, lastfmUrl, listenBrainzUrl, mergeImported } from '@/integrations/listens-import';
+import { syncCalendar } from './calendar';
 
 export type ConnectionKind = keyof Connections;
 type FetchText = (url: string, c: Connections) => Promise<string>;
 
 const MIN = 60_000;
 export const ALARM_CONNECTIONS = 'connections';
-const EVERY: Record<ConnectionKind, number> = { deadlines: 6 * 60 * MIN, listenbrainz: 30 * MIN, lastfm: 30 * MIN };
+const EVERY: Record<ConnectionKind, number> = { deadlines: 6 * 60 * MIN, listenbrainz: 30 * MIN, lastfm: 30 * MIN, google: 30 * MIN };
 /** First check after connecting looks back two weeks; later ones overlap the last by 6 hours, for phones that send late. */
 const FIRST_LOOK_BACK = 14 * 24 * 60 * MIN;
 const OVERLAP = 6 * 60 * MIN;
 
-const isOn = (c: Connections, kind: ConnectionKind) => (kind === 'deadlines' ? !!c.deadlines.url : kind === 'listenbrainz' ? !!c.listenbrainz.user : !!(c.lastfm.user && c.lastfm.key));
+const isOn = (c: Connections, kind: ConnectionKind) =>
+  kind === 'deadlines' ? !!c.deadlines.url : kind === 'listenbrainz' ? !!c.listenbrainz.user : kind === 'lastfm' ? !!(c.lastfm.user && c.lastfm.key) : c.google.on && !!c.google.calendarId;
 
 /** The connections that are on and due for a check. */
 export function dueNow(c: Connections, now: number): ConnectionKind[] {
-  return (['deadlines', 'listenbrainz', 'lastfm'] as const).filter((k) => isOn(c, k) && now - (c[k].lastSync ?? 0) >= EVERY[k]);
+  return (['deadlines', 'listenbrainz', 'lastfm', 'google'] as const).filter((k) => isOn(c, k) && now - (c[k].lastSync ?? 0) >= EVERY[k]);
 }
 
 async function patch<K extends ConnectionKind>(kind: K, fields: Partial<Connections[K]>): Promise<void> {
@@ -66,14 +68,26 @@ async function syncListens(kind: 'listenbrainz' | 'lastfm', c: Connections, now:
 
 let queue: Promise<unknown> = Promise.resolve();
 
+/**
+ * One connection job at a time: checks, and Google Calendar's Connect and Disconnect. A Disconnect pressed during a
+ * check waits for it, so the check cannot write its "not switched on" error or its sent list after the Disconnect.
+ */
+export function inQueue(job: () => Promise<void>): Promise<void> {
+  const run = queue.then(job);
+  queue = run.catch(() => undefined);
+  return run;
+}
+
 /** Each request re-reads the connections, so Disconnect stops the very next one, even in the middle of a check. */
 const fetchCurrent: FetchText = async (url) => getText(url, await loadConnections());
 
 /** Checks one connection now, if it is on (and, for listening history, if Songs you play is on). One check at a time. */
 export function syncConnection(kind: ConnectionKind, now = Date.now(), fetchText: FetchText = fetchCurrent): Promise<void> {
-  const run = queue.then(async () => {
+  return inQueue(async () => {
     const c = await loadConnections();
     if (!isOn(c, kind)) return;
+    // Calendar sync keeps its own errors and is not part of "Songs you play".
+    if (kind === 'google') return syncCalendar(now);
     if (kind !== 'deadlines' && !(await loadSettings()).measure.music) return;
     const service = kind === 'deadlines' ? 'The calendar link' : kind === 'listenbrainz' ? 'ListenBrainz' : 'Last.fm';
     try {
@@ -83,8 +97,6 @@ export function syncConnection(kind: ConnectionKind, now = Date.now(), fetchText
       await patch(kind, { lastSync: now, error: reason(e, service) });
     }
   });
-  queue = run.catch(() => undefined);
-  return run;
 }
 
 /** Every connection that is due, one after another. */
@@ -96,7 +108,7 @@ export async function syncDue(now = Date.now()): Promise<void> {
 export function parseSyncRequest(raw: unknown): ConnectionKind | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
-  return r.kind === 'connections' && r.op === 'sync' && (r.which === 'deadlines' || r.which === 'listenbrainz' || r.which === 'lastfm') ? r.which : null;
+  return r.kind === 'connections' && r.op === 'sync' && (r.which === 'deadlines' || r.which === 'listenbrainz' || r.which === 'lastfm' || r.which === 'google') ? r.which : null;
 }
 
 /** One alarm every 30 minutes; each connection runs on its own schedule inside it. */

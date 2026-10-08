@@ -53,3 +53,5 @@ export function isMusicStop(raw: unknown): boolean {
   return raw !== null && typeof raw === 'object' && (raw as Record<string, unknown>).kind === 'music' && (raw as Record<string, unknown>).op === 'none';
 }
 
+/** Spotify's web player and desktop app: shown to the user, but by Spotify's rules never fed to the insights or sent on. */
+export const SPOTIFY_HOSTS: ReadonlySet<string> = new Set(['open.spotify.com', 'app:spotify']);

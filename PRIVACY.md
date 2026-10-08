@@ -29,6 +29,7 @@ These are off until you turn them on in Connections. Each one sends only what is
 | Course deadlines | A request for the calendar link you pasted | The site that hosts it (for example your school's Canvas) | Every 6 hours, and when you press Check now |
 | ListenBrainz | A request for your own recent listens, by your username | api.listenbrainz.org | Every 30 minutes |
 | Last.fm | A request for your own recent tracks, with your username and your API key | ws.audioscrobbler.com | Every 30 minutes |
+| Google Calendar | Each finished study block and break as an event in a "Study Duo" calendar that Study Duo makes in your Google account: start and end, your time zone, the task and its course, the block number of the day and your daily goal, your focus rating, whether it ended early (minutes done of minutes planned), for a break the task it followed, and, unless you switch it off, the Study sites you used (site names and minutes) and the songs you heard in the browser, from your files or through ListenBrainz (never Spotify's, and never Last.fm's, which does not say which app played them) | www.googleapis.com, with your Google sign-in; oauth2.googleapis.com only to hand the sign-in back on Disconnect | When each block or break ends, and every 30 minutes for anything missed |
 
 What comes back stays on your computer: deadlines become to-dos with their due date, and songs are kept only when they played during a study block or break, like the songs in your tabs. With Songs you play off in Your data, no listening history is asked for at all. Disconnecting stops all requests to that service at once; the to-dos and songs already brought in stay until you delete them.
 
@@ -36,7 +37,7 @@ Like any web request, each one also shows that service your IP address, that you
 
 One part of the code makes every request, and it refuses any address that does not belong to a connection you switched on. With all of them off, Study Duo makes no internet requests. Those services handle requests under their own privacy policies.
 
-Google Calendar sync is planned for a later version.
+Google Calendar uses one permission, "Make secondary Google calendars, and see, create, change, and delete events on them": Study Duo can only reach the calendar it made, never your other calendars. You sign in with Google's own window; Study Duo never sees your password. The sign-in token stays in the browser's memory, is never written to disk by Study Duo, and is handed back to Google (revoked) when you press Disconnect. The Study Duo calendar and its events stay in your Google account until you delete them there; Disconnect stops new events at once. Google keeps what it receives under its own privacy policy.
 
 ## The desktop helper (optional)
 

@@ -30,6 +30,13 @@ describe('cleaning what the user types', () => {
       deadlines: { ...DEFAULT_CONNECTIONS.deadlines, url: null, dismissed: ['a'] },
       listenbrainz: { ...DEFAULT_CONNECTIONS.listenbrainz, user: 'ok', count: 0 },
       lastfm: { ...DEFAULT_CONNECTIONS.lastfm, user: 'x', key: null },
+      google: DEFAULT_CONNECTIONS.google,
+    });
+    // Google: only a real switch turns it on, ids are checked, and the sent map keeps short strings only.
+    expect(normalizeConnections({ google: { on: 'yes', calendarId: 'a b<script>', sent: { s1: 'abc', s2: 5 }, details: false } }).google).toEqual({
+      ...DEFAULT_CONNECTIONS.google,
+      sent: { s1: 'abc' },
+      details: false,
     });
   });
 });

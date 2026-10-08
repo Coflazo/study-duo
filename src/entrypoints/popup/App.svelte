@@ -63,6 +63,8 @@
   async function rate(r: 1 | 2 | 3 | 4 | 5 | 'skip') {
     if (!toRate) return;
     await rateSession(toRate.id, r);
+    // The rating goes into that block's calendar event too (only if Google Calendar is connected; the background checks).
+    browser.runtime.sendMessage({ kind: 'connections', op: 'sync', which: 'google' }).catch(() => undefined);
     await data.loadToday();
     // The card is gone; keep keyboard users in the popup on its next action.
     await tick();

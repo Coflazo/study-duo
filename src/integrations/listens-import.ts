@@ -31,7 +31,13 @@ function listen(prefix: string, host: string, at: number, title: string, artist:
   return { id: `${prefix}-${sec(at)}-${hash(`${title}|${artist}`)}`, host, title, artist, album, startedAt: at, endedAt: at + length, sessionId: null };
 }
 
-/** ListenBrainz `GET /1/user/{user}/listens` to listens. Malformed entries are skipped. */
+/** ListenBrainz says which service played a song in several places; any of them naming Spotify counts. */
+function fromSpotify(info: Record<string, unknown>): boolean {
+  if (typeof info.spotify_id === 'string' && info.spotify_id) return true;
+  return ['music_service', 'music_service_name', 'media_player', 'submission_client', 'origin_url'].some((k) => typeof info[k] === 'string' && /spotify/i.test(info[k] as string));
+}
+
+/** ListenBrainz `GET /1/user/{user}/listens` to listens. Plays from Spotify are filed under Spotify. Malformed entries are skipped. */
 export function fromListenBrainz(json: unknown): ListenRecord[] {
   const raw = obj(obj(json).payload).listens;
   if (!Array.isArray(raw)) return [];
@@ -41,7 +47,7 @@ export function fromListenBrainz(json: unknown): ListenRecord[] {
     const meta = obj(o.track_metadata);
     const info = obj(meta.additional_info);
     const at = typeof o.listened_at === 'number' ? o.listened_at * 1000 : NaN;
-    const l = listen('lb', 'listenbrainz', at, text(meta.track_name), text(meta.artist_name), text(meta.release_name), typeof info.duration_ms === 'number' ? info.duration_ms : null);
+    const l = listen('lb', fromSpotify(info) ? 'app:spotify' : 'listenbrainz', at, text(meta.track_name), text(meta.artist_name), text(meta.release_name), typeof info.duration_ms === 'number' ? info.duration_ms : null);
     if (l) out.push(l);
   }
   return out;

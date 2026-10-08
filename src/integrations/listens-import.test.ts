@@ -22,6 +22,17 @@ describe('fromListenBrainz', () => {
     ]);
   });
 
+  it('files plays that came from Spotify under Spotify, so they stay out of insights and the calendar', () => {
+    const at = T / 1000;
+    const listens = [
+      { listened_at: at, track_metadata: { artist_name: 'A', track_name: 'One', additional_info: { music_service: 'spotify.com' } } },
+      { listened_at: at + 1, track_metadata: { artist_name: 'A', track_name: 'Two', additional_info: { spotify_id: 'https://open.spotify.com/track/x' } } },
+      { listened_at: at + 2, track_metadata: { artist_name: 'A', track_name: 'Three', additional_info: { media_player: 'Spotify' } } },
+      { listened_at: at + 3, track_metadata: { artist_name: 'A', track_name: 'Four', additional_info: { music_service: 'youtube.com' } } },
+    ];
+    expect(fromListenBrainz({ payload: { listens } }).map((l) => l.host)).toEqual(['app:spotify', 'app:spotify', 'app:spotify', 'listenbrainz']);
+  });
+
   it('ignores anything malformed and caps text', () => {
     expect(fromListenBrainz(null)).toEqual([]);
     expect(fromListenBrainz({ payload: { listens: [{ listened_at: 'x' }, { listened_at: T / 1000, track_metadata: { track_name: '' } }, 5] } })).toEqual([]);

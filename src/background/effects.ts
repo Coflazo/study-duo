@@ -3,6 +3,7 @@ import { bellKindFor, playBell, type BellKind } from '@/core/bell';
 import { actionTitle, dial } from '@/core/dial';
 import { drawDial } from './dial-canvas';
 import { syncLockFromStorage } from './site-lock';
+import { syncConnection } from './connections';
 import type { AnnounceMessage } from '@/core/messages';
 import { phaseTitle } from '@/core/phase-copy';
 import { drawLine, momentFor, subLine } from '@/core/phrases';
@@ -96,6 +97,9 @@ export async function applyEffects(input: EffectInput): Promise<void> {
   // The log comes after everything that keeps the timer running, and a database that never answers is abandoned.
   if (segments.length > 0) {
     await withTimeout(addSessions(segments).then(() => logVersionItem.setValue(Date.now())), SESSION_WRITE_MS).catch(console.error);
+    // Each block and break that ended goes into Google Calendar by itself when that is connected. Not awaited: no
+    // network wait may hold up the bell.
+    void syncConnection('google').catch(console.error);
   }
   const finishedOnItsOwn = event.type === 'tick' && segments.some((s) => s.completed);
   if (!finishedOnItsOwn) return;
