@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-export const EXT_DIR = path.resolve('build/chrome-mv3');
+/** Tests run the copy in .test-build (npm run build:test), never the build/ folder a person loads in Chrome. */
+export const EXT_DIR = path.resolve('.test-build/chrome-mv3');
 export const EXT_ID = 'bcggiingdefmehpjcalkfpdnehpcieon';
 
 /**
@@ -96,5 +97,20 @@ export async function launchBare(): Promise<{ browser: Browser; ctx: BrowserCont
       stop();
     },
   };
+}
+
+/** Every row of one event-log store (IndexedDB study-duo), read inside the extension. */
+export function readStore(sw: Worker, store: 'sessions' | 'listens' | 'activity' | 'blocks'): Promise<any[]> {
+  return sw.evaluate((store) => new Promise<any[]>((resolve, reject) => {
+    const req = indexedDB.open('study-duo');
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(store)) return db.close(), resolve([]);
+      const all = db.transaction(store).objectStore(store).getAll();
+      all.onsuccess = () => (db.close(), resolve(all.result));
+      all.onerror = () => (db.close(), reject(all.error));
+    };
+  }), store);
 }
 

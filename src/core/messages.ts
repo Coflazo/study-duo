@@ -1,3 +1,4 @@
+import { NOISES, type NoiseKind } from './noise';
 import { strictPos, type OverlayPos } from './settings';
 import type { BellKind } from './bell';
 import { siteOf, type SiteCategory } from './sites';
@@ -95,5 +96,28 @@ export function parseMove(raw: unknown): OverlayPos | null {
   if (raw === null || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
   return r.kind === 'overlay' && r.op === 'move' ? strictPos(r.pos) : null;
+}
+
+/** One minute of opt-in input counts from a page: three whole numbers up to 10 000, nothing else. */
+export function parseCounts(raw: unknown): { keys: number; clicks: number; scrolls: number } | null {
+  if (raw === null || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  if (r.kind !== 'activity' || r.op !== 'counts') return null;
+  const ok = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 10_000;
+  return ok(r.keys) && ok(r.clicks) && ok(r.scrolls) ? { keys: r.keys, clicks: r.clicks, scrolls: r.scrolls } : null;
+}
+
+export type SoundCommand = { op: 'play'; noise: NoiseKind; volume: number } | { op: 'stop' } | { op: 'volume'; volume: number };
+
+/** Focus sound commands, from the extension's own pages only (the background checks the sender). */
+export function parseSound(raw: unknown): SoundCommand | null {
+  if (raw === null || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  if (r.kind !== 'sound') return null;
+  const vol = typeof r.volume === 'number' && Number.isFinite(r.volume) ? Math.min(1, Math.max(0, r.volume)) : null;
+  if (r.op === 'stop') return { op: 'stop' };
+  if (r.op === 'volume') return vol === null ? null : { op: 'volume', volume: vol };
+  if (r.op === 'play' && (NOISES as readonly unknown[]).includes(r.noise) && vol !== null) return { op: 'play', noise: r.noise as NoiseKind, volume: vol };
+  return null;
 }
 

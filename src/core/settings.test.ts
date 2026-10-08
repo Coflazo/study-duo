@@ -40,6 +40,15 @@ describe('normalizeSettings', () => {
     expect(normalizeSettings({ dailyGoal: 0 }).dailyGoal).toBe(1);
   });
 
+  it('measures everything but input by default, keeps a year, and clamps retention', () => {
+    expect(DEFAULT_SETTINGS.measure).toEqual({ sites: true, blocked: true, outcome: true, away: true, music: true, input: false });
+    expect(DEFAULT_SETTINGS.retentionDays).toBe(365);
+    expect(normalizeSettings({ measure: { sites: false, input: true, junk: 1 }, retentionDays: 5 })).toMatchObject({
+      measure: { sites: false, blocked: true, outcome: true, away: true, music: true, input: true },
+      retentionDays: 30,
+    });
+  });
+
   it('shows the corner clock softly by default when the mouse is away', () => {
     expect(DEFAULT_SETTINGS.overlayIdle).toBe('soft');
     expect(normalizeSettings({ overlayIdle: 'faint' }).overlayIdle).toBe('faint');

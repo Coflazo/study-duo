@@ -1,3 +1,6 @@
+import { IDLE_TRACKER, type TrackerState } from './activity';
+import type { OpenListen } from './music';
+import type { NoiseKind } from './noise';
 import { storage } from 'wxt/utils/storage';
 import { DEFAULT_SETTINGS, normalizeSettings, type TimerSettings } from './settings';
 import type { Bag } from './phrases';
@@ -28,3 +31,13 @@ export const promptDismissedItem = storage.defineItem<string[]>('local:sitePromp
 
 /** Set once the music players have been filed as Not blocked, so removing one later is respected. */
 export const musicSeededItem = storage.defineItem<boolean>('local:musicSitesSeeded', { fallback: false });
+
+/** Songs playing now, by tab (session only; the background folds them into listens). */
+export const listeningItem = storage.defineItem<Record<string, OpenListen>>('session:listening', { fallback: {} });
+/** The focus sound playing now, if any (session only). */
+export const soundItem = storage.defineItem<{ noise: NoiseKind; volume: number; startedAt: number; sessionId: string | null } | null>('session:focusSound', { fallback: null });
+/** Bumped after the background writes sessions, so open pages reload Today exactly then (no polling). */
+export const logVersionItem = storage.defineItem<number>('session:logVersion', { fallback: 0 });
+/** The activity tracker's state between events (session only; the worker sleeps, the browser session does not). */
+export const trackerItem = storage.defineItem<TrackerState>('session:activityTracker', { fallback: IDLE_TRACKER });
+

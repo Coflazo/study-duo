@@ -1,12 +1,17 @@
 import { ALARM_PHASE_END, ALARM_REFRESH, applyEffects } from '@/background/effects';
 import { createTimerService } from '@/background/timer-service';
-import { allowedFromSender, isFromWebPage, parseMessage, parseMove, parseSiteMessage, resolveSiteRequest } from '@/core/messages';
+import { allowedFromSender, isFromWebPage, parseCounts, parseMessage, parseMove, parseSiteMessage, parseSound, resolveSiteRequest } from '@/core/messages';
+import { focusSound } from '@/background/sound';
 import { normalizeSettings } from '@/core/settings';
+import { purgeOlderThan } from '@/core/log';
 import { createSiteMenu, handleSiteRequest, onSiteMenuClick } from '@/background/site-requests';
 import { loadSettings, loadState, musicSeededItem, settingsItem, sitesItem, timerItem } from '@/core/store';
 import { normalizeSites, seedMusicSites } from '@/core/sites';
 import { unlockedItem } from '@/background/site-lock';
 import { ensureOverlay, keepClocksOnOpenTabs } from '@/background/overlay-inject';
+import { acceptCounts, trackActivity } from '@/background/activity';
+import { hearTab, trackMusic } from '@/background/music';
+import { isMusicStop, parseNowPlaying } from '@/core/music';
 
 export default defineBackground(() => {
   const timer = createTimerService({
@@ -23,6 +28,12 @@ export default defineBackground(() => {
     const base = browser.runtime.getURL('/');
     const msg = parseMessage(raw);
     if (msg && allowedFromSender(msg, isFromWebPage(sender.url, base))) void timer.dispatch(msg.event).catch(console.error);
+    const sound = parseSound(raw);
+    if (sound && !isFromWebPage(sender.url, base) && (raw as { target?: unknown }).target !== 'offscreen') void focusSound(sound).catch(console.error);
+    const song = parseNowPlaying(raw);
+    if ((song || isMusicStop(raw)) && sender.tab?.id !== undefined && isFromWebPage(sender.url, base)) void hearTab(sender.tab.id, sender.url, song);
+    const counts = parseCounts(raw);
+    if (counts && sender.tab?.id !== undefined && isFromWebPage(sender.url, base)) void acceptCounts(sender.tab.id, sender.url, counts);
     const pos = parseMove(raw);
     if (pos) void settingsItem.getValue().then((v) => settingsItem.setValue({ ...normalizeSettings(v), overlayPos: pos })).catch(console.error);
     const site = parseSiteMessage(raw);
@@ -54,6 +65,15 @@ export default defineBackground(() => {
     await Promise.all(tabs.map((t) => (t.id === undefined ? undefined : ensureOverlay(t.id))));
   }
   keepClocksOnOpenTabs();
+  trackActivity();
+  trackMusic();
+
+  // Retention (Your data): drop history older than the kept period, at every worker start and when it changes.
+  const purge = () => void loadSettings().then((s) => purgeOlderThan(s.retentionDays, Date.now())).catch(console.error);
+  purge();
+  settingsItem.watch((now, before) => {
+    if (now?.retentionDays !== before?.retentionDays) purge();
+  });
 
   browser.commands.onCommand.addListener((command) => {
     if (command === 'toggle-timer') void timer.dispatch({ type: 'toggle' }).catch(console.error);

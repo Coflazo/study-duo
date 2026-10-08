@@ -6,6 +6,8 @@
   import { DEFAULT_SETTINGS, normalizeSettings } from '@/core/settings';
   import { settingsItem, timerItem } from '@/core/store';
   import { displayMs, initialState } from '@/core/timer';
+  import { addRecords } from '@/core/log';
+  import type { BlockedAttempt } from '@/core/db';
   import { ICONS } from '@/ui/icons';
   import LedBoard from '@/ui/LedBoard.svelte';
 
@@ -28,6 +30,8 @@
   );
   const waitLeft = $derived(Math.max(0, WAIT_S - Math.floor((now - opened) / 1000)));
   const site = target?.domain ?? 'This site';
+  /** Tabs the block itself closed carry ?swept: going back would only reopen the closed site. */
+  const swept = new URLSearchParams(location.search).has('swept');
 
   let ticker: ReturnType<typeof setInterval> | undefined;
   const unwatch: Array<() => void> = [];
@@ -37,14 +41,18 @@
     timer = await timerItem.getValue();
     settings = normalizeSettings(await settingsItem.getValue());
     ticker = setInterval(() => (now = Date.now()), 250);
+    // One attempt per visit during a block; tabs the block itself closed are not attempts.
+    // Real redirects are top-level only: a page that frames this one must not be able to write attempts.
+    if (target && !swept && window.top === window && lockActive(timer) && settings.measure.blocked) {
+      attempt = { id: `${opened}-${target.domain}`, at: opened, domain: target.domain, unlocked: false, reasonGiven: false };
+      await addRecords('blocks', [attempt]).catch(console.error);
+    }
   });
+  let attempt: BlockedAttempt | null = null;
   onDestroy(() => {
     clearInterval(ticker);
     unwatch.forEach((u) => u());
   });
-
-  /** Tabs the block itself closed carry ?swept: going back would only reopen the closed site. */
-  const swept = new URLSearchParams(location.search).has('swept');
 
   async function backToWork() {
     if (!swept && history.length > 1) return history.back();
@@ -70,6 +78,8 @@
     const list = await unlockedItem.getValue();
     await unlockedItem.setValue([...new Set([...list, target.domain])]);
     await waitForAllow(target.domain);
+    // Only that a reason was given; the words themselves stay on this page.
+    if (attempt) await addRecords('blocks', [{ ...attempt, unlocked: true, reasonGiven: true }]).catch(console.error);
     location.replace(target.url);
   }
 </script>

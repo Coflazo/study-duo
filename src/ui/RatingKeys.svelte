@@ -2,19 +2,24 @@
   /** Figma Control/Rating Key: one tap from 1 (kept drifting) to 5 (fully in it), as a radio group. */
   let { value = null, onchange }: { value?: number | null; onchange: (v: 1 | 2 | 3 | 4 | 5) => void } = $props();
   const KEYS = [1, 2, 3, 4, 5] as const;
+  /** The key that holds the tab stop: it follows the arrows, so Tab back in lands where you were. */
+  let at = $state(1);
+  $effect.pre(() => {
+    if (value) at = value; // a chosen rating takes the tab stop
+  });
 
   function key(e: KeyboardEvent, k: number) {
-    const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+    const step = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -1 : 0;
     if (!step) return;
     e.preventDefault();
-    const next = Math.min(5, Math.max(1, k + step));
-    (e.currentTarget as HTMLElement).parentElement?.querySelector<HTMLElement>(`[data-k="${next}"]`)?.focus();
+    at = Math.min(5, Math.max(1, k + step));
+    (e.currentTarget as HTMLElement).parentElement?.querySelector<HTMLElement>(`[data-k="${at}"]`)?.focus();
   }
 </script>
 
 <div class="keys" role="radiogroup" aria-label="How focused were you, from 1 to 5" aria-describedby="rating-scale">
   {#each KEYS as k (k)}
-    <button type="button" role="radio" data-k={k} aria-checked={value === k} tabindex={value === k || (value === null && k === 1) ? 0 : -1} onclick={() => onchange(k)} onkeydown={(e) => key(e, k)}>{k}</button>
+    <button type="button" role="radio" data-k={k} aria-checked={value === k} tabindex={k === at ? 0 : -1} onclick={() => onchange(k)} onkeydown={(e) => key(e, k)}>{k}</button>
   {/each}
 </div>
 <p class="scale" id="rating-scale"><span>1 = kept drifting</span><span>5 = fully in it</span></p>

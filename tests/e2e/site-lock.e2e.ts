@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext, type CDPSession, type Page, type Worker } from '@playwright/test';
 import fs from 'node:fs';
-import { EXT_ID, launch, tempProfile } from './extension';
+import { EXT_ID, launch, tempProfile, readStore } from './extension';
 
 declare const chrome: any;
 
@@ -187,6 +187,10 @@ test('Open anyway waits 10 seconds and a reason, lasts for this block only, and 
   await p.getByLabel('Why open video.study-duo.test now?').fill('lecture clip for the exam');
   await confirm.click();
   await expect.poll(() => p.url(), { timeout: 10_000 }).toBe('https://video.study-duo.test/clip');
+  // One attempt, marked unlocked with a reason given; the reason itself is never kept.
+  const attempts = await readStore(sw, 'blocks');
+  expect(attempts).toEqual([{ id: expect.stringMatching(/-video\.study-duo\.test$/), at: expect.any(Number), domain: 'video.study-duo.test', unlocked: true, reasonGiven: true }]);
+  expect(JSON.stringify(attempts)).not.toContain('lecture clip');
 
   // Pause keeps the lock; the unlock still holds inside this block.
   const popup = await ctx.newPage();
@@ -256,6 +260,24 @@ test('blocking YouTube keeps YouTube Music open, because music players are filed
   await p.goto('https://music.youtube.com/');
   expect(p.url()).toBe('https://music.youtube.com/');
   expect(offHost).toEqual([]);
+  await ctx.close();
+  fs.rmSync(profile, { recursive: true, force: true });
+});
+
+test('a page that frames the blocked page cannot write fake blocked attempts', async () => {
+  const { profile, ctx, sw } = await setup();
+  await sw.evaluate(() => chrome.storage.local.set({ sites: { 'video.study-duo.test': 'blocked' } }));
+  await startBlock(ctx, sw);
+  await ctx.route('https://framer.study-duo.test/**', (r) =>
+    r.fulfill({ contentType: 'text/html', body: `<iframe src="chrome-extension://${EXT_ID}/blocked.html#https://reddit.com/"></iframe><iframe src="chrome-extension://${EXT_ID}/blocked.html#https://news.example/"></iframe>` }),
+  );
+  const p = await ctx.newPage();
+  await p.goto('https://framer.study-duo.test/');
+  await p.waitForTimeout(1_500);
+  expect(await readStore(sw, 'blocks')).toEqual([]);
+  // A real visit still counts.
+  await p.goto('https://video.study-duo.test/clip').catch(() => undefined);
+  await expect.poll(async () => (await readStore(sw, 'blocks')).map((b) => b.domain)).toEqual(['video.study-duo.test']);
   await ctx.close();
   fs.rmSync(profile, { recursive: true, force: true });
 });

@@ -18,6 +18,8 @@ export interface TimerState {
   pausedAt: number | null;
   /** Paused time already closed off in this phase. */
   pausedMs: number;
+  /** Time added with +5 in this phase (absent in states saved before it existed). */
+  extendedMs?: number;
   /** Completed focus blocks since the last long break. */
   cycle: number;
   /** Flowtime: break earned by the last focus block. */
@@ -32,6 +34,8 @@ export interface Segment {
   plannedMs: number | null;
   activeMs: number;
   pausedMs: number;
+  /** Time added with +5 during it (absent in blocks logged before it existed). */
+  extendedMs?: number;
   /** Ran to its planned end (or a Flowtime focus the user finished), not skipped or reset. */
   completed: boolean;
   taskId: string | null;
@@ -128,11 +132,12 @@ function begin(state: TimerState, phase: Phase, at: number, settings: TimerSetti
     remainingMs: null,
     pausedAt: null,
     pausedMs: 0,
+    extendedMs: 0,
   };
 }
 
 function stoppedAt(state: TimerState, phase: Phase): TimerState {
-  return { ...state, phase, status: 'stopped', startedAt: null, endsAt: null, plannedMs: null, remainingMs: null, pausedAt: null, pausedMs: 0 };
+  return { ...state, phase, status: 'stopped', startedAt: null, endsAt: null, plannedMs: null, remainingMs: null, pausedAt: null, pausedMs: 0, extendedMs: 0 };
 }
 
 function segmentOf(state: TimerState, endedAt: number, completed: boolean): Segment {
@@ -146,6 +151,7 @@ function segmentOf(state: TimerState, endedAt: number, completed: boolean): Segm
     plannedMs: state.plannedMs,
     activeMs: Math.max(0, endedAt - startedAt - paused),
     pausedMs: paused,
+    extendedMs: state.extendedMs ?? 0,
     completed,
     taskId: state.taskId,
   };
@@ -211,6 +217,7 @@ export function reduce(state: TimerState, event: TimerEvent, settings: TimerSett
         state: {
           ...state,
           plannedMs: state.plannedMs + event.ms,
+          extendedMs: (state.extendedMs ?? 0) + event.ms,
           endsAt: state.status === 'running' && state.endsAt !== null ? state.endsAt + event.ms : state.endsAt,
           remainingMs: state.status === 'paused' && state.remainingMs !== null ? state.remainingMs + event.ms : state.remainingMs,
         },

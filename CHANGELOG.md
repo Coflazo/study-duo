@@ -13,6 +13,11 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ### Added
 
+- Activity log while the timer runs: time per kind of site (Study, Blocked, Not blocked, unfiled) by site name only, time away from the browser counted as away, blocked-site attempts and unlocks, and, only if you turn it on, keys, clicks and scrolls per minute in study blocks.
+- Focus signals for every study block, worked out from that log: share of time on Study sites, switches to Blocked or unfiled sites per hour, the longest study stretch, pauses, +5 extensions, whether it ran to the end, and how fast it started after a break.
+- Music: songs playing on music sites (YouTube Music, YouTube, Spotify, Apple Music, SoundCloud, Tidal, Deezer, Amazon Music) become listens tied to the block they played in; white, pink and brown focus noise; your own MP3 or FLAC files, played in the Music screen.
+- Your data: what Study Duo measures in plain words with one switch each, how much is stored, how long history is kept, export to one JSON file, and delete everything.
+
 - Popup from the Figma screens: the phase sign, the amber board, Today as a timetable, and Start, Pause, Resume, Skip. Pick a to-do to work on before a study block; afterwards it asks once, "How focused were you?", from 1 to 5.
 - Dashboard with Today (timer beside the timetable and to-dos), To-do (add with a course tag and an optional if-then plan, edit, reorder by keyboard, complete, delete with undo, start a block on a task), Site lock and Settings (lengths, daily goal, auto-start, bell volume with a preview, corner clock, Appearance).
 - A local session log in IndexedDB that keeps every block and break, with its task and rating, for Today now and insights later.

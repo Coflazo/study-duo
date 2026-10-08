@@ -61,9 +61,28 @@
     await tick();
     document.querySelector<HTMLInputElement>(`[data-edit="${t.id}"]`)?.focus();
   }
-  async function saveEdit(id: string) {
+  /** From the keyboard, focus goes back to the row's More button; a click elsewhere keeps its own focus. */
+  async function saveEdit(id: string, refocus = false) {
     await updateTodos((list) => editTodo(list, id, { text: draft }));
     editing = null;
+    if (refocus) await focusMore(id);
+  }
+  async function cancelEdit(id: string) {
+    editing = null;
+    await focusMore(id);
+  }
+  async function focusMore(id: string) {
+    await tick();
+    document.querySelector<HTMLElement>(`[data-more="${id}"]`)?.focus();
+  }
+  /** Menu keys: arrows move through the enabled actions (wrapping), Home and End jump to the ends. */
+  function menuKeys(e: KeyboardEvent) {
+    const items = [...(e.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')];
+    const at = items.indexOf(document.activeElement as HTMLButtonElement);
+    const to = e.key === 'ArrowDown' ? at + 1 : e.key === 'ArrowUp' ? at - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : null;
+    if (to === null || items.length === 0) return;
+    e.preventDefault();
+    items[(to + items.length) % items.length]!.focus();
   }
   async function remove(t: Todo) {
     menuFor = null;
@@ -119,7 +138,7 @@
           {#if editing === t.id}
             <input
               class="edit" data-edit={t.id} aria-label="Edit {t.text}" maxlength="200" bind:value={draft}
-              onkeydown={(e) => { if (e.key === 'Enter') saveEdit(t.id); if (e.key === 'Escape') editing = null; }}
+              onkeydown={(e) => { if (e.key === 'Enter') saveEdit(t.id, true); if (e.key === 'Escape') cancelEdit(t.id); }}
               onblur={() => editing === t.id && saveEdit(t.id)}
             />
           {:else}
@@ -131,7 +150,7 @@
           <span class="more-wrap">
             <button class="small" data-more={t.id} aria-label="More for {t.text}" aria-haspopup="menu" aria-expanded={menuFor === t.id} onclick={() => openMenu(t.id)}>•••</button>
             {#if menuFor === t.id}
-              <span class="menu" role="menu" aria-label="Actions for {t.text}">
+              <span class="menu" role="menu" tabindex="-1" aria-label="Actions for {t.text}" onkeydown={menuKeys}>
                 <button role="menuitem" disabled={i === 0} onclick={() => act(t.id, () => updateTodos((list) => moveAmongOpen(list, t.id, -1)))}>Move up</button>
                 <button role="menuitem" disabled={i === open.length - 1} onclick={() => act(t.id, () => updateTodos((list) => moveAmongOpen(list, t.id, 1)))}>Move down</button>
                 <button role="menuitem" onclick={() => startEdit(t)}>Edit</button>

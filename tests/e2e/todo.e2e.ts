@@ -30,7 +30,15 @@ test('to-do: add, plan, edit, reorder by keyboard, complete, delete and undo, st
   // Reorder with the keyboard: open the row menu and move the second item up.
   await p.getByRole('button', { name: 'More for Statistics problem set 4' }).focus();
   await p.keyboard.press('Enter');
-  await p.getByRole('menuitem', { name: 'Move up' }).click();
+  // Arrow keys move through the actions, wrapping; End and Home jump to the ends.
+  await expect(p.getByRole('menuitem', { name: 'Move up' })).toBeFocused();
+  await p.keyboard.press('ArrowDown');
+  await expect(p.getByRole('menuitem', { name: 'Edit' })).toBeFocused(); // Move down is disabled on the last item
+  await p.keyboard.press('End');
+  await expect(p.getByRole('menuitem', { name: 'Delete' })).toBeFocused();
+  await p.keyboard.press('ArrowDown');
+  await expect(p.getByRole('menuitem', { name: 'Move up' })).toBeFocused();
+  await p.keyboard.press('Enter');
   await expect.poll(async () => (await stored(sw)).map((t: any) => t[0])).toEqual(['Statistics problem set 4', 'Read lecture 5 notes']);
 
   // Edit in place
@@ -40,6 +48,7 @@ test('to-do: add, plan, edit, reorder by keyboard, complete, delete and undo, st
   await edit.fill('Read lecture 5 and 6 notes');
   await edit.press('Enter');
   await expect(p.getByText('Read lecture 5 and 6 notes')).toBeVisible();
+  await expect(p.getByRole('button', { name: 'More for Read lecture 5 and 6 notes' })).toBeFocused(); // keyboard users land back on the row
 
   // Complete, then it sits under Done today
   await p.getByRole('checkbox', { name: 'Read lecture 5 and 6 notes' }).check();

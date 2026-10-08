@@ -9,6 +9,10 @@ import { createSitePrompt } from '@/overlay/site-prompt';
 import type { SiteStatus } from '@/background/site-requests';
 import { isNear } from '@/overlay/proximity';
 import { dropPos, placement } from '@/overlay/position';
+import { createInputCounter } from '@/overlay/input-counter';
+import { changes, pageMedia, readNowPlaying } from '@/overlay/music-probe';
+import { isMusicHost } from '@/core/music';
+import { hostOf } from '@/core/sites';
 import { CSS, ensureFont } from '@/overlay/styles';
 
 const FRESH_MS = 4_000;
@@ -239,6 +243,65 @@ export default defineContentScript({
     const [storedTimer, storedSettings] = await Promise.all([timerItem.getValue(), settingsItem.getValue()]);
     if (!heardTimer) state = storedTimer;
     if (!heardSettings) settings = normalizeSettings(storedSettings);
+
+    // Opt-in input counts (off by default): during running study blocks only, sent once a minute and when the page goes.
+    const counter = createInputCounter();
+    const counting = () => settings.measure.input && state.phase === 'focus' && state.status === 'running';
+    const send = () => {
+      const c = counter.take();
+      if (c && alive()) browser.runtime.sendMessage({ kind: 'activity', op: 'counts', ...c }).catch(() => undefined);
+    };
+    const onInput = (e: Event) => {
+      if (counting()) counter.count(e);
+    };
+    for (const type of ['keydown', 'pointerdown', 'wheel']) document.addEventListener(type, onInput, on);
+    let minute: ReturnType<typeof setInterval> | undefined;
+    const syncCounting = () => {
+      if (counting() && minute === undefined) minute = setInterval(send, 60_000);
+      if (!counting() && minute !== undefined) {
+        clearInterval(minute);
+        minute = undefined;
+        send();
+      }
+    };
+    window.addEventListener('pagehide', send, { signal: life.signal });
+    // Switching tabs hides the page: hand over the partial minute while its site's record is still the open one.
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && send(), { signal: life.signal });
+    life.signal.addEventListener('abort', () => clearInterval(minute));
+    unwatch.push(timerItem.watch(() => syncCounting()), settingsItem.watch(() => syncCounting()));
+    syncCounting();
+
+    // Now playing, on music sites only: read on media events and on a slow beat, report only changes.
+    if (isMusicHost(hostOf(location.href))) {
+      const media = pageMedia();
+      const changed = changes();
+      let beat: ReturnType<typeof setTimeout> | undefined;
+      let sentAt = 0;
+      const read = () => {
+        clearTimeout(beat);
+        if (!alive()) return;
+        if (!settings.measure.music) return void (beat = setTimeout(read, 60_000));
+        // The background takes one song report per 2 s; wait rather than send one it would drop.
+        const wait = sentAt + 2_100 - Date.now();
+        if (wait > 0) return void (beat = setTimeout(read, wait));
+        const now = readNowPlaying(media);
+        const news = changed(now);
+        if (news !== undefined) {
+          if (news) sentAt = Date.now();
+          browser.runtime.sendMessage(news ? { kind: 'music', op: 'now', ...news } : { kind: 'music', op: 'none' }).catch(() => undefined);
+        }
+        beat = setTimeout(read, now?.playing ? 15_000 : 60_000);
+      };
+      let soon: ReturnType<typeof setTimeout> | undefined;
+      const readSoon = () => {
+        clearTimeout(soon);
+        soon = setTimeout(read, 500); // let the page update its metadata first
+      };
+      for (const type of ['play', 'pause', 'ended', 'loadedmetadata']) document.addEventListener(type, readSoon, { capture: true, signal: life.signal });
+      window.addEventListener('pagehide', () => browser.runtime.sendMessage({ kind: 'music', op: 'none' }).catch(() => undefined), { signal: life.signal });
+      life.signal.addEventListener('abort', () => (clearTimeout(beat), clearTimeout(soon)));
+      readSoon();
+    }
 
     render();
   },

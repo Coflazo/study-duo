@@ -1,4 +1,5 @@
-import { openDB, type DBSchema } from 'idb';
+import { withDb } from './db';
+import { logVersionItem } from './store';
 import type { Phase, Segment, TimerState } from './timer';
 
 /** One study block or break, as the timer emitted it. Times and a task id only; never pages or titles. */
@@ -10,27 +11,15 @@ export interface SessionRecord {
   plannedMs: number | null;
   activeMs: number;
   pausedMs: number;
+  /** Time added with +5 (absent in blocks logged before it existed). */
+  extendedMs?: number;
   completed: boolean;
   taskId: string | null;
   /** The focus rating, the label the insights learn from. */
   rating: 1 | 2 | 3 | 4 | 5 | null;
   ratingSkipped: boolean;
-}
-
-interface Schema extends DBSchema {
-  sessions: { key: string; value: SessionRecord; indexes: { endedAt: number } };
-}
-
-const DB = 'study-duo';
-const VERSION = 1;
-
-/** One database for the whole event log; later stages add stores in new versions. */
-function open() {
-  return openDB<Schema>(DB, VERSION, {
-    upgrade(db, oldVersion) {
-      if (oldVersion < 1) db.createObjectStore('sessions', { keyPath: 'id' }).createIndex('endedAt', 'endedAt');
-    },
-  });
+  /** Quiet focus signals, worked out when a study block ends (see signals.ts). */
+  signals?: Record<string, number>;
 }
 
 /** Stable id: the same segment written twice stays one record. */
@@ -38,40 +27,30 @@ export const sessionId = (s: Pick<Segment, 'phase' | 'startedAt'>) => `${s.start
 
 export async function addSessions(segments: Segment[]): Promise<void> {
   if (segments.length === 0) return;
-  const db = await open();
-  try {
+  await withDb(async (db) => {
     const tx = db.transaction('sessions', 'readwrite');
     for (const s of segments) {
       const id = sessionId(s);
       const old = await tx.store.get(id);
-      await tx.store.put({ ...s, id, rating: old?.rating ?? null, ratingSkipped: old?.ratingSkipped ?? false });
+      await tx.store.put({ ...s, id, rating: old?.rating ?? null, ratingSkipped: old?.ratingSkipped ?? false, signals: old?.signals });
     }
     await tx.done;
-  } finally {
-    db.close();
-  }
+  });
 }
 
 /** Sessions that ended in [from, to), oldest first. */
-export async function sessionsBetween(from: number, to: number): Promise<SessionRecord[]> {
-  const db = await open();
-  try {
-    return await db.getAllFromIndex('sessions', 'endedAt', IDBKeyRange.bound(from, to, false, true));
-  } finally {
-    db.close();
-  }
+export function sessionsBetween(from: number, to: number): Promise<SessionRecord[]> {
+  return withDb((db) => db.getAllFromIndex('sessions', 'endedAt', IDBKeyRange.bound(from, to, false, true)));
 }
 
 export async function rateSession(id: string, rating: 1 | 2 | 3 | 4 | 5 | 'skip'): Promise<void> {
-  const db = await open();
-  try {
+  await withDb(async (db) => {
     const tx = db.transaction('sessions', 'readwrite');
     const rec = await tx.store.get(id);
     if (rec) await tx.store.put(rating === 'skip' ? { ...rec, ratingSkipped: true } : { ...rec, rating, ratingSkipped: false });
     await tx.done;
-  } finally {
-    db.close();
-  }
+  });
+  await logVersionItem.setValue(Date.now()); // open dashboards show the rating
 }
 
 /** The local calendar day around `now`, as [start, next start). A block belongs to the day it ended. */
