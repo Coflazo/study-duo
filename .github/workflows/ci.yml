@@ -40,6 +40,29 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
 
+  install-unix:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: runner.os == 'Linux'
+        run: shellcheck install.sh tests/install/test-install.sh
+      - run: sh tests/install/test-install.sh
+
+  install-windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Windows PowerShell 5.1
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tests/install/test-install.ps1 -Shell powershell
+      - name: PowerShell 7
+        shell: pwsh
+        run: ./tests/install/test-install.ps1 -Shell pwsh
+
   secrets-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 10
