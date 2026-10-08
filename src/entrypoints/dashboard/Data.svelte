@@ -9,6 +9,7 @@
   import NumberField from '@/ui/NumberField.svelte';
   import SignButton from '@/ui/SignButton.svelte';
   import Toggle from '@/ui/Toggle.svelte';
+  import Move from './Move.svelte';
 
   let { data }: { data: ReturnType<typeof createLive> } = $props();
   const s = $derived(data.live.settings);
@@ -61,7 +62,7 @@
 <div class="columns">
   <section aria-labelledby="measures-title">
     <h2 class="section-title" id="measures-title">What Study Duo measures</h2>
-    <div class="row"><div class="text"><p class="label">During study blocks it counts. It never reads.</p><p class="help">Only site names, never full addresses, page text or what you type. No camera, microphone or screenshots. Everything stays in this browser, and each item has its own switch.</p></div></div>
+    <div class="row"><div class="text"><p class="label">During study blocks it counts. It never reads.</p><p class="help">Only site names, never full addresses, page text or what you type. No microphone or screenshots, and the camera only while you scan move codes. Everything stays in this browser, and each item has its own switch.</p></div></div>
     {#each MEASURES as [key, label, help] (key)}
       <div class="row">
         <div class="text"><p class="label">{label}</p><p class="help">{help}</p></div>
@@ -70,6 +71,7 @@
     {/each}
   </section>
 
+  <div>
   <section aria-labelledby="data-title">
     <h2 class="section-title" id="data-title">Your data</h2>
     <div class="row">
@@ -100,6 +102,8 @@
     {/if}
     {#if done}<p class="done" role="status">{done}</p>{/if}
   </section>
+    <Move />
+  </div>
 </div>
 
 <style>
