@@ -5,7 +5,7 @@
   import { clockTime } from '@/core/today-view';
   import type { createLive } from '@/ui/live.svelte';
   import SignButton from '@/ui/SignButton.svelte';
-  import { helperItem, type HelperState } from '@/core/helper';
+  import { helperErrorText, helperItem, type HelperState } from '@/core/helper';
   import { qrPath } from '@/ui/qr';
 
   let { data }: { data: ReturnType<typeof createLive> } = $props();
@@ -206,7 +206,7 @@
           <p class="label">Songs from desktop players</p>
           <p class="help">With the desktop helper, songs from Music, VLC and other desktop players count too, like the songs in your tabs. Install it with the same install line plus --helper (on Windows, -Helper). Spotify's app shows here but stays out of your insights, as Spotify's rules ask.</p>
           {#if helper.on && !helper.error}<p class="help" aria-live="polite">{helper.app ? `On. Last heard from ${helper.app}.` : 'On. Nothing heard from your desktop players yet.'}</p>{/if}
-          {#if helper.on && helper.error}<p class="help error" role="status">{helper.error}</p>{/if}
+          {#if helper.on && helper.error}<p class="help error" role="status">{helperErrorText(helper.error)}</p>{/if}
           {#if helperNote}<p class="help error" role="alert">{helperNote}</p>{/if}
         </div>
         {#if helper.on}<SignButton label="Turn off" kind="secondary" onclick={helperOff} />{:else}<SignButton label="Turn on" kind="secondary" onclick={helperOn} />{/if}

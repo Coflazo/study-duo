@@ -37,8 +37,9 @@ now_playing() {
   case "$(uname -s)" in
     Darwin)
       for app in Music Spotify; do
-        # "is running" never starts the app; macOS asks once before Chrome may read it.
-        line=$(osascript -e "if application \"$app\" is running then tell application \"$app\" to if player state is playing then return (name of current track) & tab & (artist of current track) & tab & (album of current track) & tab & \"$app\"" 2>/dev/null)
+        # Ask only an app that is running: this never starts it, and never asks where an app that is not installed is.
+        pgrep -xq "$app" || continue
+        line=$(osascript -e "tell application \"$app\" to if player state is playing then return (name of current track) & tab & (artist of current track) & tab & (album of current track) & tab & \"$app\"" 2>/dev/null)
         if [ -n "$line" ]; then
           printf '%s\n' "$line"
           return
@@ -46,8 +47,10 @@ now_playing() {
       done
       ;;
     Linux)
-      if command -v playerctl >/dev/null 2>&1 && [ "$(playerctl status 2>/dev/null)" = "Playing" ]; then
-        playerctl metadata --format "{{title}}${TAB}{{artist}}${TAB}{{album}}${TAB}{{playerName}}" 2>/dev/null
+      # Browsers publish every tab's audio and video here too; Study Duo reads music sites itself, so they are skipped.
+      ignore="chromium,chrome,google-chrome,firefox,brave,vivaldi,opera,msedge,microsoft-edge,epiphany,plasma-browser-integration"
+      if command -v playerctl >/dev/null 2>&1 && [ "$(playerctl -i "$ignore" status 2>/dev/null)" = "Playing" ]; then
+        playerctl -i "$ignore" metadata --format "{{title}}${TAB}{{artist}}${TAB}{{album}}${TAB}{{playerName}}" 2>/dev/null
       fi
       ;;
   esac
@@ -62,6 +65,8 @@ main() {
   last="(nothing sent yet)"
   while kill -0 "$reader" 2>/dev/null || [ -n "${STUDY_DUO_HELPER_ONCE:-}" ]; do
     line=$(now_playing | head -n 1)
+    # Exactly four fields: a title holding a tab or a line break must not get to choose the app it is filed under.
+    if [ -n "$line" ] && [ "$(printf '%s' "$line" | tr -cd '\t' | wc -c | tr -d ' ')" != 3 ]; then line=""; fi
     if [ "$line" != "$last" ]; then
       if [ -n "$line" ]; then
         title=$(printf '%s' "$line" | cut -f 1)

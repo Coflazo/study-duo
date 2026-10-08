@@ -25,6 +25,12 @@ got=$(once "Near \"Light\" \\ 1${TAB}Ólafur Arnalds${TAB}日本${TAB}VLC")
 [ "$got" = '[{"kind": "now", "title": "Near \"Light\" \\ 1", "artist": "Ólafur Arnalds", "album": "日本", "app": "VLC", "playing": true}]' ] || die "escaping: $got"
 pass "escapes quotes and backslashes and keeps non-ASCII text"
 
+got=$(once "x${TAB}y${TAB}z${TAB}Chrome${TAB}w")
+[ "$got" = '[{"kind": "now", "title": "", "artist": "", "album": "", "app": "", "playing": false}]' ] || die "extra fields: $got"
+got=$(once "$(printf 'Evil\nrest\tb\tc\td')")
+[ "$got" = '[{"kind": "now", "title": "", "artist": "", "album": "", "app": "", "playing": false}]' ] || die "line break: $got"
+pass "a title with tabs or line breaks cannot choose the app it is filed under"
+
 got=$(once none)
 [ "$got" = '[{"kind": "now", "title": "", "artist": "", "album": "", "app": "", "playing": false}]' ] || die "nothing playing: $got"
 pass "says so when nothing is playing"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appHost, helperError, parseHelperMessage } from './helper';
+import { appHost, helperError, helperErrorText, isBrowserApp, parseHelperMessage } from './helper';
 
 describe('parseHelperMessage', () => {
   it('reads what the helper sends, as a song or as nothing playing', () => {
@@ -24,13 +24,24 @@ describe('appHost', () => {
     expect(appHost('Apple Music')).toBe('app:apple-music');
     expect(appHost('')).toBe('app:unknown');
   });
+
+  it('files every Spotify client as app:spotify, which insights leave out (security review)', () => {
+    for (const app of ['Spotify', 'SpotifyMusic', 'spotifyd', 'ncspot', 'psst']) expect(appHost(app)).toBe('app:spotify');
+  });
+
+  it('knows browsers, whose tabs the helper must not report (security review)', () => {
+    for (const app of ['Chrome', 'chromium', 'MSEdge', 'firefox', 'Brave', 'Vivaldi', 'opera']) expect(isBrowserApp(app)).toBe(true);
+    for (const app of ['Music', 'VLC', 'foobar2000', 'Spotify']) expect(isBrowserApp(app)).toBe(false);
+  });
 });
 
 describe('helperError', () => {
-  it('turns the browser messages into plain advice', () => {
-    expect(helperError('Specified native messaging host not found.')).toMatch(/isn't installed/);
-    expect(helperError('Access to the specified native messaging host is forbidden.')).toMatch(/isn't installed for this browser/);
-    expect(helperError('Native host has exited.')).toMatch(/stopped/);
-    expect(helperError(undefined)).toMatch(/stopped/);
+  it('turns the browser messages into codes, and codes into plain advice', () => {
+    expect(helperError('Specified native messaging host not found.')).toBe('missing');
+    expect(helperError('Access to the specified native messaging host is forbidden.')).toBe('forbidden');
+    expect(helperError('Native host has exited.')).toBe('stopped');
+    expect(helperError(undefined)).toBe('stopped');
+    expect(helperErrorText('missing')).toMatch(/isn't installed\. Run the install line again with --helper/);
+    expect(helperErrorText('forbidden')).toMatch(/isn't installed for this browser/);
   });
 });

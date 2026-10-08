@@ -118,6 +118,10 @@ verify() {
 install_helper() {
   download "$BASE/$HELPER" "$tmp/$HELPER" || fail "could not download $BASE/$HELPER."
   verify "$HELPER"
+  # The helper runs outside the browser, so it gets the same proof of origin as the extension when gh can check it.
+  if [ -z "${STUDY_DUO_BASE_URL:-}" ] && command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    gh attestation verify "$tmp/$HELPER" --repo "$REPO" >/dev/null 2>&1 || fail "GitHub could not confirm the helper was built from the Study Duo repository. It was not installed."
+  fi
   mkdir -p "$HELPER_DIR"
   cp "$tmp/$HELPER" "$HELPER_DIR/$HELPER"
   chmod 755 "$HELPER_DIR/$HELPER"

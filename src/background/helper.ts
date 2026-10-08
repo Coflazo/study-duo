@@ -1,4 +1,4 @@
-import { appHost, HELPER_HOST, helperError, helperItem, parseHelperMessage } from '@/core/helper';
+import { appHost, HELPER_HOST, helperError, helperItem, isBrowserApp, parseHelperMessage } from '@/core/helper';
 import { hearSource } from './music';
 
 /**
@@ -29,6 +29,7 @@ export async function syncHelper(): Promise<void> {
   p.onMessage.addListener((raw: unknown) => {
     const m = parseHelperMessage(raw);
     if (!m) return;
+    if (m.song && isBrowserApp(m.app)) m.song = null; // a browser tab, not a desktop player: Study Duo reads music sites itself
     if (m.song) host = appHost(m.app);
     void hearSource('helper', host, m.song);
     void patch({ error: null, ...(m.app ? { app: m.app } : {}) });

@@ -32,14 +32,21 @@ if (-not $env:STUDY_DUO_HELPER_FAKE) {
   $manager = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
 }
 
+# Browsers publish every tab's audio and video to the media controls; Study Duo reads music sites itself, so they are
+# skipped (Firefox's app id is a fixed hash).
+$browsers = '(?i)chrome|msedge|edge|firefox|308046B0AF4A39CB|brave|opera|vivaldi|arc|browser'
+
 function Get-NowPlaying {
   if ($env:STUDY_DUO_HELPER_FAKE) { if ($env:STUDY_DUO_HELPER_FAKE -eq 'none') { return '' } return $env:STUDY_DUO_HELPER_FAKE }
-  $s = $manager.GetCurrentSession()
-  if ($null -eq $s -or $s.GetPlaybackInfo().PlaybackStatus -ne 'Playing') { return '' }
-  $p = Await ($s.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
-  # The app id is like Spotify.exe or AppleInc.AppleMusicWin_nzyj5cx40ttqa!App: keep the readable part.
-  $app = ($s.SourceAppUserModelId -replace '\.exe$', '' -replace '!.*$', '' -replace '_[a-z0-9]{13}$', '' -replace '^.*\.', '')
-  "$($p.Title)`t$($p.Artist)`t$($p.AlbumTitle)`t$app"
+  foreach ($s in $manager.GetSessions()) {
+    if ($s.SourceAppUserModelId -match $browsers -or $s.GetPlaybackInfo().PlaybackStatus -ne 'Playing') { continue }
+    $p = Await ($s.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
+    # The app id is like Spotify.exe or AppleInc.AppleMusicWin_nzyj5cx40ttqa!App: keep the readable part.
+    $app = ($s.SourceAppUserModelId -replace '\.exe$', '' -replace '!.*$', '' -replace '_[a-z0-9]{13}$', '' -replace '^.*\.', '')
+    # Each field is cleaned before joining, so a tab or line break in a title cannot shift the fields.
+    return "$(Clean $p.Title)`t$(Clean $p.Artist)`t$(Clean $p.AlbumTitle)`t$(Clean $app)"
+  }
+  ''
 }
 
 # Chrome closes our input when Study Duo lets go of the helper; a reader on another thread notices and we stop.
@@ -50,8 +57,8 @@ $last = $null
 while ($true) {
   $line = Get-NowPlaying
   if ($line -ne $last) {
-    if ($line) {
-      $f = $line -split "`t"
+    $f = if ($line) { $line -split "`t" } else { @() }
+    if ($f.Count -eq 4) {
       Send-Message @{ kind = 'now'; title = Clean $f[0]; artist = Clean $f[1]; album = Clean $f[2]; app = Clean $f[3]; playing = $true }
     } else {
       Send-Message @{ kind = 'now'; title = ''; artist = ''; album = ''; app = ''; playing = $false }

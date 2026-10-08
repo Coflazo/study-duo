@@ -136,6 +136,14 @@ function Install-StudyDuo {
       foreach ($f in $files) {
         Invoke-WebRequest -UseBasicParsing -Uri "$base/$f" -OutFile (Join-Path $tmp $f)
         Assert-Checksum $f
+        # The helper runs outside the browser, so it gets the same proof of origin as the extension when gh can check it.
+        if (-not $env:STUDY_DUO_BASE_URL -and (Get-Command gh -ErrorAction SilentlyContinue)) {
+          & gh auth status 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+            & gh attestation verify (Join-Path $tmp $f) --repo $repo 2>$null | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "GitHub could not confirm $f was built from the Study Duo repository. The helper was not installed." }
+          }
+        }
       }
       New-Item -ItemType Directory -Force -Path $helperDir | Out-Null
       foreach ($f in $files) { Copy-Item -Force (Join-Path $tmp $f) (Join-Path $helperDir $f) }

@@ -62,7 +62,7 @@ if STUDY_DUO_BASE_URL="http://example.com/release" sh "$ROOT/install.sh" >/dev/n
 pass "refuses a plain-HTTP download address that is not this computer"
 
 # Desktop helper (--helper): installed next to the extension, registered with the browsers that have a profile.
-export HOME="$WORK/fakehome"
+export HOME="$WORK/fakehome" XDG_CONFIG_HOME="$WORK/fakehome/.config" # runners set XDG_CONFIG_HOME, which the installer honours
 if [ "$(uname -s)" = Darwin ]; then
   PROFILE="$HOME/Library/Application Support/Google/Chrome"
   NO_PROFILE="$HOME/Library/Application Support/Microsoft Edge"

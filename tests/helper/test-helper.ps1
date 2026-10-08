@@ -37,6 +37,10 @@ $m = Once "Near `"Light`" \ 1`t$([char]0xD3)lafur Arnalds`tx`tVLC"
 if ($m[0].title -ne 'Near "Light" \ 1' -or $m[0].artist -ne "$([char]0xD3)lafur Arnalds") { throw "FAIL escaping: $($m | ConvertTo-Json -Compress)" }
 Write-Host 'ok   escapes quotes and backslashes and keeps non-ASCII text'
 
+$m = Once "x`ty`tz`tChrome`tw"
+if ($m.Count -ne 1 -or $m[0].playing -ne $false -or $m[0].app -ne '') { throw "FAIL extra fields: $($m | ConvertTo-Json -Compress)" }
+Write-Host 'ok   a title with tabs cannot choose the app it is filed under'
+
 $m = Once 'none'
 if ($m.Count -ne 1 -or $m[0].playing -ne $false -or $m[0].title -ne '') { throw "FAIL nothing playing: $($m | ConvertTo-Json -Compress)" }
 Write-Host 'ok   says so when nothing is playing'
