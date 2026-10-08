@@ -23,6 +23,9 @@ Study Duo is built on other people's open work. Thank you.
 - The seven-segment digits are drawn from scratch as SVG, modelled on platform departure boards.
 - Design direction chosen with the Impeccable design skill; research sources for the default settings are listed in the README.
 
-## Demo video
+## Launch film
 
-- The demo film in `docs/media` is composed with **Remotion** (free for individuals under the Remotion License, https://www.remotion.dev/license) from the **Agentic Product Demo** kit by Alex Ibragimov (MIT, kept in `demo/LICENSE`). Every page in it is a screenshot of the real extension; the insights show one simulated student.
+- The film and the README loop in `docs/media` are composed with **Remotion** (free for individuals under the Remotion License, https://www.remotion.dev/license) from the **Agentic Product Demo** kit by Alex Ibragimov (MIT, kept in `demo/LICENSE`). Every page in it is a screenshot of the real extension; the insights show one simulated student.
+- The voice is **Kokoro-82M** by hexgrad (Apache License 2.0, https://huggingface.co/hexgrad/Kokoro-82M), voice `bm_lewis`, run on this computer with kokoro-onnx (MIT).
+- Music: Frédéric Chopin, Waltz in A-flat major, Op. 69 No. 1, played by Luke Faulkner for Musopen (Public Domain Mark 1.0), and Nocturne in F major, Op. 15 No. 1, from Musopen's Complete Chopin Collection (CC0 1.0). Sources in `demo/public/audio/LICENSE.md`.
+- The bell and the white, pink and brown noise in the film are made by Study Duo's own code (`src/core/bell.ts`, `src/core/noise.ts`).
