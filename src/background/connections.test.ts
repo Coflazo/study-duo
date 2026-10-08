@@ -119,3 +119,16 @@ describe('Disconnect (security review)', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('an answer that arrives after Disconnect', () => {
+  it('adds no songs', async () => {
+    await addSessions([{ phase: 'focus', startedAt: NOW - 60 * MIN, endedAt: NOW - 35 * MIN, plannedMs: 25 * MIN, activeMs: 25 * MIN, pausedMs: 0, completed: true, taskId: null }]);
+    await saveConnections({ ...DEFAULT_CONNECTIONS, listenbrainz: { ...DEFAULT_CONNECTIONS.listenbrainz, user: 'ana' } });
+    const body = JSON.stringify({ payload: { listens: [{ listened_at: Math.floor((NOW - 50 * MIN) / 1000), track_metadata: { artist_name: 'A', track_name: 'Late' } }] } });
+    await syncConnection('listenbrainz', NOW, async () => {
+      await saveConnections({ ...(await loadConnections()), listenbrainz: { ...DEFAULT_CONNECTIONS.listenbrainz } });
+      return body;
+    });
+    expect(await recordsBetween('listens', 0, NOW + DAY)).toEqual([]);
+  });
+});

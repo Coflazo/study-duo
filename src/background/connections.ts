@@ -56,6 +56,8 @@ async function syncListens(kind: 'listenbrainz' | 'lastfm', c: Connections, now:
     imported = fromLastfm(first);
     for (let page = 2; page <= lastfmPages(first); page++) imported.push(...fromLastfm(JSON.parse(await fetchText(lastfmUrl(c.lastfm.user!, c.lastfm.key!, since, page), c))));
   }
+  // Disconnected, or Songs you play switched off, while the answer was on its way: keep nothing from it.
+  if (!isOn(await loadConnections(), kind) || !(await loadSettings()).measure.music) return;
   const [sessions, existing] = await Promise.all([sessionsBetween(since - OVERLAP, now + 1), recordsBetween('listens', since - OVERLAP, now + 1)]);
   const fresh = mergeImported(existing, attachToSessions(imported, sessions));
   await addRecords('listens', fresh);
