@@ -82,6 +82,14 @@
       <Segmented options={LOOKS} value={s.appearance} label="Appearance" onchange={(appearance) => save({ appearance })} />
     </div>
   </section>
+
+  <section aria-labelledby="calendar-title">
+    <h2 class="section-title" id="calendar-title">Calendar</h2>
+    <div class="row">
+      <div class="text"><p class="label">List songs in calendar events</p><p class="help">Exported events show the task and your focus rating; this adds the songs that played.</p></div>
+      <Toggle checked={s.calendarSongs} label="List songs in calendar events" onchange={(calendarSongs) => save({ calendarSongs })} />
+    </div>
+  </section>
 </div>
 
 <style>
