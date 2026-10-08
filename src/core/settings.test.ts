@@ -37,6 +37,9 @@ describe('normalizeSettings', () => {
     expect(DEFAULT_SETTINGS).toMatchObject({ appearance: 'system', dailyGoal: 8 });
     expect(normalizeSettings({ appearance: 'dark', dailyGoal: 5.6 })).toMatchObject({ appearance: 'dark', dailyGoal: 6 });
     expect(normalizeSettings({ appearance: 'sepia', dailyGoal: 400 })).toMatchObject({ appearance: 'system', dailyGoal: 24 });
+    expect(DEFAULT_SETTINGS.discMotion).toBe('system');
+    expect(normalizeSettings({ discMotion: 'always' }).discMotion).toBe('always');
+    expect(normalizeSettings({ discMotion: 'wild' }).discMotion).toBe('system');
     expect(normalizeSettings({ dailyGoal: 0 }).dailyGoal).toBe(1);
   });
 

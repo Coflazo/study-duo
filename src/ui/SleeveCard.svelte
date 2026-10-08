@@ -3,6 +3,8 @@
   import type { NoiseKind } from '@/core/noise';
   import { INITIAL_PLAYER, type PlayerCommand, type PlayerState } from '@/core/player';
   import { playerItem } from '@/core/session-store';
+  import { normalizeSettings } from '@/core/settings';
+  import { settingsItem } from '@/core/store';
   import { FULL_SPEED, SPIN_STILL, stepSpin, type Spin } from '@/core/spin';
   import { ICONS } from '@/ui/icons';
 
@@ -37,6 +39,9 @@
 
   // The disc: frame by frame only while its speed changes; at full speed the compositor turns it (no work per frame).
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  /** Settings, Spinning disc: "Always" turns it even when the computer asks for less motion. */
+  let always = $state(false);
+  const still = () => reduce.matches && !always;
   let spin: Spin = SPIN_STILL;
   let raf = 0;
   let last = 0;
@@ -73,7 +78,7 @@
     raf = requestAnimationFrame(frame);
   }
   function drive() {
-    if (reduce.matches) {
+    if (still()) {
       stopSteady();
       cancelAnimationFrame(raf);
       raf = 0;
@@ -88,6 +93,7 @@
   }
   $effect(() => {
     void playing;
+    void always;
     drive();
   });
 
@@ -125,10 +131,12 @@
 
   let unwatch: (() => void) | undefined;
   onMount(async () => {
-    unwatch = playerItem.watch((v) => (player = v ?? INITIAL_PLAYER));
-    player = await playerItem.getValue();
+    const unwatchPlayer = playerItem.watch((v) => (player = v ?? INITIAL_PLAYER));
+    const unwatchSettings = settingsItem.watch((v) => (always = normalizeSettings(v).discMotion === 'always'));
+    unwatch = () => (unwatchPlayer(), unwatchSettings());
+    [player, always] = await Promise.all([playerItem.getValue(), settingsItem.getValue().then((v) => normalizeSettings(v).discMotion === 'always')]);
     // Opened while it plays: the disc is already out and turning at full speed. The music did not just start.
-    if (playing && !reduce.matches) {
+    if (playing && !still()) {
       spin = { angle: Math.random() * 360, speed: FULL_SPEED, accel: 0, settled: true };
       out = true;
       paint();
@@ -149,7 +157,7 @@
   });
 </script>
 
-<section class="card" class:ready aria-label="Player">
+<section class="card" class:ready class:still={!always} aria-label="Player">
   <div class="body">
     <div class="art" aria-hidden="true">
       <div class="disc" class:out style:--c1={noise.c[0]} style:--c2={noise.c[1]} style:--ring={noise.ring} style:--mark={noise.mark}>
@@ -273,7 +281,8 @@
   .menu small { display: block; font: 400 11px/14px var(--font-family-ui); color: var(--color-text-secondary); }
   button:focus-visible, input:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) {
-    .ready .disc, .ready .disc.out, .src svg, .noises button, .key { transition: none; }
+    .still.ready .disc, .still.ready .disc.out { transition: none; }
+    .src svg, .noises button, .key { transition: none; }
     .menu { animation: none; }
   }
 </style>

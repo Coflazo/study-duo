@@ -66,3 +66,28 @@ test('the popup card plays focus noise through the one player, and its disc turn
   expect(sound ?? null).toBeNull();
   await ctx.close();
 });
+
+test('with Reduce motion on, the disc stays still unless Spinning disc is set to Always', async () => {
+  const { ctx } = await launch(tempProfile());
+  const page = await ctx.newPage();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 360, height: 600 });
+  await page.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  const card = page.getByRole('region', { name: 'Player' });
+  const turning = () => page.evaluate(() => getComputedStyle(document.querySelector('.spin')!).transform);
+  await card.getByRole('button', { name: 'Play' }).click();
+  await page.waitForTimeout(600);
+  await expect(page.locator('.disc')).not.toHaveClass(/out/);
+  expect(await turning()).toBe('none');
+  await card.getByRole('button', { name: 'Pause' }).click();
+
+  const settings = await ctx.newPage();
+  await settings.goto(`chrome-extension://${EXT_ID}/dashboard.html#settings`);
+  await settings.getByRole('radiogroup', { name: 'Spinning disc' }).getByRole('radio', { name: 'Always' }).click();
+  await settings.close();
+  await card.getByRole('button', { name: 'Play' }).click();
+  await expect(page.locator('.disc')).toHaveClass(/out/);
+  await page.waitForTimeout(400);
+  expect(await turning()).not.toBe('none');
+  await ctx.close();
+});

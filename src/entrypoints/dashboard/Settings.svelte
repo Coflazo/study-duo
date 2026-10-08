@@ -1,6 +1,6 @@
 <script lang="ts">
   import { playBell } from '@/core/bell';
-  import { CORNER_POS, normalizeSettings, type Appearance, type OverlayCorner, type OverlayIdle, type TimerMode, type TimerSettings } from '@/core/settings';
+  import { CORNER_POS, normalizeSettings, type Appearance, type DiscMotion, type OverlayCorner, type OverlayIdle, type TimerMode, type TimerSettings } from '@/core/settings';
   import { cornerOf } from '@/overlay/position';
   import { settingsItem } from '@/core/store';
   import type { createLive } from '@/ui/live.svelte';
@@ -17,6 +17,7 @@
   const MODES: Array<[TimerMode, string]> = [['pomodoro', 'Pomodoro'], ['flowtime', 'Flowtime']];
   const CORNERS: Array<[OverlayCorner, string]> = [['top-right', 'Top right'], ['bottom-right', 'Bottom right']];
   const LOOKS: Array<[Appearance, string]> = [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']];
+  const DISC: Array<[DiscMotion, string]> = [['system', 'Follow the computer'], ['always', 'Always']];
   const IDLE: Array<[OverlayIdle, string]> = [['faint', 'Faint'], ['soft', 'Soft'], ['full', 'Full']];
 
   let audio: AudioContext | undefined;
@@ -80,6 +81,10 @@
     <div class="row">
       <div class="text"><p class="label">Appearance</p><p class="help">System follows your computer. The corner clock stays dark either way.</p></div>
       <Segmented options={LOOKS} value={s.appearance} label="Appearance" onchange={(appearance) => save({ appearance })} />
+    </div>
+    <div class="row">
+      <div class="text"><p class="label">Spinning disc</p><p class="help">The player's disc turns while music plays. If your computer is set to reduce motion, it stays still unless you choose Always.</p></div>
+      <Segmented options={DISC} value={s.discMotion} label="Spinning disc" onchange={(discMotion) => save({ discMotion })} />
     </div>
   </section>
 

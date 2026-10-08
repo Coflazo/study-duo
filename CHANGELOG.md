@@ -6,7 +6,7 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ### Added
 
-- A player card in the popup, under the clock: focus noise half out of its sleeve, with White, Pink and Brown, play and pause, and volume. The disc turns while it plays, starting softly and coasting to a stop, and the popup takes a light tint of the noise. Your music folder, YouTube links and streaming join it in 0.3.0.
+- A player card in the popup, under the clock: focus noise half out of its sleeve, with White, Pink and Brown, play and pause, and volume. The disc turns while it plays, starting softly and coasting to a stop, and the popup takes a light tint of the noise. It stays still when your computer asks for less motion, unless Settings, Spinning disc is set to Always. Your music folder, YouTube links and streaming join it in 0.3.0.
 
 ### Changed
 

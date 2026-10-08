@@ -17,6 +17,8 @@ export type OverlayIdle = 'faint' | 'soft' | 'full';
 /** During study blocks: close Blocked sites, or close everything except Study and Not blocked sites. */
 export type SiteMode = 'closeBlocked' | 'allowOnlyStudy';
 export type Appearance = 'system' | 'light' | 'dark';
+/** The player's disc: follow the computer's Reduce motion setting, or always turn. */
+export type DiscMotion = 'system' | 'always';
 /** One switch per thing Study Duo measures (Settings > What Study Duo measures). Input counting is off until turned on. */
 export interface Measure {
   sites: boolean;
@@ -52,6 +54,8 @@ export interface TimerSettings {
   hardLock: boolean;
   /** Extension pages only; the corner clock always stays dark. */
   appearance: Appearance;
+  /** The player's disc turns unless the computer asks for less motion; "always" turns it anyway. */
+  discMotion: DiscMotion;
   /** Study blocks per day, shown as "3 of 8 blocks". Never a streak. */
   dailyGoal: number;
   /** List the songs that played in each calendar event (off: titles and ratings only). */
@@ -78,6 +82,7 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   siteMode: 'closeBlocked',
   hardLock: false,
   appearance: 'system',
+  discMotion: 'system',
   dailyGoal: 8,
   calendarSongs: false,
   measure: { sites: true, blocked: true, outcome: true, away: true, music: true, input: false },
@@ -138,6 +143,7 @@ export function normalizeSettings(raw: unknown): TimerSettings {
     siteMode: r.siteMode === 'allowOnlyStudy' ? 'allowOnlyStudy' : 'closeBlocked',
     hardLock: bool(r.hardLock, d.hardLock),
     appearance: r.appearance === 'light' || r.appearance === 'dark' ? r.appearance : 'system',
+    discMotion: r.discMotion === 'always' ? 'always' : 'system',
     dailyGoal: Math.round(num(r.dailyGoal, 1, 24, d.dailyGoal)),
     calendarSongs: bool(r.calendarSongs, d.calendarSongs),
     measure: measure(r.measure, d.measure),
