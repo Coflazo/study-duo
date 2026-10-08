@@ -4,6 +4,10 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Changed
+
+- Focus noise loops with no click and fades in and out along an ear-shaped curve: 1 s for white, 1.4 s for pink, 1.8 s for brown. A fade-out that starts mid fade-in starts from what you hear, and brown noise no longer thumps at the loop.
+
 ## [0.2.3] - 2026-10-08
 
 ### Fixed
