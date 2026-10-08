@@ -3,7 +3,8 @@ import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { DEFAULT_SETTINGS } from '@/core/settings';
-import { timerItem, trackerItem } from '@/core/store';
+import { timerItem } from '@/core/store';
+import { trackerItem } from '@/core/session-store';
 import { initialState, reduce } from '@/core/timer';
 import { trackActivity } from './activity';
 

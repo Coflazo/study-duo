@@ -7,7 +7,7 @@ import type { AnnounceMessage } from '@/core/messages';
 import { phaseTitle } from '@/core/phase-copy';
 import { drawLine, momentFor, subLine } from '@/core/phrases';
 import { addSessions } from '@/core/sessions';
-import { logVersionItem } from '@/core/store';
+import { logVersionItem } from '@/core/session-store';
 import { lastFocusDayItem, phraseBagItem } from '@/core/store';
 import type { TimerSettings } from '@/core/settings';
 import type { TimerState } from '@/core/timer';

@@ -5,7 +5,8 @@ import { foldListen } from '@/core/music';
 import { startNoise, type NoiseKind } from '@/core/noise';
 import { sessionId } from '@/core/sessions';
 import { normalizeSettings } from '@/core/settings';
-import { settingsItem, soundItem, timerItem } from '@/core/store';
+import { settingsItem, timerItem } from '@/core/store';
+import { soundItem } from '@/core/session-store';
 
 let firefox: { ctx: AudioContext; noise: ReturnType<typeof startNoise> } | null = null;
 const NAMES: Record<NoiseKind, string> = { white: 'White noise', pink: 'Pink noise', brown: 'Brown noise' };

@@ -4,9 +4,10 @@
   import { toICS } from '@/core/ics';
   import { recordsBetween } from '@/core/log';
   import { sessionsBetween, type SessionRecord } from '@/core/sessions';
-  import { logVersionItem } from '@/core/store';
+  import { logVersionItem } from '@/core/session-store';
   import { dayItems, startOfWeek, VISIBLE_FROM, VISIBLE_TO } from '@/core/timeline';
   import { clockTime } from '@/core/today-view';
+  import { weekRange } from '@/core/due';
   import type { createLive } from '@/ui/live.svelte';
   import Segmented from '@/ui/Segmented.svelte';
   import SignButton from '@/ui/SignButton.svelte';
@@ -32,9 +33,8 @@
   const range = $derived.by(() => {
     const fmt = (t: number, opts: Intl.DateTimeFormatOptions) => new Date(t).toLocaleDateString([], opts);
     if (view === 'day') return fmt(days[0]!, { weekday: 'long', day: 'numeric', month: 'long' });
-    const a = days[0]!;
-    const b = days[6]!;
-    return new Date(a).getMonth() === new Date(b).getMonth() ? `${fmt(a, { day: 'numeric' })} to ${fmt(b, { day: 'numeric', month: 'long' })}` : `${fmt(a, { day: 'numeric', month: 'long' })} to ${fmt(b, { day: 'numeric', month: 'long' })}`;
+    // The browser orders day and month for its language ("October 5 to 11", "5 to 11 October"); "to" replaces its dash.
+    return weekRange(days[0]!, days[6]!);
   });
 
   async function load() {

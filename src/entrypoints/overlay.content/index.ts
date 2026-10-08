@@ -240,10 +240,12 @@ export default defineContentScript({
 
     document.addEventListener('visibilitychange', render, { signal: life.signal });
     document.addEventListener('fullscreenchange', render, { signal: life.signal });
-    // A dialog or popover the page opens joins the top layer above the clock; step back on top of it.
-    document.addEventListener('toggle', (e) => e.target !== host && (e as ToggleEvent).newState === 'open' && raise(), on);
+    // A dialog or popover the page opens joins the top layer above the clock; step back on top of it. A copy left
+    // behind by an extension reload must not: it would bring back a stale clock over the new one, so it leaves.
+    const raiseIfAlive = () => (alive() ? raise() : teardown());
+    document.addEventListener('toggle', (e) => e.target !== host && (e as ToggleEvent).newState === 'open' && raiseIfAlive(), on);
     const dialogs = new MutationObserver((changes) => {
-      if (changes.some((c) => c.target !== host && (c.target as Element).hasAttribute?.('open'))) raise();
+      if (changes.some((c) => c.target !== host && (c.target as Element).hasAttribute?.('open'))) raiseIfAlive();
     });
     dialogs.observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['open'] });
     life.signal.addEventListener('abort', () => dialogs.disconnect());

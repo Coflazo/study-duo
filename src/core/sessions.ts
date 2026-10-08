@@ -1,5 +1,5 @@
 import { withDb } from './db';
-import { logVersionItem } from './store';
+import { logVersionItem } from './session-store';
 import type { Phase, Segment, TimerState } from './timer';
 
 /** One study block or break, as the timer emitted it. Times and a task id only; never pages or titles. */

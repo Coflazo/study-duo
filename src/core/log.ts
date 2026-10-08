@@ -1,4 +1,4 @@
-import { logVersionItem } from './store';
+import { logVersionItem } from './session-store';
 import { STORES, TIME_INDEX, withDb, type ActivityRecord, type BlockedAttempt, type ListenRecord, type StoreName } from './db';
 import type { SessionRecord } from './sessions';
 

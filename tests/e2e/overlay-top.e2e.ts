@@ -20,11 +20,13 @@ async function pixel(page: Page, x: number, y: number): Promise<[number, number,
 }
 const isRed = ([r, g, b]: [number, number, number]) => r > 200 && g < 60 && b < 60;
 
-test('the corner clock stays above dialogs and popovers the page opens', async () => {
+test('the corner clock stays above dialogs and popovers the page opens, and never throws there', async () => {
   const profile = tempProfile();
   const { ctx } = await launch(profile);
   await ctx.route('https://study-duo.test/**', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body style="background:#fff">page</body></html>' }));
   const page = await ctx.newPage();
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message)); // the clock's script must never throw on a page
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('https://study-duo.test/');
   const popup = await ctx.newPage();
@@ -59,6 +61,7 @@ test('the corner clock stays above dialogs and popovers the page opens', async (
     p.showPopover();
   });
   await expect.poll(async () => pixel(page, ...(await centre())).then(isRed)).toBe(false);
+  expect(errors).toEqual([]);
   await ctx.close();
   fs.rmSync(profile, { recursive: true, force: true });
 });
