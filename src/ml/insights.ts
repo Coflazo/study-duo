@@ -7,6 +7,7 @@ import { BINS, buildFeatures, cellWeights, DAYS, FIRST_HOUR, isWeekend, LENGTHS,
 import { calibrate } from './focus-index';
 import { walkForward } from './validate';
 import { overlapping, seeded } from './random';
+import { SPOTIFY_HOSTS } from '@/core/music';
 
 const Z80 = 1.2816;
 /** A best window is the winner of about 14 candidates: it must clear a one-sided 97.5% bound, not 80% (winner's curse). */
@@ -115,7 +116,7 @@ const sourceOf = (l: ListenRecord) => (l.host === 'file' ? 'file' : l.host === '
  */
 /** Hosts whose plays are shown but never learned from. Spotify's User Guidelines forbid using Spotify content in a
  *  machine learning model; Spotify plays reach insights only as the user's own ListenBrainz or Last.fm scrobbles. */
-export const NOT_FOR_INSIGHTS = new Set(['open.spotify.com', 'app:spotify']);
+export const NOT_FOR_INSIGHTS = SPOTIFY_HOSTS;
 
 export function computeInsights(raw: InsightsInput): Insights {
   const input = { ...raw, listens: raw.listens.filter((l) => !NOT_FOR_INSIGHTS.has(l.host)) };

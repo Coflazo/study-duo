@@ -23,6 +23,19 @@ export interface Connections {
   listenbrainz: Status & { user: string | null };
   /** The key is kept in the extension database, never in storage. */
   lastfm: Status & { user: string | null; key: string | null };
+  /**
+   * Google Calendar: every finished block and break becomes an event in a "Study Duo" calendar. No token is kept here
+   * (the browser keeps it); `sent` remembers what each event last said, so unchanged events are not sent again.
+   */
+  google: Status & {
+    on: boolean;
+    calendarId: string | null;
+    /** Up to when every block was in the calendar; the next sync starts a little before it. */
+    lastOk: number | null;
+    sent: Record<string, string>;
+    /** Send the sites and songs of each block too, or only the task and focus rating. */
+    details: boolean;
+  };
 }
 
 const status = (): Status => ({ lastSync: null, count: 0, error: null });
@@ -31,6 +44,7 @@ export const DEFAULT_CONNECTIONS: Connections = {
   deadlines: { ...status(), url: null, host: null, dismissed: [] },
   listenbrainz: { ...status(), user: null },
   lastfm: { ...status(), user: null, key: null },
+  google: { ...status(), on: false, calendarId: null, lastOk: null, sent: {}, details: true },
 };
 
 export const connectionsItem = storage.defineItem<Connections>('local:connections', { fallback: DEFAULT_CONNECTIONS });
@@ -73,6 +87,8 @@ export function normalizeConnections(raw: unknown): Connections {
   const d = obj(r.deadlines);
   const lb = obj(r.listenbrainz);
   const fm = obj(r.lastfm);
+  const g = obj(r.google);
+  const sent = Object.entries(obj(g.sent)).filter((e): e is [string, string] => typeof e[1] === 'string' && e[0].length <= 64 && e[1].length <= 16);
   return {
     deadlines: {
       ...statusOf(d),
@@ -82,6 +98,14 @@ export function normalizeConnections(raw: unknown): Connections {
     },
     listenbrainz: { ...statusOf(lb), user: str(lb.user, userName) },
     lastfm: { ...statusOf(fm), user: str(fm.user, userName), key: str(fm.key, lastfmKey) },
+    google: {
+      ...statusOf(g),
+      on: g.on === true,
+      calendarId: str(g.calendarId, (id) => (/^[\w.@-]{1,200}$/.test(id) ? id : null)),
+      lastOk: num(g.lastOk),
+      sent: Object.fromEntries(sent.slice(-2000)),
+      details: g.details !== false,
+    },
   };
 }
 

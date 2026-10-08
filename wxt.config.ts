@@ -42,7 +42,15 @@ export default defineConfig({
             gecko: { id: 'study-duo@coflazo.github.io', data_collection_permissions: { required: ['none'] } },
           },
         }
-      : { key: CHROMIUM_PUBLIC_KEY }),
+      : {
+          key: CHROMIUM_PUBLIC_KEY,
+          // Google Calendar sync (Connections): the OAuth client is tied to this extension's fixed id, and the only
+          // scope makes and fills Study Duo's own calendar, never the user's other calendars.
+          oauth2: {
+            client_id: '1073365254472-i3u0f46qfj7sm92p3qv0jt201l5aj8d4.apps.googleusercontent.com',
+            scopes: ['https://www.googleapis.com/auth/calendar.app.created'],
+          },
+        }),
     permissions: [
       'storage',
       'unlimitedStorage',
@@ -53,11 +61,12 @@ export default defineConfig({
       'contextMenus',
       'scripting',
       ...(browser === 'firefox' ? [] : ['offscreen']),
-      ...(process.env.STUDY_DUO_OUT === '.test-build' ? ['nativeMessaging'] : []),
+      ...(process.env.STUDY_DUO_OUT === '.test-build' ? ['nativeMessaging', 'identity'] : []),
     ],
     // Redirects and reading an open tab's address need host access; the corner clock already asks for every site.
-    // Desktop apps in Connections asks for this only when turned on (the test build holds it, so E2E needs no prompt).
-    optional_permissions: process.env.STUDY_DUO_OUT === '.test-build' ? [] : ['nativeMessaging'],
+    // Desktop apps and Google Calendar in Connections ask for these only when turned on and give them back when turned
+    // off (the test build holds them, so E2E needs no prompt). Neither shows an install warning.
+    optional_permissions: process.env.STUDY_DUO_OUT === '.test-build' ? [] : ['nativeMessaging', 'identity'],
     host_permissions: ['<all_urls>'],
     // Only the phase-word font, behind a per-session URL so pages cannot fetch it by a fixed address.
     web_accessible_resources: [

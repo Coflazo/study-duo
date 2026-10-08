@@ -12,7 +12,7 @@ No software can promise to be perfectly secure. These are the choices Study Duo 
 - The extension runs only the code shipped in it. Manifest V3 forbids loading remote code, and the content security policy blocks all network access from extension pages unless you switch on a connection.
 - It asks for the fewest permissions it needs. Connections (Google Calendar, Last.fm, ListenBrainz) request their permissions only when you turn them on, and give them back when you turn them off.
 - The script it adds to web pages only draws the clock and the phase text inside a closed shadow root. It never inserts page-provided text as HTML.
-- Sign-ins use OAuth with PKCE. No client secrets are shipped. Access tokens are kept in memory.
+- Google sign-in uses the browser's own OAuth flows (Chrome's sign-in, or Google's account chooser in its own window). No client secrets are shipped, Study Duo never sees a password, access tokens are kept in memory only and revoked on Disconnect, and the one scope reaches only the calendar Study Duo made.
 - Dependencies are few and pinned. CI runs CodeQL, gitleaks and dependency audits. GitHub Actions are pinned to exact commits.
 - Releases are built by GitHub Actions from tagged commits and published with SHA-256 checksums and build attestations, so you can check that a download matches this source.
 
