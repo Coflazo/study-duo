@@ -4,6 +4,10 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-08
+
+Connections, moving to another computer, and songs from desktop apps. Every connection is off until you turn it on.
+
 ### Added
 
 - Connections, a new dashboard screen, each connection off until you turn it on:
@@ -13,6 +17,7 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 - To-do rows show due dates, in red when less than a day is left or the date has passed.
 - Desktop apps (Connections): with the optional desktop helper, songs from desktop players (Music, VLC and any player the system's media controls know) count like the songs in your tabs. Install it with the install line plus `--helper` (Windows: `-Helper`); it is a short script that only reports the song, only to Study Duo.
 - Move to another computer (Your data): settings, site lists and to-dos as one small file, or as QR codes that the other computer reads with its camera. A preview shows what comes in before anything changes, including hard lock and how many sites are blocked; hard lock refuses a move in during a locked block. History, how long it is kept, what Study Duo measures and connections stay where they are. The camera runs only while the Scan panel is open and visible.
+- A privacy page on the install site, built from PRIVACY.md: coflazo.github.io/study-duo/privacy.html.
 
 ### Security
 
@@ -20,6 +25,8 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 - The course link (it carries a private token) and the Last.fm key are kept in the extension's own database, which web pages and content scripts cannot open; storage holds only the host name.
 - Disconnecting stops the very next request, even in the middle of a check.
 - Calendar feeds are read in time proportional to their size, whatever they contain (each value is cut to 500 characters before parsing).
+- The desktop helper skips browser tabs (Study Duo reads music sites itself), files every Spotify client so it stays out of insights, refuses titles that try to change the app they are filed under, and gets the same build attestation check as the extension.
+- Moving in from another computer respects hard lock, keeps this computer's history settings, and refuses more blocked sites than the browser can enforce.
 
 ### Fixed
 
@@ -97,5 +104,6 @@ The first release. Everything runs in your browser, offline, with no account.
 - Releases are built in a job that can only read the repository; a separate job with no package code attests the zips and publishes them.
 - The installers accept a different download address only over HTTPS, or plain HTTP to this computer for tests, and say so when one is set.
 
-[Unreleased]: https://github.com/Coflazo/study-duo/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Coflazo/study-duo/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Coflazo/study-duo/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Coflazo/study-duo/releases/tag/v0.1.0

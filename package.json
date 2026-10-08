@@ -2,7 +2,7 @@
   "name": "study-duo",
   "description": "Pomodoro timer, focus clock, tab locker and private study insights. Runs offline.",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
