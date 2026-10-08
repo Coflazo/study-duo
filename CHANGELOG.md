@@ -11,6 +11,7 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
   - Listening history: connect ListenBrainz (no key) or Last.fm (your own free API key), and songs your phone and desktop apps played during study blocks count, like the songs in your tabs.
   - A QR code that opens a page on your phone explaining how to send what you play to ListenBrainz or Last.fm.
 - To-do rows show due dates, in red when less than a day is left or the date has passed.
+- Desktop apps (Connections): with the optional desktop helper, songs from desktop players (Music, VLC and any player the system's media controls know) count like the songs in your tabs. Install it with the install line plus `--helper` (Windows: `-Helper`); it is a short script that only reports the song, only to Study Duo.
 
 ### Security
 
