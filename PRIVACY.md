@@ -40,4 +40,4 @@ Google Calendar sync is planned for a later version.
 
 ## Contact
 
-Questions: open an issue on this repository.
+Questions: open an issue at [github.com/Coflazo/study-duo/issues](https://github.com/Coflazo/study-duo/issues).

@@ -3,7 +3,7 @@ name: pages
 on:
   push:
     branches: [main]
-    paths: ['site/**', 'src/ui/tokens.css', 'public/fonts/**', '.github/workflows/pages.yml']
+    paths: ['site/**', 'PRIVACY.md', 'scripts/privacy-page.py', 'src/ui/tokens.css', 'public/fonts/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -28,6 +28,7 @@ jobs:
         run: |
           mkdir -p _site/fonts
           cp site/*.html _site/
+          python3 scripts/privacy-page.py PRIVACY.md > _site/privacy.html
           cp src/ui/tokens.css _site/tokens.css
           cp public/fonts/atkinson-next-latin.woff2 public/fonts/atkinson-mono-latin.woff2 public/fonts/OFL.txt _site/fonts/
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
