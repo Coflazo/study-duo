@@ -1,6 +1,6 @@
 # Privacy
 
-Study Duo has no server and sends nothing about you anywhere. What it records stays in your browser, on your computer.
+Study Duo has no server. What it records stays in your browser, on your computer, and unless you switch on a connection it sends nothing anywhere.
 
 ## What stays on your computer
 
@@ -31,6 +31,8 @@ These are off until you turn them on in Connections. Each one sends only what is
 | Last.fm | A request for your own recent tracks, with your username and your API key | ws.audioscrobbler.com | Every 30 minutes |
 
 What comes back stays on your computer: deadlines become to-dos with their due date, and songs are kept only when they played during a study block or break, like the songs in your tabs. With Songs you play off in Your data, no listening history is asked for at all. Disconnecting stops all requests to that service at once; the to-dos and songs already brought in stay until you delete them.
+
+Like any web request, each one also shows that service your IP address, that you use a browser, and when your browser is open. The course link and the Last.fm key are kept in the extension's own database, which web pages cannot read.
 
 One part of the code makes every request, and it refuses any address that does not belong to a connection you switched on. With all of them off, Study Duo makes no internet requests. Those services handle requests under their own privacy policies.
 

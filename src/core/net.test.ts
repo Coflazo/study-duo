@@ -54,3 +54,24 @@ describe('getText', () => {
     await expect(getText(FEED, on({ url: FEED }), { fetch: fetch as unknown as typeof globalThis.fetch, timeoutMs: 20 })).rejects.toThrow('did not answer');
   });
 });
+
+describe('the gate is the only way out (security review)', () => {
+  it('no other source file calls fetch, XMLHttpRequest, WebSocket, EventSource or sendBeacon', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (/\.(ts|svelte)$/.test(e.name) && !/\.test\.ts$/.test(e.name)) files.push(p);
+      }
+    };
+    walk(path.resolve(__dirname, '..'));
+    const using = (re: RegExp) => files.filter((f) => re.test(fs.readFileSync(f, 'utf8'))).map((f) => path.relative(path.resolve(__dirname, '..'), f)).sort();
+    // UpdateNotice reads the extension's own /manifest.json (same origin, no network); nothing else calls out directly.
+    expect(using(/\b(fetch\s*\(|XMLHttpRequest|new\s+WebSocket|EventSource|sendBeacon)/)).toEqual(['ui/UpdateNotice.svelte']);
+    // The global fetch is reached only from the gate (as its default) and that same-origin read.
+    expect(using(/(^|[^.\w])fetch\b/m)).toEqual(['core/net.ts', 'ui/UpdateNotice.svelte']);
+  });
+});

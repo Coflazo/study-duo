@@ -12,6 +12,13 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
   - A QR code that opens a page on your phone explaining how to send what you play to ListenBrainz or Last.fm.
 - To-do rows show due dates, in red when less than a day is left or the date has passed.
 
+### Security
+
+- One part of the code makes every connection request: GET over HTTPS to the services you switched on only, with no cookies, no referrer and no redirects, a time limit and a size limit. A test fails if any other file reaches the network.
+- The course link (it carries a private token) and the Last.fm key are kept in the extension's own database, which web pages and content scripts cannot open; storage holds only the host name.
+- Disconnecting stops the very next request, even in the middle of a check.
+- Calendar feeds are read in time proportional to their size, whatever they contain (each value is cut to 500 characters before parsing).
+
 ### Changed
 
 - Releases are published by the repository owner with `scripts/publish-release.sh`, from the zips the release workflow built and attested. No CI job can write to the repository any more.

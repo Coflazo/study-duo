@@ -1,4 +1,4 @@
-import { connectionsItem, normalizeConnections, type Connections } from '@/core/connections';
+import { connectionsItem, loadConnections, normalizeConnections, type Connections } from '@/core/connections';
 import { addRecords, recordsBetween } from '@/core/log';
 import { getText, NetError } from '@/core/net';
 import { sessionsBetween } from '@/core/sessions';
@@ -36,6 +36,7 @@ async function syncDeadlines(c: Connections, now: number, fetchText: FetchText):
   const text = await fetchText(c.deadlines.url!, c);
   const events = parseFeed(text);
   if (events.length === 0 && !/BEGIN:VCALENDAR/i.test(text)) throw new NetError('That link did not return a calendar.');
+  if (!isOn(await loadConnections(), 'deadlines')) return; // disconnected while the answer was on its way
   let count = 0;
   await updateTodos((list) => {
     const r = mergeDeadlines(list, events, c.deadlines.dismissed, now);
@@ -63,10 +64,13 @@ async function syncListens(kind: 'listenbrainz' | 'lastfm', c: Connections, now:
 
 let queue: Promise<unknown> = Promise.resolve();
 
+/** Each request re-reads the connections, so Disconnect stops the very next one, even in the middle of a check. */
+const fetchCurrent: FetchText = async (url) => getText(url, await loadConnections());
+
 /** Checks one connection now, if it is on (and, for listening history, if Songs you play is on). One check at a time. */
-export function syncConnection(kind: ConnectionKind, now = Date.now(), fetchText: FetchText = (url, c) => getText(url, c)): Promise<void> {
+export function syncConnection(kind: ConnectionKind, now = Date.now(), fetchText: FetchText = fetchCurrent): Promise<void> {
   const run = queue.then(async () => {
-    const c = normalizeConnections(await connectionsItem.getValue());
+    const c = await loadConnections();
     if (!isOn(c, kind)) return;
     if (kind !== 'deadlines' && !(await loadSettings()).measure.music) return;
     const service = kind === 'deadlines' ? 'The calendar link' : kind === 'listenbrainz' ? 'ListenBrainz' : 'Last.fm';
@@ -83,7 +87,7 @@ export function syncConnection(kind: ConnectionKind, now = Date.now(), fetchText
 
 /** Every connection that is due, one after another. */
 export async function syncDue(now = Date.now()): Promise<void> {
-  for (const kind of dueNow(normalizeConnections(await connectionsItem.getValue()), now)) await syncConnection(kind, now);
+  for (const kind of dueNow(await loadConnections(), now)) await syncConnection(kind, now);
 }
 
 /** A "check now" request from an extension page: { kind: 'connections', op: 'sync', which }. */

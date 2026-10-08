@@ -2,7 +2,7 @@
   /** Figma Dashboard / Connections (82:153): course deadlines from a calendar link, listening history, the phone QR. */
   import { onDestroy, onMount } from 'svelte';
   import qrcode from 'qrcode-generator';
-  import { connectionsItem, DEFAULT_CONNECTIONS, feedUrl, lastfmKey, normalizeConnections, userName, type Connections } from '@/core/connections';
+  import { connectionsItem, DEFAULT_CONNECTIONS, feedUrl, lastfmKey, loadConnections, normalizeConnections, saveConnections, userName, type Connections } from '@/core/connections';
   import { clockTime } from '@/core/today-view';
   import type { createLive } from '@/ui/live.svelte';
   import SignButton from '@/ui/SignButton.svelte';
@@ -28,9 +28,9 @@
   });
   onDestroy(() => unwatch?.());
 
-  async function save(next: Connections) {
-    conn = next;
-    await connectionsItem.setValue($state.snapshot(next));
+  /** Saves a change on top of the stored connections, secrets included (they never pass through this page's state). */
+  async function save(change: (c: Connections) => Connections) {
+    await saveConnections(change(await loadConnections()));
   }
   async function check(kind: Kind) {
     busy[kind] = true;
@@ -46,7 +46,7 @@
     const url = feedUrl(feed);
     invalid.deadlines = url ? '' : 'Paste the https link from your course calendar. It usually ends in .ics.';
     if (!url) return;
-    await save({ ...conn, deadlines: { ...conn.deadlines, ...fresh, url } });
+    await save((c) => ({ ...c, deadlines: { ...c.deadlines, ...fresh, url } }));
     feed = '';
     await check('deadlines');
   }
@@ -54,7 +54,7 @@
     const user = userName(lbUser);
     invalid.listenbrainz = user ? '' : 'Type your ListenBrainz user name, without spaces.';
     if (!user) return;
-    await save({ ...conn, listenbrainz: { ...fresh, user } });
+    await save((c) => ({ ...c, listenbrainz: { ...fresh, user } }));
     lbUser = '';
     await check('listenbrainz');
   }
@@ -63,16 +63,16 @@
     const key = lastfmKey(fmKey);
     invalid.lastfm = !user ? 'Type your Last.fm user name, without spaces.' : !key ? 'The API key is 32 letters and digits, from last.fm/api.' : '';
     if (!user || !key) return;
-    await save({ ...conn, lastfm: { ...fresh, user, key } });
+    await save((c) => ({ ...c, lastfm: { ...fresh, user, key } }));
     fmUser = '';
     fmKey = '';
     await check('lastfm');
   }
   const disconnect = (kind: Kind) =>
-    save(
-      kind === 'deadlines' ? { ...conn, deadlines: { ...conn.deadlines, ...fresh, url: null } }
-      : kind === 'listenbrainz' ? { ...conn, listenbrainz: { ...fresh, user: null } }
-      : { ...conn, lastfm: { ...fresh, user: null, key: null } },
+    save((c) =>
+      kind === 'deadlines' ? { ...c, deadlines: { ...c.deadlines, ...fresh, url: null } }
+      : kind === 'listenbrainz' ? { ...c, listenbrainz: { ...fresh, user: null } }
+      : { ...c, lastfm: { ...fresh, user: null, key: null } },
     );
 
   const checked = (kind: Kind) => {
@@ -81,7 +81,6 @@
     if (c.lastSync === null) return 'Not checked yet.';
     return `Checked at ${clockTime(c.lastSync)}. It checks again every ${kind === 'deadlines' ? '6 hours' : '30 minutes'}.`;
   };
-  const host = (url: string) => new URL(url).hostname;
 
   // The phone page's address as a QR code, drawn here: nothing is fetched to make it.
   const qr = (() => {
@@ -100,11 +99,11 @@
   <div>
     <section aria-labelledby="deadlines-title">
       <h2 class="section-title" id="deadlines-title">Course deadlines</h2>
-      {#if conn.deadlines.url}
+      {#if conn.deadlines.host}
         <div class="row">
           <div class="text">
             <p class="label">{conn.deadlines.count} {conn.deadlines.count === 1 ? 'deadline' : 'deadlines'} in your to-do list</p>
-            <p class="help" aria-live="polite">From {host(conn.deadlines.url)}. {checked('deadlines')}</p>
+            <p class="help" aria-live="polite">From {conn.deadlines.host}. {checked('deadlines')}</p>
             {#if conn.deadlines.error}<p class="help error" role="status">Last check failed: {conn.deadlines.error}</p>{/if}
           </div>
           <SignButton label="Check now" kind="secondary" disabled={busy.deadlines} onclick={() => check('deadlines')} />

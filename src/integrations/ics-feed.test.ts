@@ -65,3 +65,15 @@ describe('helpers', () => {
     expect(zonedToUtc(2026, 9, 9, 12, 0, 0, 'Not/AZone')).toBe(new Date(2026, 9, 9, 12, 0, 0).getTime());
   });
 });
+
+describe('hostile feeds (security review: ReDoS)', () => {
+  it('parse 2 MB of brackets or a 2 MB category in well under a second', () => {
+    const evil1 = `BEGIN:VEVENT\nUID:x\nDTSTART:20261009T100000Z\nSUMMARY:due ${'['.repeat(2_000_000)}\nEND:VEVENT`;
+    const evil2 = `BEGIN:VEVENT\nUID:y\nDTSTART:20261009T100000Z\nSUMMARY:due\nCATEGORIES:${'a'.repeat(2_000_000)}!\nEND:VEVENT`;
+    for (const text of [evil1, evil2]) {
+      const t = performance.now();
+      parseFeed(text);
+      expect(performance.now() - t).toBeLessThan(1000);
+    }
+  });
+});

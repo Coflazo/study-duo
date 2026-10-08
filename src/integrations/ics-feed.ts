@@ -11,6 +11,8 @@ export interface FeedEvent {
 
 const MAX_EVENTS = 2000;
 const MAX_TITLE = 200;
+/** Every property value is cut to this before any pattern runs on it, so hostile input stays linear. */
+const MAX_VALUE = 500;
 // Lectures and tutorials are not to-dos; these words mark the events that are.
 const DEADLINE_WORDS = /\b(due|deadline|assignment|homework|quiz|exam|test|submission|submit|deliverable|essay|report|project|opdracht|inleveren|tentamen|toets)\b/i;
 const STOPWORDS = new Set(['of', 'and', 'the', 'for', 'to', 'in', 'a', 'an', 'on', 'with', 'en', 'de', 'het', 'van', 'voor']);
@@ -24,7 +26,7 @@ const unescape = (s: string) => s.replace(/\\(.)/g, (_, c: string) => (c === 'n'
 /** A course name as a short tag: a course code if there is one (STAT2001), else the initials (FPTS). */
 export function courseTag(name: string): string | null {
   const words = clean(name).split(' ').filter(Boolean);
-  const code = words.find((w) => /^[A-Za-z]{2,}[A-Za-z0-9-]*\d{2,}[A-Za-z]?$/.test(w));
+  const code = words.find((w) => w.length <= 16 && /^[A-Za-z]{2,}[A-Za-z0-9-]*\d{2,}[A-Za-z]?$/.test(w));
   if (code) return code.toUpperCase().slice(0, 12);
   const initials = words
     .filter((w) => /^\p{L}/u.test(w) && !STOPWORDS.has(w.toLowerCase()))
@@ -84,7 +86,7 @@ function parseLine(line: string): { name: string; params: Map<string, string>; v
     const eq = p.indexOf('=');
     if (eq > 0) params.set(p.slice(0, eq).toUpperCase(), p.slice(eq + 1).replace(/^"|"$/g, ''));
   }
-  return { name: parts[0]!.toUpperCase(), params, value: line.slice(colon + 1) };
+  return { name: parts[0]!.toUpperCase(), params, value: line.slice(colon + 1, colon + 1 + MAX_VALUE) };
 }
 
 const hash = (s: string) => {

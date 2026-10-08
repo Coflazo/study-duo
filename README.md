@@ -85,7 +85,7 @@ Everything happens on your computer. After each study block you rate your focus 
 
 ## Is it safe?
 
-Study Duo has no servers and no account, and it sends nothing about you anywhere. Your history stays in your browser on your computer, and you can delete all of it with one button. The code is public, so anyone can check it.
+Study Duo has no servers and no account. Your history stays in your browser on your computer, and you can delete all of it with one button. Unless you switch on a connection, it sends nothing anywhere; a connection asks one service for your own data and nothing more. The code is public, so anyone can check it.
 
 <details>
 <summary>What Study Duo stores, and what the optional connections send</summary>
