@@ -34,7 +34,8 @@
     "wxt": "^0.21.3"
   },
   "dependencies": {
-    "idb": "^8.0.4"
+    "idb": "^8.0.4",
+    "jsqr": "1.4.0"
   },
   "license": "MIT",
   "overrides": {
