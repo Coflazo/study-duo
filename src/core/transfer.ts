@@ -71,7 +71,7 @@ async function readCapped(stream: ReadableStream<Uint8Array>): Promise<Uint8Arra
   return out;
 }
 
-const streamOf = (bytes: Uint8Array) => new Blob([bytes]).stream();
+const streamOf = (bytes: Uint8Array) => new Blob([bytes as Uint8Array<ArrayBuffer>]).stream();
 
 /** A bundle as compact text for QR codes: JSON, deflated by the browser, in URL-safe base64. */
 export async function encodeBundle(bundle: MoveBundle): Promise<string> {
@@ -96,7 +96,7 @@ const FRAME = /^SD1:([a-z0-9]{4}):(\d{1,3})\/(\d{1,3}):([\s\S]*)$/;
 const MAX_FRAMES = 200;
 
 /** Splits text into numbered QR frames: SD1:<transfer id>:<i>/<n>:<part>. */
-export function toFrames(text: string, id: string, size = 400): string[] {
+export function toFrames(text: string, id: string, size = 250): string[] {
   const n = Math.max(1, Math.ceil(text.length / size));
   return Array.from({ length: n }, (_, i) => `SD1:${id}:${i + 1}/${n}:${text.slice(i * size, (i + 1) * size)}`);
 }

@@ -24,12 +24,12 @@ function chromePath(): string | undefined {
   return undefined;
 }
 
-export async function launch(userDataDir: string): Promise<{ ctx: BrowserContext; sw: Worker }> {
+export async function launch(userDataDir: string, extraArgs: string[] = []): Promise<{ ctx: BrowserContext; sw: Worker }> {
   const executablePath = chromePath();
   const ctx = await chromium.launchPersistentContext(userDataDir, {
     headless: true,
     ...(executablePath ? { executablePath } : { channel: 'chromium' }),
-    args: [`--disable-extensions-except=${EXT_DIR}`, `--load-extension=${EXT_DIR}`],
+    args: [`--disable-extensions-except=${EXT_DIR}`, `--load-extension=${EXT_DIR}`, ...extraArgs],
   });
   const sw = ctx.serviceWorkers()[0] ?? (await ctx.waitForEvent('serviceworker'));
   // Wait for the install step (music players filed as Not blocked), so tests never race it.
