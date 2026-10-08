@@ -14,6 +14,7 @@
   import SignButton from '@/ui/SignButton.svelte';
   import TimetableRow from '@/ui/TimetableRow.svelte';
   import RatingCard from './RatingCard.svelte';
+  import { askForRating } from '@/ml/ask';
   import UpdateNotice from '@/ui/UpdateNotice.svelte';
 
   const SITE_CHOICES: Array<[SiteCategory, string]> = [['study', 'Study'], ['neutral', 'Not blocked'], ['blocked', 'Blocked']];
@@ -29,7 +30,15 @@
 
   const open = $derived(live.todos.filter((t) => !t.done));
   const shown = $derived(data.shown());
-  const toRate = $derived(pendingRating(live.today, live.now, timer));
+  const pending = $derived(pendingRating(live.today, live.now, timer));
+  // Once the focus index matches your ratings it fills in blocks it is sure about, so the card only shows when it is not.
+  let askFor = $state<string | null>(null);
+  $effect(() => {
+    const block = pending;
+    if (!block) return;
+    void askForRating(block, settings.measure).then((ask) => (askFor = ask ? block.id : null));
+  });
+  const toRate = $derived(pending && askFor === pending.id ? pending : null);
   const blocksDone = $derived(live.today.filter((s) => s.phase === 'focus' && s.completed).length);
   const progress = $derived(timer.status !== 'stopped' && timer.plannedMs ? 1 - shown.ms / timer.plannedMs : 0);
   const rows = $derived(timetable({ timer, settings, sessions: live.today, todos: live.todos, now: live.now, chosen: chosen || null, keepDone: 2 }));

@@ -13,6 +13,8 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ### Added
 
+- Your best hours (Insights): a map of expected focus by day and hour, best windows for weekdays, the weekend and any day that differs, music and focus compared with silence, a sound and a block length to try, and how accurate it is, all worked out on your computer by a Bayesian model with grouped priors. It shows only what the data supports and checks itself on simulated students.
+- Your focus signals stand in for ratings once they predict them well, so Study Duo asks less often.
 - Timeline: every study block and break by day or week (06:00 to midnight; blocks across midnight show on both days), with the task and rating, and Export to calendar: one .ics file for Google Calendar, Apple Calendar or Outlook. Importing it again updates the same events. Settings > Calendar adds the songs that played.
 
 - Activity log while the timer runs: time per kind of site (Study, Blocked, Not blocked, unfiled) by site name only, time away from the browser counted as away, blocked-site attempts and unlocks, and, only if you turn it on, keys, clicks and scrolls per minute in study blocks.
