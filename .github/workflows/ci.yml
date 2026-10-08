@@ -49,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - if: runner.os == 'Linux'
-        run: shellcheck install.sh tests/install/test-install.sh
+        run: shellcheck install.sh tests/install/test-install.sh scripts/publish-release.sh
       - run: sh tests/install/test-install.sh
 
   install-windows:

@@ -4,6 +4,10 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Changed
+
+- Releases are published by the repository owner with `scripts/publish-release.sh`, from the zips the release workflow built and attested. No CI job can write to the repository any more.
+
 ## [0.1.0] - 2026-10-08
 
 The first release. Everything runs in your browser, offline, with no account.
