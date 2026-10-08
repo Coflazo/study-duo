@@ -6,7 +6,8 @@ import { NULL_STUDENT, seeded, simulate, TYPICAL } from './synthetic';
 const run = (sessions: ReturnType<typeof simulate>['sessions'], listens: ReturnType<typeof simulate>['listens'], seed = 1) =>
   computeInsights({ sessions, listens, activity: [], blocks: [], measure: DEFAULT_SETTINGS.measure, random: seeded(seed).u });
 
-describe('computeInsights', () => {
+// Each test fits the model several times (about 2 s on a laptop); a busy machine needs more than the 5 s default.
+describe('computeInsights', { timeout: 20_000 }, () => {
   it('starts with a learning state, never an error, on no data or a few blocks', () => {
     const none = run([], []);
     expect(none.learning).toEqual({ have: 0, need: 25 });

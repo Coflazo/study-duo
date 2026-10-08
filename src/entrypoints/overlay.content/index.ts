@@ -1,4 +1,4 @@
-import { capsuleText } from '@/core/capsule';
+import { tickPlan } from '@/core/capsule';
 import { isPing, parseAnnounce } from '@/core/messages';
 import { DEFAULT_SETTINGS, normalizeSettings } from '@/core/settings';
 import { settingsItem, timerItem } from '@/core/store';
@@ -135,11 +135,15 @@ export default defineContentScript({
       clock.el.dataset.status = state.status;
       if (!dragging) Object.assign(clock.el.style, placement(settings.overlayPos));
       clock.el.dataset.idle = settings.overlayIdle;
-      // Full brightness for the first seconds of a block so it gets noticed, then as quiet as the user asked.
-      clock.el.toggleAttribute('data-fresh', state.status === 'running' && state.startedAt !== null && Date.now() - state.startedAt < FRESH_MS);
       const now = Date.now();
+      // Full brightness for the first seconds of a block so it gets noticed, then as quiet as the user asked.
+      const fresh = state.status === 'running' && state.startedAt !== null && now - state.startedAt < FRESH_MS;
+      clock.el.toggleAttribute('data-fresh', fresh);
       const { ms, countsUp } = displayMs(state, settings, now);
-      clock.show(capsuleText(ms, countsUp));
+      // Dimmed, the clock shows minutes and wakes once a minute (#41). Near, fresh, held, paused or set to full
+      // brightness, it shows seconds; a paused clock does not tick, so its seconds cost nothing.
+      const plan = tickPlan(ms, countsUp, near || dragging || fresh || state.status !== 'running' || settings.overlayIdle === 'full');
+      clock.show(plan.text);
       if (state.status !== 'running' || document.visibilityState !== 'visible') return;
       if (state.endsAt !== null && now >= state.endsAt) {
         // Alarms can fire late; the visible page ends the phase on time. One tick per phase end.
@@ -149,9 +153,8 @@ export default defineContentScript({
         }
         return;
       }
-      // Wake once per displayed second, right after the digits change.
-      const wait = countsUp ? 1000 - (ms % 1000) : ms % 1000 || 1000;
-      next = setTimeout(render, wait + 20);
+      // Wake right after the digits change: next second, or next minute while dimmed.
+      next = setTimeout(render, plan.nextInMs + 20);
     }
 
     function renderPrompt() {
@@ -181,6 +184,7 @@ export default defineContentScript({
       near = value;
       clock.el.toggleAttribute('data-near', near);
       prompt.el.toggleAttribute('data-near', near);
+      render(); // seconds the moment the pointer comes near, minutes again when it leaves
     }
 
     let pointer: PointerEvent | undefined;
@@ -239,6 +243,8 @@ export default defineContentScript({
     }, { signal: life.signal });
 
     document.addEventListener('visibilitychange', render, { signal: life.signal });
+    // Timers stop while the computer sleeps; a dimmed minute would otherwise be stale for up to a minute after waking.
+    window.addEventListener('focus', render, { signal: life.signal });
     document.addEventListener('fullscreenchange', render, { signal: life.signal });
     // A dialog or popover the page opens joins the top layer above the clock; step back on top of it. A copy left
     // behind by an extension reload must not: it would bring back a stale clock over the new one, so it leaves.

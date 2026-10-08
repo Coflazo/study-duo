@@ -51,7 +51,8 @@ export const CSS = `${hostTokens}
 .digits { display: block; flex: none; width: 86px; height: 29px; }
 .seg { fill: var(--color-text-led-ghost); }
 .seg.on, .colon { fill: var(--color-text-led); }
-.clock[data-status="paused"] .colon { animation: blink 2s steps(1, end) infinite; }
+/* The paused colon blinks only when the pointer is near: a blinking dimmed clock would repaint every second (#41). */
+.clock[data-status="paused"][data-near] .colon { animation: blink 2s steps(1, end) infinite; }
 @keyframes blink { 50% { fill: var(--color-text-led-ghost); } }
 .close {
   display: none; place-items: center; width: 24px; height: 24px; margin: 0; padding: 0;
