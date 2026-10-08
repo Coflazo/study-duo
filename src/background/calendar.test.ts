@@ -22,6 +22,10 @@ class FakeGoogle {
   revoked: string[] = [];
   expired = new Set<string>();
   down = false;
+  /** A status for the GET of a known calendar, as when Google is busy. */
+  busyGet: number | null = null;
+  /** Every event insert answered with this error, Google's way: { error: { errors: [{ reason }] } }. */
+  refuse: { status: number; reason: string } | null = null;
   calls: string[] = [];
   send: CalendarDeps['send'] = async (url, init) => {
     this.calls.push(`${init.method} ${url.replace(API, '')}`);
@@ -29,6 +33,8 @@ class FakeGoogle {
     if (url.endsWith('/revoke')) return this.revoked.push(String((init.body as URLSearchParams).get('token'))), { status: 200, data: null };
     if (init.token && this.expired.has(init.token)) return { status: 401, data: null };
     const cal = /\/calendars\/([^/]+)/.exec(url)?.[1];
+    if (this.busyGet && /\/calendars\/[^/]+$/.test(url) && init.method === 'GET') return { status: this.busyGet, data: null };
+    if (this.refuse && url.endsWith('/events')) return { status: this.refuse.status, data: { error: { errors: [{ reason: this.refuse.reason }] } } };
     if (url === `${API}/calendars` && init.method === 'POST') {
       this.calendars.add('cal1');
       return { status: 200, data: { id: 'cal1' } };
@@ -106,6 +112,18 @@ describe('connectCalendar', () => {
     expect(google.calls.filter((c) => c === 'POST /calendars')).toEqual([]);
   });
 
+  it('keeps the old calendar when Google is busy on reconnect, and gives the sign-in back', async () => {
+    google.calendars.add('old');
+    google.busyGet = 503;
+    await connectionsItem.setValue({ ...DEFAULT_CONNECTIONS, google: { ...DEFAULT_CONNECTIONS.google, calendarId: 'old' } });
+    await connectCalendar(NOW, deps);
+    expect(google.calls.filter((c) => c === 'POST /calendars')).toEqual([]);
+    expect((await g()).calendarId).toBe('old');
+    expect((await g()).on).toBe(false);
+    expect((await g()).error).toMatch(/busy/);
+    expect(google.revoked).toEqual(['tok']);
+  });
+
   it('stays off and says so when the sign-in did not finish', async () => {
     tokens = [];
     await connectCalendar(NOW, deps);
@@ -168,6 +186,37 @@ describe('syncCalendar', () => {
     await syncCalendar(NOW + 30 * MIN, deps);
     expect(google.events.size).toBe(1);
     expect((await g()).error).toBeNull();
+  });
+
+  it('sends a block saved late, after a later pass already moved past its time', async () => {
+    await connectionsItem.setValue({ ...DEFAULT_CONNECTIONS, google: { ...DEFAULT_CONNECTIONS.google, on: true, calendarId: 'cal1', since: NOW - 20 * 60 * MIN, lastOk: NOW } });
+    // The laptop slept through the end of this block; it is written ten hours late, after a pass at NOW found nothing.
+    const s = await block({ startedAt: NOW - 10 * 60 * MIN, endedAt: NOW - 10 * 60 * MIN + 25 * MIN });
+    await syncCalendar(NOW + MIN, deps);
+    expect(google.events.has(eventId(s.id))).toBe(true);
+  });
+
+  it('never sends blocks from before Connect', async () => {
+    await connectionsItem.setValue({ ...DEFAULT_CONNECTIONS, google: { ...DEFAULT_CONNECTIONS.google, on: true, calendarId: 'cal1', since: NOW - 30 * MIN } });
+    await block({});
+    await syncCalendar(NOW, deps);
+    expect(google.events.size).toBe(0);
+  });
+
+  it('names a lasting refusal instead of calling Google busy', async () => {
+    google.refuse = { status: 403, reason: 'accessNotConfigured' };
+    await block({});
+    await syncCalendar(NOW, deps);
+    expect((await g()).error).toMatch(/accessNotConfigured/);
+    expect((await g()).error).not.toMatch(/busy/);
+  });
+
+  it('calls a rate limit busy and tries again later', async () => {
+    google.refuse = { status: 403, reason: 'rateLimitExceeded' };
+    const s = await block({});
+    await syncCalendar(NOW, deps);
+    expect((await g()).error).toMatch(/busy/);
+    expect((await g()).sent[s.id]).toBeUndefined();
   });
 
   it('asks to connect again when the calendar itself was deleted', async () => {

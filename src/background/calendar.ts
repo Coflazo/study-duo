@@ -9,10 +9,15 @@ import { dropToken, googleToken } from './google-auth';
 
 const MIN = 60_000;
 const API = `${GOOGLE_API_ORIGIN}/calendar/v3`;
-/** Each pass looks back this far before the last good one, for ratings given after a block was first sent. */
-const OVERLAP = 3 * 60 * MIN;
-/** How long `sent` remembers an event; older blocks are past their rating window and are not sent again. */
+/** A block that ended this recently is rebuilt on every pass, so a rating given later updates its event. */
+const RATING_WINDOW = 3 * 60 * MIN;
+/**
+ * Each pass looks at every block of the last three days that is not in the calendar yet, whenever it was written: a
+ * block can be saved hours after it ended (a laptop that slept through its end), after a later pass already ran.
+ */
 const KEEP = 3 * 24 * 60 * MIN;
+/** Google's 403 reasons that mean "slow down", not "never". */
+const RATE_LIMITS = new Set(['rateLimitExceeded', 'userRateLimitExceeded', 'quotaExceeded']);
 
 type Send = (url: string, init: Parameters<typeof sendJson>[1]) => Promise<{ status: number; data: unknown }>;
 export interface CalendarDeps {
@@ -33,6 +38,21 @@ async function patch(fields: Partial<Connections['google']>): Promise<Connection
 }
 
 const SIGN_IN_AGAIN = 'Google asks you to sign in again: Disconnect, then Connect.';
+const reasonOf = (data: unknown) => {
+  const r = (data as { error?: { errors?: { reason?: unknown }[] } } | null)?.error?.errors?.[0]?.reason;
+  return typeof r === 'string' && /^\w{1,64}$/.test(r) ? r : null;
+};
+/** What a refused request means: try again later, or a refusal that will not change by itself. */
+function refusal(r: { status: number; data: unknown }): { later: boolean; message: string } {
+  const reason = reasonOf(r.data);
+  if (r.status === 429 || r.status >= 500 || (r.status === 403 && reason !== null && RATE_LIMITS.has(reason))) return { later: true, message: busy(r.status) };
+  return { later: false, message: `Google refused the calendar (${reason ?? `error ${r.status}`}).` };
+}
+/** Hands a sign-in back to Google; called while the connection is still on, since the gate closes with it. */
+async function giveBack(token: string, deps: CalendarDeps): Promise<void> {
+  await deps.send(`${GOOGLE_OAUTH_ORIGIN}/revoke`, { method: 'POST', body: new URLSearchParams({ token }) }).catch(() => undefined);
+  await deps.dropToken(token);
+}
 const gone = 'The Study Duo calendar was deleted in Google Calendar. Connect again to make a new one.';
 const zone = (deps: CalendarDeps) => deps.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -44,9 +64,18 @@ export async function connectCalendar(now = Date.now(), deps: CalendarDeps = rea
   const before = await patch({ on: true, error: null });
   const token = await deps.token(false);
   if (!token) return void (await patch({ on: false, lastSync: now, error: 'The Google sign-in did not finish. Try Connect again.' }));
+  const fail = async (error: string) => {
+    await giveBack(token, deps);
+    await patch({ on: false, lastSync: now, error });
+  };
   try {
     let id = before.calendarId;
-    if (id && (await deps.send(`${API}/calendars/${encodeURIComponent(id)}`, { method: 'GET', token })).status !== 200) id = null;
+    if (id) {
+      const old = await deps.send(`${API}/calendars/${encodeURIComponent(id)}`, { method: 'GET', token });
+      // Only "gone" makes a new calendar; a busy Google must not leave the user with two "Study Duo" calendars.
+      if (old.status === 404 || old.status === 410) id = null;
+      else if (old.status !== 200) return void (await fail(refusal(old).message));
+    }
     if (!id) {
       const made = await deps.send(`${API}/calendars`, {
         method: 'POST',
@@ -54,12 +83,12 @@ export async function connectCalendar(now = Date.now(), deps: CalendarDeps = rea
         body: { summary: 'Study Duo', description: 'Study blocks and breaks, logged by Study Duo when each one ends.', timeZone: zone(deps) },
       });
       id = made.status === 200 ? ((made.data as { id?: unknown } | null)?.id as string | undefined) ?? null : null;
-      if (!id) return void (await patch({ on: false, lastSync: now, error: `Google did not make the calendar (error ${made.status}).` }));
+      if (!id) return void (await fail(`Google did not make the calendar (error ${made.status}).`));
     }
     // A new calendar starts empty: forget what an older one held. Today's earlier blocks go in on the first pass.
-    await patch({ calendarId: id, lastOk: localDayRange(now)[0], ...(id === before.calendarId ? {} : { sent: {} }) });
+    await patch({ calendarId: id, since: localDayRange(now)[0], ...(id === before.calendarId ? {} : { sent: {} }) });
   } catch (e) {
-    return void (await patch({ on: false, lastSync: now, error: e instanceof NetError ? e.message : 'Google sent something Study Duo could not read.' }));
+    return void (await fail(e instanceof NetError ? e.message : 'Google sent something Study Duo could not read.'));
   }
   await syncCalendar(now, deps);
 }
@@ -71,9 +100,11 @@ export async function syncCalendar(now = Date.now(), deps: CalendarDeps = real):
   let token = await deps.token(false);
   if (!token) return void (await patch({ lastSync: now, error: SIGN_IN_AGAIN }));
 
-  const from = Math.min(g.lastOk ?? localDayRange(now)[0], now) - OVERLAP;
-  const blocks = (await sessionsBetween(from, now + 1)).filter((s) => s.endedAt <= now).sort((a, b) => a.startedAt - b.startedAt);
-  const dayStart = localDayRange(Math.min(from, ...blocks.map((b) => b.startedAt)))[0];
+  const from = Math.max(g.since ?? 0, now - KEEP);
+  const blocks = (await sessionsBetween(from, now + 1))
+    .filter((s) => s.startedAt >= from && s.endedAt <= now && (g.sent[s.id] === undefined || s.endedAt > now - RATING_WINDOW))
+    .sort((a, b) => a.startedAt - b.startedAt);
+  const dayStart = localDayRange(Math.min(now, ...blocks.map((b) => b.startedAt)))[0];
   const [todos, settings, focus, activity, listens] = await Promise.all([
     todosItem.getValue(),
     loadSettings(),
@@ -131,14 +162,23 @@ export async function syncCalendar(now = Date.now(), deps: CalendarDeps = real):
           break;
         }
         if (r.status !== 200 && r.status !== 404 && r.status !== 410) {
-          error = busy(r.status);
-          break;
+          const why = refusal(r);
+          if (why.later || r.status === 403) {
+            error = why.message;
+            break;
+          }
+          error = `Google refused one block (error ${r.status}); the others are in.`; // not retried: it would fail again
         }
       } else if (r.status === 200 || r.status === 201) added++;
-      else if (r.status === 429 || r.status === 403 || r.status >= 500) {
-        error = busy(r.status);
-        break;
-      } else error = `Google refused one block (error ${r.status}); the others are in.`; // not retried: it would fail again
+      else {
+        const why = refusal(r);
+        // Busy, or a refusal of the whole calendar (the API switched off, no permission): stop and keep the rest.
+        if (why.later || r.status === 403) {
+          error = why.message;
+          break;
+        }
+        error = `Google refused one block (error ${r.status}); the others are in.`; // not retried: it would fail again
+      }
       sent[s.id] = hash;
     }
   } catch (e) {
@@ -154,12 +194,9 @@ const busy = (status: number) => `Google is busy (error ${status}). Trying again
 /** Gives the sign-in back to Google and switches off. The calendar stays in Google Calendar, kept for a reconnect. */
 export async function disconnectCalendar(deps: CalendarDeps = real): Promise<void> {
   const token = await deps.token(false);
-  if (token) {
-    // Revoked while still switched on: the network gate only lets Google in while the connection is on.
-    await deps.send(`${GOOGLE_OAUTH_ORIGIN}/revoke`, { method: 'POST', body: new URLSearchParams({ token }) }).catch(() => undefined);
-    await deps.dropToken(token);
-  }
-  await patch({ on: false, sent: {}, lastOk: null, error: null });
+  // Revoked while still switched on: the network gate only lets Google in while the connection is on.
+  if (token) await giveBack(token, deps);
+  await patch({ on: false, sent: {}, lastOk: null, since: null, error: null });
 }
 
 /** A Connect or Disconnect request from an extension page: { kind: 'calendar', op: 'connect' | 'disconnect' }. */

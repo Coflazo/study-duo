@@ -30,8 +30,10 @@ export interface Connections {
   google: Status & {
     on: boolean;
     calendarId: string | null;
-    /** Up to when every block was in the calendar; the next sync starts a little before it. */
+    /** When a pass last ended with every block in the calendar. */
     lastOk: number | null;
+    /** Start of the day Connect was pressed: blocks from before it are never sent. */
+    since: number | null;
     sent: Record<string, string>;
     /** Send the sites and songs of each block too, or only the task and focus rating. */
     details: boolean;
@@ -44,7 +46,7 @@ export const DEFAULT_CONNECTIONS: Connections = {
   deadlines: { ...status(), url: null, host: null, dismissed: [] },
   listenbrainz: { ...status(), user: null },
   lastfm: { ...status(), user: null, key: null },
-  google: { ...status(), on: false, calendarId: null, lastOk: null, sent: {}, details: true },
+  google: { ...status(), on: false, calendarId: null, lastOk: null, since: null, sent: {}, details: true },
 };
 
 export const connectionsItem = storage.defineItem<Connections>('local:connections', { fallback: DEFAULT_CONNECTIONS });
@@ -103,6 +105,7 @@ export function normalizeConnections(raw: unknown): Connections {
       on: g.on === true,
       calendarId: str(g.calendarId, (id) => (/^[\w.@-]{1,200}$/.test(id) ? id : null)),
       lastOk: num(g.lastOk),
+      since: num(g.since),
       sent: Object.fromEntries(sent.slice(-2000)),
       details: g.details !== false,
     },

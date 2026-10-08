@@ -68,12 +68,22 @@ async function syncListens(kind: 'listenbrainz' | 'lastfm', c: Connections, now:
 
 let queue: Promise<unknown> = Promise.resolve();
 
+/**
+ * One connection job at a time: checks, and Google Calendar's Connect and Disconnect. A Disconnect pressed during a
+ * check waits for it, so the check cannot write its "not switched on" error or its sent list after the Disconnect.
+ */
+export function inQueue(job: () => Promise<void>): Promise<void> {
+  const run = queue.then(job);
+  queue = run.catch(() => undefined);
+  return run;
+}
+
 /** Each request re-reads the connections, so Disconnect stops the very next one, even in the middle of a check. */
 const fetchCurrent: FetchText = async (url) => getText(url, await loadConnections());
 
 /** Checks one connection now, if it is on (and, for listening history, if Songs you play is on). One check at a time. */
 export function syncConnection(kind: ConnectionKind, now = Date.now(), fetchText: FetchText = fetchCurrent): Promise<void> {
-  const run = queue.then(async () => {
+  return inQueue(async () => {
     const c = await loadConnections();
     if (!isOn(c, kind)) return;
     // Calendar sync keeps its own errors and is not part of "Songs you play".
@@ -87,8 +97,6 @@ export function syncConnection(kind: ConnectionKind, now = Date.now(), fetchText
       await patch(kind, { lastSync: now, error: reason(e, service) });
     }
   });
-  queue = run.catch(() => undefined);
-  return run;
 }
 
 /** Every connection that is due, one after another. */

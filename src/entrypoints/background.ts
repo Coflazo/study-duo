@@ -12,7 +12,7 @@ import { ensureOverlay, keepClocksOnOpenTabs } from '@/background/overlay-inject
 import { acceptCounts, trackActivity } from '@/background/activity';
 import { hearTab, trackMusic } from '@/background/music';
 import { isMusicStop, parseNowPlaying } from '@/core/music';
-import { parseSyncRequest, syncConnection, syncDue, trackConnections } from '@/background/connections';
+import { inQueue, parseSyncRequest, syncConnection, syncDue, trackConnections } from '@/background/connections';
 import { trackHelper } from '@/background/helper';
 import { connectCalendar, disconnectCalendar, parseCalendarRequest } from '@/background/calendar';
 
@@ -48,7 +48,7 @@ export default defineBackground(() => {
     // Connect / Disconnect for Google Calendar, from the Connections screen only; the page has already signed in.
     const calendar = parseCalendarRequest(raw);
     if (calendar && !isFromWebPage(sender.url, base)) {
-      (calendar === 'connect' ? connectCalendar() : disconnectCalendar()).then(() => sendResponse(true), () => sendResponse(false));
+      inQueue(calendar === 'connect' ? () => connectCalendar() : () => disconnectCalendar()).then(() => sendResponse(true), () => sendResponse(false));
       return true;
     }
     const site = parseSiteMessage(raw);

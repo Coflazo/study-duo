@@ -11,6 +11,8 @@ export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.app.crea
 export const WEB_CLIENT_ID: string | null = '1073365254472-hk755es3u4871q9nam8i5dsp8ttup6kg.apps.googleusercontent.com';
 
 const webTokenItem = storage.defineItem<{ token: string; expiresAt: number } | null>('session:googleWebToken', { fallback: null });
+/** Which route the user signed in with, so the background renews that account's grant and not another one. */
+const routeItem = storage.defineItem<'web' | 'chrome' | null>('local:googleRoute', { fallback: null });
 
 async function chromeToken(interactive: boolean): Promise<string | null> {
   if (!browser.identity?.getAuthToken) return null;
@@ -26,13 +28,15 @@ async function webToken(interactive: boolean): Promise<string | null> {
   if (!WEB_CLIENT_ID || !browser.identity?.launchWebAuthFlow) return null;
   const kept = await webTokenItem.getValue();
   if (kept && kept.expiresAt > Date.now() + 60_000) return kept.token;
-  const q = new URLSearchParams({ client_id: WEB_CLIENT_ID, response_type: 'token', redirect_uri: browser.identity.getRedirectURL(), scope: CALENDAR_SCOPE });
+  // A fresh state per sign-in: an answer that does not carry it back was not started by this request.
+  const state = crypto.randomUUID();
+  const q = new URLSearchParams({ client_id: WEB_CLIENT_ID, response_type: 'token', redirect_uri: browser.identity.getRedirectURL(), scope: CALENDAR_SCOPE, state });
   if (!interactive) q.set('prompt', 'none');
   try {
     const back = await browser.identity.launchWebAuthFlow({ url: `https://accounts.google.com/o/oauth2/v2/auth?${q}`, interactive });
     const p = new URLSearchParams(new URL(back ?? '').hash.slice(1));
     const token = p.get('access_token');
-    if (!token) return null;
+    if (!token || p.get('state') !== state) return null;
     await webTokenItem.setValue({ token, expiresAt: Date.now() + Number(p.get('expires_in') ?? 3600) * 1000 });
     return token;
   } catch {
@@ -42,10 +46,20 @@ async function webToken(interactive: boolean): Promise<string | null> {
 
 /**
  * A Calendar token. Interactive (from a click on an extension page) tries Google's account chooser first, the route
- * that works for everyone; silent (the background) uses whichever route already holds a grant.
+ * that works for everyone, and remembers which route signed in; silent (the background) renews through that route only,
+ * so it never picks up a different account that Chrome's profile happens to hold.
  */
 export async function googleToken(interactive: boolean): Promise<string | null> {
-  if (interactive) return (await webToken(true)) ?? (await chromeToken(true));
+  if (interactive) {
+    const web = await webToken(true);
+    if (web) return (await routeItem.setValue('web'), web);
+    const chrome = await chromeToken(true);
+    if (chrome) await routeItem.setValue('chrome');
+    return chrome;
+  }
+  const route = await routeItem.getValue();
+  if (route === 'web') return webToken(false);
+  if (route === 'chrome') return chromeToken(false);
   return (await chromeToken(false)) ?? (await webToken(false));
 }
 

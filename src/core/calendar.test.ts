@@ -129,7 +129,7 @@ describe('eventContext', () => {
         act(null, 'unobserved', T0 + 25 * MIN, T0 + 30 * MIN),
         act('overleaf.com', 'study', T0 - 30 * MIN, T0 - 5 * MIN), // before the block
       ],
-      listens: [listen('Nocturne', 'file'), listen('A Spotify song', 'open.spotify.com'), listen('Nocturne', 'file'), listen('Other', 'file', 'x')],
+      listens: [listen('Nocturne', 'file'), listen('A Spotify song', 'open.spotify.com'), listen('A phone Spotify song', 'app:spotify'), listen('A scrobble from who knows', 'last.fm'), listen('Nocturne', 'file'), listen('Other', 'file', 'x')],
       details: true,
     });
     expect(ctx.task).toEqual({ text: 'Problem set 5', course: 'LA' });

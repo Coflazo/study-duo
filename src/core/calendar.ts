@@ -129,7 +129,8 @@ export function eventContext(s: SessionRecord, src: ContextSources): EventContex
   const seen = new Set<string>();
   const songs: { title: string; artist: string }[] = [];
   for (const l of src.listens) {
-    if (l.sessionId !== s.id || SPOTIFY_HOSTS.has(l.host) || l.host === 'sound') continue;
+    // Spotify never goes, and Last.fm does not say which app played a song, so its plays could be Spotify's.
+    if (l.sessionId !== s.id || SPOTIFY_HOSTS.has(l.host) || l.host === 'last.fm' || l.host === 'sound') continue;
     const key = `${l.title}\u0000${l.artist}`;
     if (seen.has(key)) continue;
     seen.add(key);

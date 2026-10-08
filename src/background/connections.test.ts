@@ -9,7 +9,7 @@ import { addSessions } from '@/core/sessions';
 import { DEFAULT_SETTINGS } from '@/core/settings';
 import { settingsItem } from '@/core/store';
 import { todosItem } from '@/core/todos';
-import { dueNow, syncConnection } from './connections';
+import { dueNow, inQueue, syncConnection } from './connections';
 
 /** A made-up Last.fm key: 32 hex characters, uniform so no scanner mistakes it for a real one. */
 const KEY = 'a'.repeat(32);
@@ -130,5 +130,28 @@ describe('an answer that arrives after Disconnect', () => {
       return body;
     });
     expect(await recordsBetween('listens', 0, NOW + DAY)).toEqual([]);
+  });
+});
+
+describe('inQueue', () => {
+  it('runs one job at a time, in order, and a failed job does not stop the next', async () => {
+    const order: string[] = [];
+    let release!: () => void;
+    const check = inQueue(async () => {
+      order.push('check starts');
+      await new Promise<void>((r) => (release = r));
+      order.push('check ends');
+    });
+    const failing = inQueue(async () => {
+      throw new Error('boom');
+    });
+    const disconnect = inQueue(async () => void order.push('disconnect'));
+    await Promise.resolve();
+    expect(order).toEqual(['check starts']);
+    release();
+    await check;
+    await expect(failing).rejects.toThrow('boom');
+    await disconnect;
+    expect(order).toEqual(['check starts', 'check ends', 'disconnect']);
   });
 });
