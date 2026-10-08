@@ -8,6 +8,12 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 - A narrated launch film with subtitles (`docs/media/study-duo.mp4`, `.srt`, `.vtt`) and a silent loop of it at the top of the README. Every page in it is the real extension, the sounds come from Study Duo's own code, and the insights show one simulated student. `demo/` rebuilds it.
 - A benchmark against LeechBlock NG, BlockSite and Forest (`tests/e2e/bench.e2e.ts`, results in `bench/results/2026-10-08.md`): download size, script per page, memory, CPU and every outside server contacted.
+- The benchmark can re-measure chosen extensions (`BENCH_ONLY`), and a live-web stress test (`STRESS=1`, `tests/e2e/clock-stress.e2e.ts`) checks that the corner clock shows on 38 real sites in old tabs, new tabs, new windows, after an extension reload and after the back button.
+
+### Fixed
+
+- The corner clock no longer costs the most CPU of the blockers we measured (#41): with a block running, Study Duo went from 1.27 s to 0.11 s of CPU per idle minute (`bench/results/2026-10-08-clock-fix.md`). Dimmed, the clock shows the minutes and wakes once a minute; seconds come back when the pointer is near, for the first seconds of a block, in its last minute, while paused and at full brightness.
+- The background audio page no longer wakes its audio for messages that are not sounds, and Firefox closes its audio after the noise stops.
 
 ## [0.2.1] - 2026-10-08
 

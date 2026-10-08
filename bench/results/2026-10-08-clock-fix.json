@@ -1,0 +1,352 @@
+{
+  "date": "2026-10-08-clock-fix",
+  "idleMs": 120000,
+  "runs": [
+    [
+      {
+        "id": "baseline",
+        "name": "No extension",
+        "browser": "Chrome/155.0.8059.39",
+        "version": null,
+        "packedKb": 0,
+        "unpackedKb": 0,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          },
+          {
+            "page": "/videos",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          },
+          {
+            "page": "/article",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          }
+        ],
+        "memoryMb": 470,
+        "extensionProcessMb": 0,
+        "cpuSecPerMin": 0.16,
+        "wakeupsPerMin": 241,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 27,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.4892578125,
+            "android.clients.google.com:443": 4.34375,
+            "mtalk.google.com:5228": 2.150390625
+          }
+        },
+        "networkSession": {
+          "connections": 1,
+          "hosts": [
+            "mtalk.google.com:5228"
+          ],
+          "kbUp": 2,
+          "kbDown": 7,
+          "upKbByHost": {
+            "mtalk.google.com:5228": 2.123046875
+          }
+        }
+      },
+      {
+        "id": "study-duo",
+        "name": "Study Duo",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "0.2.1",
+        "packedKb": 283,
+        "unpackedKb": 638,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 1,
+            "kb": 67.2109375,
+            "heapKb": 1114.26953125
+          },
+          {
+            "page": "/videos",
+            "scripts": 1,
+            "kb": 67.2109375,
+            "heapKb": 1114.26953125
+          },
+          {
+            "page": "/article",
+            "scripts": 1,
+            "kb": 67.2109375,
+            "heapKb": 1114.26953125
+          }
+        ],
+        "memoryMb": 584,
+        "extensionProcessMb": 43,
+        "cpuSecPerMin": 0.235,
+        "wakeupsPerMin": 387,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 27,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.5478515625,
+            "android.clients.google.com:443": 4.6962890625,
+            "mtalk.google.com:5228": 2.150390625
+          }
+        },
+        "networkSession": {
+          "connections": 0,
+          "hosts": [],
+          "kbUp": 0,
+          "kbDown": 0,
+          "upKbByHost": {}
+        }
+      },
+      {
+        "id": "study-duo-timer",
+        "name": "Study Duo, timer running",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "0.2.1",
+        "packedKb": 283,
+        "unpackedKb": 638,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 1,
+            "kb": 67.2109375,
+            "heapKb": 1122.94921875
+          },
+          {
+            "page": "/videos",
+            "scripts": 1,
+            "kb": 67.2109375,
+            "heapKb": 1122.671875
+          },
+          {
+            "page": "/article",
+            "scripts": 1,
+            "kb": 67.2109375,
+            "heapKb": 1122.671875
+          }
+        ],
+        "memoryMb": 610,
+        "extensionProcessMb": 76,
+        "cpuSecPerMin": 0.255,
+        "wakeupsPerMin": 191,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 27,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.5478515625,
+            "android.clients.google.com:443": 4.6025390625,
+            "mtalk.google.com:5228": 2.119140625
+          }
+        },
+        "networkSession": {
+          "connections": 1,
+          "hosts": [
+            "mtalk.google.com:5228"
+          ],
+          "kbUp": 2,
+          "kbDown": 7,
+          "upKbByHost": {
+            "mtalk.google.com:5228": 2.185546875
+          }
+        }
+      }
+    ],
+    [
+      {
+        "id": "study-duo-timer",
+        "name": "Study Duo, timer running",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "0.2.1",
+        "packedKb": 283,
+        "unpackedKb": 638,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 1,
+            "kb": 67.2109375,
+            "heapKb": 1122.94921875
+          },
+          {
+            "page": "/videos",
+            "scripts": 1,
+            "kb": 67.2109375,
+            "heapKb": 1122.671875
+          },
+          {
+            "page": "/article",
+            "scripts": 1,
+            "kb": 67.2109375,
+            "heapKb": 1122.671875
+          }
+        ],
+        "memoryMb": 604,
+        "extensionProcessMb": 79,
+        "cpuSecPerMin": 0.265,
+        "wakeupsPerMin": 219,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 26,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.548828125,
+            "android.clients.google.com:443": 4.3681640625,
+            "mtalk.google.com:5228": 2.087890625
+          }
+        },
+        "networkSession": {
+          "connections": 0,
+          "hosts": [],
+          "kbUp": 0,
+          "kbDown": 0,
+          "upKbByHost": {}
+        }
+      },
+      {
+        "id": "study-duo",
+        "name": "Study Duo",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "0.2.1",
+        "packedKb": 283,
+        "unpackedKb": 638,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 1,
+            "kb": 67.2109375,
+            "heapKb": 1114.26953125
+          },
+          {
+            "page": "/videos",
+            "scripts": 1,
+            "kb": 67.2109375,
+            "heapKb": 1114.26953125
+          },
+          {
+            "page": "/article",
+            "scripts": 1,
+            "kb": 67.2109375,
+            "heapKb": 1114.26953125
+          }
+        ],
+        "memoryMb": 568,
+        "extensionProcessMb": 44,
+        "cpuSecPerMin": 0.155,
+        "wakeupsPerMin": 194,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 27,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.517578125,
+            "android.clients.google.com:443": 4.658203125,
+            "mtalk.google.com:5228": 2.119140625
+          }
+        },
+        "networkSession": {
+          "connections": 1,
+          "hosts": [
+            "mtalk.google.com:5228"
+          ],
+          "kbUp": 2,
+          "kbDown": 7,
+          "upKbByHost": {
+            "mtalk.google.com:5228": 2.216796875
+          }
+        }
+      },
+      {
+        "id": "baseline",
+        "name": "No extension",
+        "browser": "Chrome/155.0.8059.39",
+        "version": null,
+        "packedKb": 0,
+        "unpackedKb": 0,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          },
+          {
+            "page": "/videos",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          },
+          {
+            "page": "/article",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          }
+        ],
+        "memoryMb": 503,
+        "extensionProcessMb": 0,
+        "cpuSecPerMin": 0.13,
+        "wakeupsPerMin": 134,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 27,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.548828125,
+            "android.clients.google.com:443": 4.42578125,
+            "mtalk.google.com:5228": 2.087890625
+          }
+        },
+        "networkSession": {
+          "connections": 0,
+          "hosts": [],
+          "kbUp": 0,
+          "kbDown": 0,
+          "upKbByHost": {}
+        }
+      }
+    ]
+  ]
+}

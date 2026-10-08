@@ -11,7 +11,8 @@ import { chromePath, EXT_ID } from './extension';
  * Measures Study Duo against the free versions of other blockers, each alone in a throwaway Chrome for Testing
  * profile. Their code runs only there. Run with:
  *   npm run build:test && sh bench/fetch.sh && BENCH=1 npx playwright test tests/e2e/bench.e2e.ts
- * Writes bench/results/<date>.json and .md. Method notes are in the .md.
+ * Writes bench/results/<date>.json and .md. Method notes are in the .md. BENCH_ONLY=baseline,study-duo-timer measures
+ * just those (the baseline is always kept) and writes <date>-<BENCH_TAG or "partial">.json and .md beside the full run.
  */
 test.skip(!process.env.BENCH, 'measures Study Duo against other blockers only when asked (BENCH=1)');
 
@@ -318,8 +319,10 @@ test('measure Study Duo against other blockers', async () => {
   const port = await listen(site);
   const runs: Result[][] = [];
   try {
+    const only = process.env.BENCH_ONLY?.split(',');
+    const chosen = only ? SUBJECTS.filter((s) => s.id === 'baseline' || only.includes(s.id)) : SUBJECTS;
     for (let run = 0; run < RUNS; run++) {
-      const order = run % 2 ? [...SUBJECTS].reverse() : SUBJECTS; // alternate, so drift over time does not favour anyone
+      const order = run % 2 ? [...chosen].reverse() : chosen; // alternate, so drift over time does not favour anyone
       const results: Result[] = [];
       for (const s of order) {
         results.push(await measure(s, port));
@@ -330,7 +333,7 @@ test('measure Study Duo against other blockers', async () => {
   } finally {
     site.close();
   }
-  const date = new Date().toISOString().slice(0, 10);
+  const date = new Date().toISOString().slice(0, 10) + (process.env.BENCH_ONLY ? `-${process.env.BENCH_TAG ?? 'partial'}` : '');
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, `${date}.json`), JSON.stringify({ date, idleMs: IDLE_MS, runs }, null, 2) + '\n');
   fs.writeFileSync(path.join(OUT, `${date}.md`), report(runs, date));
