@@ -5,3 +5,7 @@ out
 
 # demo footage is rebuilt by tests/e2e/demo-capture.e2e.ts
 public/footage
+
+# rebuilt by scripts/narrate.py and scripts/sounds.mjs; timing.json is kept
+public/narration/*.wav
+public/sounds

@@ -1,0 +1,517 @@
+{
+ "fps": 30,
+ "rate": 24000,
+ "voice": "bm_lewis",
+ "lang": "en-gb",
+ "length": 99.665,
+ "beats": [
+  {
+   "id": "hook",
+   "start": 0.0,
+   "end": 7.222
+  },
+  {
+   "id": "problem",
+   "start": 7.222,
+   "end": 10.993
+  },
+  {
+   "id": "reveal",
+   "start": 10.993,
+   "end": 19.317
+  },
+  {
+   "id": "start",
+   "start": 19.317,
+   "end": 25.508
+  },
+  {
+   "id": "clock",
+   "start": 25.508,
+   "end": 31.096
+  },
+  {
+   "id": "lock",
+   "start": 31.096,
+   "end": 39.283
+  },
+  {
+   "id": "noise",
+   "start": 39.283,
+   "end": 48.393,
+   "hold": [
+    43.893,
+    48.093
+   ]
+  },
+  {
+   "id": "songs",
+   "start": 48.393,
+   "end": 54.727,
+   "hold": [
+    51.727,
+    54.527
+   ]
+  },
+  {
+   "id": "bell",
+   "start": 54.727,
+   "end": 62.779,
+   "hold": [
+    54.727,
+    57.927
+   ]
+  },
+  {
+   "id": "rate",
+   "start": 62.779,
+   "end": 65.981
+  },
+  {
+   "id": "insights",
+   "start": 65.981,
+   "end": 73.184
+  },
+  {
+   "id": "calendar",
+   "start": 73.184,
+   "end": 77.993
+  },
+  {
+   "id": "move",
+   "start": 77.993,
+   "end": 83.338
+  },
+  {
+   "id": "proof",
+   "start": 83.338,
+   "end": 93.975
+  },
+  {
+   "id": "end",
+   "start": 93.975,
+   "end": 99.665
+  }
+ ],
+ "lines": [
+  {
+   "id": "hook-1",
+   "beat": "hook",
+   "text": "You sit down to study at eight.",
+   "start": 0.8,
+   "end": 2.618
+  },
+  {
+   "id": "hook-2",
+   "beat": "hook",
+   "text": "By nine, you've read one page and opened fourteen tabs.",
+   "start": 3.118,
+   "end": 6.822
+  },
+  {
+   "id": "problem",
+   "beat": "problem",
+   "text": "So you install a blocker, and it wants you to sign up.",
+   "start": 7.522,
+   "end": 10.493
+  },
+  {
+   "id": "reveal-1",
+   "beat": "reveal",
+   "text": "Study Duo is a study timer that lives in your browser.",
+   "start": 11.993,
+   "end": 15.847
+  },
+  {
+   "id": "reveal-2",
+   "beat": "reveal",
+   "text": "Free, offline, and it never phones home.",
+   "start": 16.247,
+   "end": 18.817
+  },
+  {
+   "id": "start-1",
+   "beat": "start",
+   "text": "Your deadlines come in from your course calendar.",
+   "start": 19.717,
+   "end": 22.485
+  },
+  {
+   "id": "start-2",
+   "beat": "start",
+   "text": "Pick one and press Start.",
+   "start": 23.285,
+   "end": 24.908
+  },
+  {
+   "id": "clock",
+   "beat": "clock",
+   "text": "A small clock sits in the corner of every page, and fades while you read.",
+   "start": 25.908,
+   "end": 30.396
+  },
+  {
+   "id": "lock-1",
+   "beat": "lock",
+   "text": "Distracting sites stay closed until the block ends.",
+   "start": 31.396,
+   "end": 34.71
+  },
+  {
+   "id": "lock-2",
+   "beat": "lock",
+   "text": "Opening one anyway takes ten seconds and a reason.",
+   "start": 35.21,
+   "end": 38.483
+  },
+  {
+   "id": "noise",
+   "beat": "noise",
+   "text": "Need some sound? White, pink or brown noise, made right here.",
+   "start": 39.783,
+   "end": 43.893
+  },
+  {
+   "id": "songs",
+   "beat": "songs",
+   "text": "Or play your own songs, straight from your computer.",
+   "start": 48.693,
+   "end": 51.727
+  },
+  {
+   "id": "bell",
+   "beat": "bell",
+   "text": "When time's up, a bell rings and the page tells you to rest.",
+   "start": 57.927,
+   "end": 61.779
+  },
+  {
+   "id": "rate",
+   "beat": "rate",
+   "text": "One tap says how focused you were.",
+   "start": 63.279,
+   "end": 65.381
+  },
+  {
+   "id": "insights-1",
+   "beat": "insights",
+   "text": "After a few weeks, it knows your best hours,",
+   "start": 66.581,
+   "end": 69.252
+  },
+  {
+   "id": "insights-2",
+   "beat": "insights",
+   "text": "and which songs actually help you focus.",
+   "start": 69.502,
+   "end": 71.984
+  },
+  {
+   "id": "calendar",
+   "beat": "calendar",
+   "text": "Every block lands on your timeline, ready for any calendar.",
+   "start": 73.584,
+   "end": 77.293
+  },
+  {
+   "id": "move",
+   "beat": "move",
+   "text": "New laptop? Move your settings and to-dos over with a QR code.",
+   "start": 78.393,
+   "end": 82.638
+  },
+  {
+   "id": "proof-1",
+   "beat": "proof",
+   "text": "No account, no server.",
+   "start": 83.838,
+   "end": 85.541
+  },
+  {
+   "id": "proof-2",
+   "beat": "proof",
+   "text": "When we installed BlockSite, it contacted fifty-six outside servers.",
+   "start": 86.041,
+   "end": 90.505
+  },
+  {
+   "id": "proof-3",
+   "beat": "proof",
+   "text": "Study Duo contacted none.",
+   "start": 91.005,
+   "end": 92.975
+  },
+  {
+   "id": "end",
+   "beat": "end",
+   "text": "Study Duo. Free and open source.",
+   "start": 94.775,
+   "end": 97.465
+  }
+ ],
+ "cues": {
+  "bed": [
+   [
+    11.593,
+    48.393
+   ],
+   [
+    62.779,
+    99.665
+   ]
+  ],
+  "noise": [
+   [
+    "white",
+    41.183
+   ],
+   [
+    "pink",
+    45.293
+   ],
+   [
+    "brown",
+    46.693
+   ],
+   [
+    "stop",
+    48.093
+   ]
+  ],
+  "song": [
+   49.993,
+   54.727
+  ],
+  "bell": 55.527
+ },
+ "captions": [
+  {
+   "line": "hook-1",
+   "text": "You sit down to study at eight",
+   "start": 0.8,
+   "end": 2.618
+  },
+  {
+   "line": "hook-2",
+   "text": "By nine, you've read one page",
+   "start": 3.118,
+   "end": 5.107
+  },
+  {
+   "line": "hook-2",
+   "text": "and opened fourteen tabs",
+   "start": 5.107,
+   "end": 6.822
+  },
+  {
+   "line": "problem",
+   "text": "So you install a blocker",
+   "start": 7.522,
+   "end": 8.923
+  },
+  {
+   "line": "problem",
+   "text": "and it wants you to sign up",
+   "start": 8.923,
+   "end": 10.493
+  },
+  {
+   "line": "reveal-1",
+   "text": "Study Duo is a study timer",
+   "start": 11.993,
+   "end": 13.884
+  },
+  {
+   "line": "reveal-1",
+   "text": "that lives in your browser",
+   "start": 13.884,
+   "end": 15.847
+  },
+  {
+   "line": "reveal-2",
+   "text": "Free, offline, and it never phones home",
+   "start": 16.247,
+   "end": 18.817
+  },
+  {
+   "line": "start-1",
+   "text": "Your deadlines come in from your course calendar",
+   "start": 19.717,
+   "end": 22.485
+  },
+  {
+   "line": "start-2",
+   "text": "Pick one and press Start",
+   "start": 23.285,
+   "end": 24.908
+  },
+  {
+   "line": "clock",
+   "text": "A small clock sits",
+   "start": 25.908,
+   "end": 27.046
+  },
+  {
+   "line": "clock",
+   "text": "in the corner of every page",
+   "start": 27.046,
+   "end": 28.816
+  },
+  {
+   "line": "clock",
+   "text": "and fades while you read",
+   "start": 28.816,
+   "end": 30.396
+  },
+  {
+   "line": "lock-1",
+   "text": "Distracting sites stay closed until the block ends",
+   "start": 31.396,
+   "end": 34.71
+  },
+  {
+   "line": "lock-2",
+   "text": "Opening one anyway takes ten seconds and a reason",
+   "start": 35.21,
+   "end": 38.483
+  },
+  {
+   "line": "noise",
+   "text": "Need some sound?",
+   "start": 39.783,
+   "end": 40.898
+  },
+  {
+   "line": "noise",
+   "text": "White, pink or brown noise",
+   "start": 40.898,
+   "end": 42.778
+  },
+  {
+   "line": "noise",
+   "text": "made right here",
+   "start": 42.778,
+   "end": 43.893
+  },
+  {
+   "line": "songs",
+   "text": "Or play your own songs",
+   "start": 48.693,
+   "end": 50.061
+  },
+  {
+   "line": "songs",
+   "text": "straight from your computer",
+   "start": 50.061,
+   "end": 51.727
+  },
+  {
+   "line": "bell",
+   "text": "When time's up",
+   "start": 57.927,
+   "end": 58.923
+  },
+  {
+   "line": "bell",
+   "text": "a bell rings",
+   "start": 58.923,
+   "end": 59.72
+  },
+  {
+   "line": "bell",
+   "text": "and the page tells you to rest",
+   "start": 59.72,
+   "end": 61.779
+  },
+  {
+   "line": "rate",
+   "text": "One tap says how focused you were",
+   "start": 63.279,
+   "end": 65.381
+  },
+  {
+   "line": "insights-1",
+   "text": "After a few weeks",
+   "start": 66.581,
+   "end": 67.699
+  },
+  {
+   "line": "insights-1",
+   "text": "it knows your best hours",
+   "start": 67.699,
+   "end": 69.252
+  },
+  {
+   "line": "insights-2",
+   "text": "and which songs actually help you focus",
+   "start": 69.502,
+   "end": 71.984
+  },
+  {
+   "line": "calendar",
+   "text": "Every block lands on your timeline",
+   "start": 73.584,
+   "end": 75.822
+  },
+  {
+   "line": "calendar",
+   "text": "ready for any calendar",
+   "start": 75.822,
+   "end": 77.293
+  },
+  {
+   "line": "move",
+   "text": "New laptop?",
+   "start": 78.393,
+   "end": 79.171
+  },
+  {
+   "line": "move",
+   "text": "Move your settings and to-dos",
+   "start": 79.171,
+   "end": 81.223
+  },
+  {
+   "line": "move",
+   "text": "over with a QR code",
+   "start": 81.223,
+   "end": 82.638
+  },
+  {
+   "line": "proof-1",
+   "text": "No account, no server",
+   "start": 83.838,
+   "end": 85.541
+  },
+  {
+   "line": "proof-2",
+   "text": "When we installed BlockSite",
+   "start": 86.041,
+   "end": 87.907
+  },
+  {
+   "line": "proof-2",
+   "text": "it contacted fifty-six outside servers",
+   "start": 87.907,
+   "end": 90.505
+  },
+  {
+   "line": "proof-3",
+   "text": "Study Duo contacted none",
+   "start": 91.005,
+   "end": 92.975
+  },
+  {
+   "line": "end",
+   "text": "Study Duo",
+   "start": 94.775,
+   "end": 95.643
+  },
+  {
+   "line": "end",
+   "text": "Free and open source",
+   "start": 95.643,
+   "end": 97.465
+  }
+ ]
+}
