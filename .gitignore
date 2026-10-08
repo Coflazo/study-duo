@@ -40,3 +40,6 @@ playwright-report/
 # Claude Code agent worktrees
 .claude/worktrees/
 .test-build
+
+# third-party extensions downloaded by bench/fetch.sh
+bench/.cache
