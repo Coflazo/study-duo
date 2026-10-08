@@ -113,7 +113,12 @@ const sourceOf = (l: ListenRecord) => (l.host === 'file' ? 'file' : l.host === '
  * category's average with an 80% interval above zero, and a music effect is claimed only when its 80% interval excludes
  * zero ("unclear" otherwise). Suggestions come from one Thompson sample of the posterior (Sutton and Barto, ch. 2).
  */
-export function computeInsights(input: InsightsInput): Insights {
+/** Hosts whose plays are shown but never learned from. Spotify's User Guidelines forbid using Spotify content in a
+ *  machine learning model; Spotify plays reach insights only as the user's own ListenBrainz or Last.fm scrobbles. */
+export const NOT_FOR_INSIGHTS = new Set(['open.spotify.com']);
+
+export function computeInsights(raw: InsightsInput): Insights {
+  const input = { ...raw, listens: raw.listens.filter((l) => !NOT_FOR_INSIGHTS.has(l.host)) };
   const random = input.random ?? seeded(weekSeed(input.now ?? Date.now())).u;
   const normal = () => Math.sqrt(-2 * Math.log(random() || 1e-12)) * Math.cos(2 * Math.PI * random());
   const all = [...input.sessions].sort((a, b) => a.startedAt - b.startedAt);
