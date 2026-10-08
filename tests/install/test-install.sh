@@ -60,3 +60,37 @@ pass "uninstalls"
 if STUDY_DUO_BASE_URL="http://example.com/release" sh "$ROOT/install.sh" >/dev/null 2>&1; then die "accepted a plain-HTTP download address on another computer"; fi
 [ ! -d "$DEST" ] || die "a refused address still installed"
 pass "refuses a plain-HTTP download address that is not this computer"
+
+# Desktop helper (--helper): installed next to the extension, registered with the browsers that have a profile.
+export HOME="$WORK/fakehome" XDG_CONFIG_HOME="$WORK/fakehome/.config" # runners set XDG_CONFIG_HOME, which the installer honours
+if [ "$(uname -s)" = Darwin ]; then
+  PROFILE="$HOME/Library/Application Support/Google/Chrome"
+  NO_PROFILE="$HOME/Library/Application Support/Microsoft Edge"
+else
+  PROFILE="$HOME/.config/google-chrome"
+  NO_PROFILE="$HOME/.config/microsoft-edge"
+fi
+mkdir -p "$PROFILE"
+release 0.1.5 yes
+cp "$ROOT/helper/study-duo-helper.sh" "$REL/study-duo-helper.sh"
+printf '%s  study-duo-helper.sh\n' "$(sum "$REL/study-duo-helper.sh")" >> "$REL/SHA256SUMS"
+sh "$ROOT/install.sh" --helper >/dev/null
+H="$STUDY_DUO_HOME/helper/study-duo-helper.sh"
+M="$PROFILE/NativeMessagingHosts/com.coflazo.study_duo.json"
+[ -x "$H" ] || die "the helper was not installed"
+python3 - "$M" "$H" <<'PY' || die "host manifest"
+import json, sys
+m = json.load(open(sys.argv[1]))
+assert m["name"] == "com.coflazo.study_duo" and m["path"] == sys.argv[2] and m["type"] == "stdio", m
+assert m["allowed_origins"] == ["chrome-extension://bcggiingdefmehpjcalkfpdnehpcieon/"], m
+PY
+[ ! -e "$NO_PROFILE/NativeMessagingHosts/com.coflazo.study_duo.json" ] || die "registered with a browser that has no profile"
+pass "installs the desktop helper for Study Duo only, with the browsers that have a profile"
+
+printf 'tampered' >> "$REL/study-duo-helper.sh"
+if sh "$ROOT/install.sh" --helper >/dev/null 2>&1; then die "accepted a tampered helper"; fi
+pass "refuses a helper that does not match its checksum"
+
+sh "$ROOT/install.sh" --uninstall >/dev/null
+if [ -e "$M" ] || [ -e "$H" ]; then die "uninstall left the helper behind"; fi
+pass "uninstall removes the helper and its registration"

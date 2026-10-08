@@ -18,9 +18,9 @@ if command -v sha256sum >/dev/null 2>&1; then
 else
   (cd "$DIR" && shasum -a 256 -c SHA256SUMS)
 fi
-for f in "$DIR"/study-duo-*.zip; do
+for f in "$DIR"/study-duo-*; do
   gh attestation verify "$f" -R "$REPO" --source-ref "refs/tags/$TAG" --signer-workflow "$REPO/.github/workflows/release.yml" --deny-self-hosted-runners >/dev/null
   echo "attested: $(basename "$f")"
 done
 
-gh release create "$TAG" "$DIR"/study-duo-*.zip "$DIR/SHA256SUMS" -R "$REPO" --title "Study Duo $TAG" --notes-file "$DIR/notes.md" --verify-tag
+gh release create "$TAG" "$DIR"/study-duo-* "$DIR/SHA256SUMS" -R "$REPO" --title "Study Duo $TAG" --notes-file "$DIR/notes.md" --verify-tag

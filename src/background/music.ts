@@ -7,22 +7,29 @@ import { listeningItem, settingsItem, timerItem } from '@/core/store';
 
 
 let queue: Promise<void> = Promise.resolve();
-const lastReport = new Map<number, number>();
+const lastReport = new Map<string, number>();
 
 /** A now-playing report from a tab (null: nothing is playing there any more, or the tab closed). */
 export function hearTab(tabId: number, url: string | undefined, now: NowPlaying | null, at = Date.now()): Promise<void> {
+  const host = hostOf(url);
+  if (now && !isMusicHost(host)) return queue; // only music sites may report songs
+  return hearSource(String(tabId), host, now, at);
+}
+
+/**
+ * A now-playing report from one source: a tab (keyed by its id) or the desktop helper ('helper', host app:<name>).
+ * Songs count only while the timer runs and only while Songs you play is on, whatever the source.
+ */
+export function hearSource(key: string, host: string | null, now: NowPlaying | null, at = Date.now()): Promise<void> {
   queue = queue
     .then(async () => {
-      const host = hostOf(url);
-      if (now && !isMusicHost(host)) return; // only music sites may report songs
       if (now) {
-        if (at - (lastReport.get(tabId) ?? 0) < 2_000) return; // a stop never blocks the next song
-        lastReport.set(tabId, at);
+        if (at - (lastReport.get(key) ?? 0) < 2_000) return; // a stop never blocks the next song
+        lastReport.set(key, at);
       }
       const [listening, timer, settings] = await Promise.all([listeningItem.getValue(), timerItem.getValue(), settingsItem.getValue().then(normalizeSettings)]);
       // Songs count only while the timer runs (a block or a break): a music tab never becomes a watch history.
       if (timer.status === 'stopped') now = null;
-      const key = String(tabId);
       const open = listening[key] ?? null;
       const inSession = timer.status !== 'stopped' && timer.startedAt !== null ? sessionId({ phase: timer.phase, startedAt: timer.startedAt }) : null;
       const r = foldListen(open, settings.measure.music ? now : null, at, host ?? open?.host ?? '', inSession);

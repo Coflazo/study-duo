@@ -53,8 +53,11 @@ export default defineConfig({
       'contextMenus',
       'scripting',
       ...(browser === 'firefox' ? [] : ['offscreen']),
+      ...(process.env.STUDY_DUO_OUT === '.test-build' ? ['nativeMessaging'] : []),
     ],
     // Redirects and reading an open tab's address need host access; the corner clock already asks for every site.
+    // Desktop apps in Connections asks for this only when turned on (the test build holds it, so E2E needs no prompt).
+    optional_permissions: process.env.STUDY_DUO_OUT === '.test-build' ? [] : ['nativeMessaging'],
     host_permissions: ['<all_urls>'],
     // Only the phase-word font, behind a per-session URL so pages cannot fetch it by a fixed address.
     web_accessible_resources: [

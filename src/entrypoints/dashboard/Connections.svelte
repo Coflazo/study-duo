@@ -5,6 +5,7 @@
   import { clockTime } from '@/core/today-view';
   import type { createLive } from '@/ui/live.svelte';
   import SignButton from '@/ui/SignButton.svelte';
+  import { helperErrorText, helperItem, type HelperState } from '@/core/helper';
   import { qrPath } from '@/ui/qr';
 
   let { data }: { data: ReturnType<typeof createLive> } = $props();
@@ -21,12 +22,31 @@
   let busy = $state<Record<Kind, boolean>>({ deadlines: false, listenbrainz: false, lastfm: false });
   let invalid = $state<Record<Kind, string>>({ deadlines: '', listenbrainz: '', lastfm: '' });
 
-  let unwatch: (() => void) | undefined;
+  let helper = $state<HelperState>({ on: false, app: null, error: null });
+  let helperNote = $state('');
+
+  const unwatch: Array<() => void> = [];
   onMount(async () => {
-    unwatch = connectionsItem.watch((v) => (conn = normalizeConnections(v)));
+    unwatch.push(connectionsItem.watch((v) => (conn = normalizeConnections(v))), helperItem.watch((v) => v && (helper = v)));
     conn = normalizeConnections(await connectionsItem.getValue());
+    helper = await helperItem.getValue();
   });
-  onDestroy(() => unwatch?.());
+  onDestroy(() => unwatch.forEach((u) => u()));
+
+  // Desktop apps: the permission is asked for at the click (browsers require it) and handed back when turned off.
+  async function helperOn() {
+    helperNote = '';
+    const granted = await browser.permissions.request({ permissions: ['nativeMessaging'] }).catch(() => false);
+    if (!granted) {
+      helperNote = 'Study Duo needs your permission to talk to the desktop helper.';
+      return;
+    }
+    await helperItem.setValue({ on: true, app: null, error: null });
+  }
+  async function helperOff() {
+    await helperItem.setValue({ on: false, app: null, error: null });
+    await browser.permissions.remove({ permissions: ['nativeMessaging'] }).catch(() => false);
+  }
 
   /** Saves a change on top of the stored connections, secrets included (they never pass through this page's state). */
   async function save(change: (c: Connections) => Connections) {
@@ -178,6 +198,19 @@
           {#if invalid.lastfm}<p class="help error" id="fm-error" role="alert">{invalid.lastfm}</p>{/if}
         </form>
       {/if}
+    </section>
+    <section aria-labelledby="desktop-title">
+      <h2 class="section-title" id="desktop-title">Desktop apps</h2>
+      <div class="row">
+        <div class="text">
+          <p class="label">Songs from desktop players</p>
+          <p class="help">With the desktop helper, songs from Music, VLC and other desktop players count too, like the songs in your tabs. Install it with the same install line plus --helper (on Windows, -Helper). Spotify's app shows here but stays out of your insights, as Spotify's rules ask.</p>
+          {#if helper.on && !helper.error}<p class="help" aria-live="polite">{helper.app ? `On. Last heard from ${helper.app}.` : 'On. Nothing heard from your desktop players yet.'}</p>{/if}
+          {#if helper.on && helper.error}<p class="help error" role="status">{helperErrorText(helper.error)}</p>{/if}
+          {#if helperNote}<p class="help error" role="alert">{helperNote}</p>{/if}
+        </div>
+        {#if helper.on}<SignButton label="Turn off" kind="secondary" onclick={helperOff} />{:else}<SignButton label="Turn on" kind="secondary" onclick={helperOn} />{/if}
+      </div>
     </section>
     <section aria-labelledby="phone-title">
       <h2 class="section-title" id="phone-title">Your phone</h2>
