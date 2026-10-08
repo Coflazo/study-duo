@@ -42,31 +42,49 @@ const clamp = (v: number) => Math.min(CLAMP[1], Math.max(CLAMP[0], v));
  * noise precision set by evidence maximisation (MacKay's fixed point: gamma_g = sum over the group of 1 - alpha_g S_jj,
  * alpha_g = gamma_g / sum (m_j - m0_j)^2, beta = (N - gamma) / weighted residual sum of squares).
  */
-export function fitBLR(d: Design, groups: Group[], opts: { beta?: number; iterations?: number } = {}): Fit {
-  const { rows: n, cols: p, x, y } = d;
-  const w = d.w ?? new Float64Array(n).fill(1);
-  const xtx = new Float64Array(p * p);
-  const xty = new Float64Array(p);
-  let nEff = 0;
-  let ySum = 0;
-  let yy = 0;
-  let logW = 0;
-  for (let i = 0; i < n; i++) {
-    const wi = w[i]!;
-    if (wi <= 0) continue;
-    nEff += wi;
-    ySum += wi * y[i]!;
-    yy += wi * y[i]! ** 2;
-    logW += Math.log(wi);
-    const row = i * p;
-    for (let a = 0; a < p; a++) {
-      const xa = x[row + a]!;
-      if (xa === 0) continue;
-      xty[a] = xty[a]! + wi * xa * y[i]!;
-      for (let b = 0; b <= a; b++) xtx[a * p + b] = xtx[a * p + b]! + wi * xa * x[row + b]!;
-    }
+/** Sufficient statistics of a weighted design: XᵀWX (lower triangle filled as rows are added), XᵀWy and sums. */
+export interface Stats {
+  cols: number;
+  xtx: Float64Array;
+  xty: Float64Array;
+  nEff: number;
+  ySum: number;
+  yy: number;
+  logW: number;
+}
+
+export function emptyStats(p: number): Stats {
+  return { cols: p, xtx: new Float64Array(p * p), xty: new Float64Array(p), nEff: 0, ySum: 0, yy: 0, logW: 0 };
+}
+
+/** Adds one row (a block) to the statistics: O(p²), so a walk forward can grow them instead of rebuilding. */
+export function addRow(s: Stats, x: Float64Array, y: number, w = 1): void {
+  if (w <= 0) return;
+  const p = s.cols;
+  s.nEff += w;
+  s.ySum += w * y;
+  s.yy += w * y * y;
+  s.logW += Math.log(w);
+  for (let a = 0; a < p; a++) {
+    const xa = x[a]!;
+    if (xa === 0) continue;
+    s.xty[a] = s.xty[a]! + w * xa * y;
+    for (let b = 0; b <= a; b++) s.xtx[a * p + b] = s.xtx[a * p + b]! + w * xa * x[b]!;
   }
+}
+
+export function fitBLR(d: Design, groups: Group[], opts: { beta?: number; iterations?: number } = {}): Fit {
+  const s = emptyStats(d.cols);
+  for (let i = 0; i < d.rows; i++) addRow(s, d.x.subarray(i * d.cols, (i + 1) * d.cols), d.y[i]!, d.w?.[i] ?? 1);
+  return fitStats(s, groups, opts);
+}
+
+/** The fit from sufficient statistics (see fitBLR). */
+export function fitStats(s: Stats, groups: Group[], opts: { beta?: number; iterations?: number } = {}): Fit {
+  const p = s.cols;
+  const xtx = Float64Array.from(s.xtx);
   for (let a = 0; a < p; a++) for (let b = 0; b < a; b++) xtx[b * p + a] = xtx[a * p + b]!;
+  const { xty, nEff, ySum, yy, logW } = s;
 
   const m0 = new Float64Array(p);
   const colAlpha = new Float64Array(p);

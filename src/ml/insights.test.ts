@@ -68,6 +68,6 @@ describe('computeInsights', () => {
     const { sessions, listens } = simulate(TYPICAL, { days: 365, seed: 5 });
     const t = performance.now();
     run(sessions, listens);
-    expect(performance.now() - t).toBeLessThan(1500);
+    expect(performance.now() - t).toBeLessThan(1000);
   }, 20_000);
 });
