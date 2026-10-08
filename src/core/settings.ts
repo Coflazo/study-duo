@@ -54,6 +54,8 @@ export interface TimerSettings {
   appearance: Appearance;
   /** Study blocks per day, shown as "3 of 8 blocks". Never a streak. */
   dailyGoal: number;
+  /** List the songs that played in each calendar event (off: titles and ratings only). */
+  calendarSongs: boolean;
   measure: Measure;
   /** Days of history kept before it is deleted. */
   retentionDays: number;
@@ -77,6 +79,7 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   hardLock: false,
   appearance: 'system',
   dailyGoal: 8,
+  calendarSongs: false,
   measure: { sites: true, blocked: true, outcome: true, away: true, music: true, input: false },
   retentionDays: 365,
 };
@@ -136,6 +139,7 @@ export function normalizeSettings(raw: unknown): TimerSettings {
     hardLock: bool(r.hardLock, d.hardLock),
     appearance: r.appearance === 'light' || r.appearance === 'dark' ? r.appearance : 'system',
     dailyGoal: Math.round(num(r.dailyGoal, 1, 24, d.dailyGoal)),
+    calendarSongs: bool(r.calendarSongs, d.calendarSongs),
     measure: measure(r.measure, d.measure),
     retentionDays: Math.round(num(r.retentionDays, 30, 3650, d.retentionDays)),
   };

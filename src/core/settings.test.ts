@@ -69,3 +69,12 @@ describe('clock position', () => {
     expect(normalizeSettings({ overlayPos: 'top' }).overlayPos).toEqual({ h: 'right', v: 'top', x: 16, y: 16 });
   });
 });
+
+describe('calendar', () => {
+  it('leaves songs out of calendar events unless asked', () => {
+    expect(DEFAULT_SETTINGS.calendarSongs).toBe(false);
+    expect(normalizeSettings({ calendarSongs: true }).calendarSongs).toBe(true);
+    expect(normalizeSettings({ calendarSongs: 'yes' }).calendarSongs).toBe(false);
+  });
+});
+
