@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { lockActive, unlockedItem } from '@/background/site-lock';
+  import { blockKeyItem, lockActive, unlockedItem } from '@/background/site-lock';
   import { parseBlockedHash } from '@/core/blocked';
   import { capsuleText } from '@/core/capsule';
   import { DEFAULT_SETTINGS, normalizeSettings } from '@/core/settings';
@@ -32,6 +32,8 @@
   const site = target?.domain ?? 'This site';
   /** Tabs the block itself closed carry ?swept: going back would only reopen the closed site. */
   const swept = new URLSearchParams(location.search).has('swept');
+  /** Only Study Duo's own redirects carry the session key. */
+  const key = new URLSearchParams(location.search).get('k');
 
   let ticker: ReturnType<typeof setInterval> | undefined;
   const unwatch: Array<() => void> = [];
@@ -41,9 +43,9 @@
     timer = await timerItem.getValue();
     settings = normalizeSettings(await settingsItem.getValue());
     ticker = setInterval(() => (now = Date.now()), 250);
-    // One attempt per visit during a block; tabs the block itself closed are not attempts.
-    // Real redirects are top-level only: a page that frames this one must not be able to write attempts.
-    if (target && !swept && window.top === window && lockActive(timer) && settings.measure.blocked) {
+    // One attempt per visit during a block; tabs the block itself closed are not attempts. Real redirects are
+    // top-level and carry the session key: a page that frames or opens this one must not be able to write attempts.
+    if (target && !swept && key && window.top === window && lockActive(timer) && settings.measure.blocked && key === (await blockKeyItem.getValue())) {
       attempt = { id: `${opened}-${target.domain}`, at: opened, domain: target.domain, unlocked: false, reasonGiven: false };
       await addRecords('blocks', [attempt]).catch(console.error);
     }

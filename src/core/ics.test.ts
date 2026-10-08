@@ -10,7 +10,7 @@ const s = (extra: Partial<SessionRecord> = {}): SessionRecord => ({
 
 describe('escapeText', () => {
   it('escapes backslashes, semicolons, commas and newlines (RFC 5545 3.3.11)', () => {
-    expect(escapeText('a\\b;c,d\ne')).toBe('a\\\\b\;c\\,d\\ne');
+    expect(escapeText('a\\b;c,d\ne')).toBe('a\\\\b\\;c\\,d\\ne');
   });
 });
 
@@ -50,6 +50,18 @@ describe('toICS', () => {
 
   it('lists the songs only when asked', () => {
     const songs = new Map([[`${T}-focus`, ['Says, Nils Frahm', 'Hammers, Nils Frahm']]]);
-    expect(toICS([s()], { tasks: new Map(), now: T, songs })).toContain('DESCRIPTION:Focus: 4 of 5\\nSongs: Says\\, Nils Frahm\; Hammers\\, Nils Frahm');
+    expect(toICS([s()], { tasks: new Map(), now: T, songs })).toContain('DESCRIPTION:Focus: 4 of 5\\nSongs: Says\\, Nils Frahm\\; Hammers\\, Nils Frahm');
+  });
+});
+
+describe('escaping text a web page wrote (security review L1)', () => {
+  it('escapes semicolons and turns every kind of line break into \\n', () => {
+    expect(escapeText('a;b')).toBe('a\\;b');
+    expect(escapeText('x\rURL:https://evil\rBEGIN:VALARM')).toBe('x\\nURL:https://evil\\nBEGIN:VALARM');
+    expect(escapeText('a\r\nb\nc')).toBe('a\\nb\\nc');
+  });
+
+  it('drops other control characters', () => {
+    expect(escapeText('a\u0000b\u0007c\u007f')).toBe('abc');
   });
 });

@@ -24,7 +24,8 @@ export function parseNowPlaying(raw: unknown): NowPlaying | null {
   const r = raw as Record<string, unknown>;
   if (r.kind !== 'music' || r.op !== 'now') return null;
   if (typeof r.title !== 'string' || typeof r.artist !== 'string' || typeof r.album !== 'string' || typeof r.playing !== 'boolean') return null;
-  const cut = (s: string) => s.trim().slice(0, MAX_TEXT);
+  // eslint-disable-next-line no-control-regex
+  const cut = (s: string) => s.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, MAX_TEXT);
   const title = cut(r.title);
   return title ? { title, artist: cut(r.artist), album: cut(r.album), playing: r.playing } : null;
 }

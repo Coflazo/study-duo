@@ -10,12 +10,18 @@ export const unlockedItem = storage.defineItem<string[]>('session:unlocked', { f
 const ruleSigItem = storage.defineItem<string>('session:lockRules', { fallback: '' });
 
 export const blockedPage = () => browser.runtime.getURL('/blocked.html');
+/**
+ * A random key per browser session that only Study Duo's own redirects carry (?k=). The blocked page is reachable by a
+ * fixed address, so without it any page could open it and log a fake blocked attempt. Session storage: web pages and
+ * content scripts cannot read it.
+ */
+export const blockKeyItem = storage.defineItem<string>('session:blockKey', { init: () => crypto.randomUUID() });
 
 export { lockActive } from '@/core/blocking';
 
 export async function syncLock(state: TimerState, settings: TimerSettings, sites: Sites, unlocked: string[]): Promise<void> {
   const active = lockActive(state);
-  const rules: DnrRule[] = active ? buildRules({ sites, mode: settings.siteMode, unlocked, blockedPage: blockedPage() }) : [];
+  const rules: DnrRule[] = active ? buildRules({ sites, mode: settings.siteMode, unlocked, blockedPage: `${blockedPage()}?k=${await blockKeyItem.getValue()}` }) : [];
   const sig = JSON.stringify(rules);
   if (!active && unlocked.length > 0) await unlockedItem.setValue([]);
   // The fingerprint alone could survive rules that vanished (extension disabled and enabled again), so count them too.

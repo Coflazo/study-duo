@@ -18,9 +18,11 @@ Study Duo never uses your camera, microphone or screenshots.
 
 **Your data** in the dashboard lists each of these with its own switch, shows how much is stored, keeps history for a period you choose (a year unless you change it), exports everything as one file, and deletes everything.
 
-## Optional connections
+Study Duo does not run in private (Incognito) windows, so nothing from them is recorded.
 
-These are off until you turn them on. Each one sends only what is listed, directly from your browser to that service:
+## Planned connections
+
+Version 0.1.0 has none, and its content security policy blocks every network request. Later versions may add these, each off until you turn it on, each sending only what is listed, directly from your browser to that service:
 
 | Connection | What is sent | Where |
 |---|---|---|

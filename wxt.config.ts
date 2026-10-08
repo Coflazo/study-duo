@@ -33,6 +33,8 @@ export default defineConfig({
     name: 'Study Duo',
     version_name: `${process.env.npm_package_version ?? '0.0.0'} ${BUILD}`,
     description: 'Pomodoro timer, focus clock, tab locker and private study insights. Runs offline.',
+    // Private windows stay private: Study Duo never runs there, so nothing from them reaches the log.
+    incognito: 'not_allowed',
     ...(browser === 'firefox'
       ? {
           browser_specific_settings: {
