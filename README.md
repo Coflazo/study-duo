@@ -61,6 +61,28 @@ Works in Chrome, Edge, Brave, Arc, Opera and Vivaldi. Firefox is coming later.
 - **Calendar:** every study block and break is saved to a timeline you can export to any calendar app. Google Calendar sync is optional.
 - **Your best hours:** after a few weeks it shows which hours of which days you focus best, and which music helps you most.
 
+## How your best hours are worked out
+
+Everything happens on your computer. After each study block you rate your focus from 1 to 5 with one tap, or skip it. Study Duo learns which hours, days and music go with your better blocks.
+
+- **It waits for enough data.** Nothing shows until 25 rated blocks, and each hour only lights up once there are blocks near it. Until then you see how far along it is.
+- **It only claims what it can back.** A best time or a music effect appears only when the data clearly supports it. Otherwise it says "unclear" or "no clear best time".
+- **Weekdays learn from each other, and so do weekends.** A day with few blocks borrows from the days like it, so one odd Tuesday doesn't redraw your map.
+- **Your quiet signals can stand in for a rating.** Once they predict your ratings well (after 15 rated blocks), time on study sites and how often you wander off fill in the blocks you didn't rate, and Study Duo asks less.
+- **It suggests things to try.** A sound and a block length, picked to keep learning what works for you.
+
+<details>
+<summary>The details, for the curious</summary>
+
+- The model is a Bayesian linear regression with grouped Gaussian priors, fitted in the browser with a Cholesky factorisation and no extra code libraries. Each group's prior strength and the noise level are set by evidence maximisation (MacKay's fixed point).
+- Time is modelled as an hour-of-day profile, plus a weekday or weekend difference, plus a per-day difference in three-hour steps. The hour effects are coded as steps from one hour to the next, so the prior is a random walk along the day.
+- Music effects nest: genre, then artist, then track, each a share of the block's minutes, compared with silence.
+- A music effect is claimed when its 80% interval excludes zero and it is at least a quarter of a rating point. A best window must beat your usual hours at a one-sided 97.5% bound, because it is the best of about 14 candidates.
+- Suggestions come from Thompson sampling: one draw from the model's uncertainty, so options it is unsure about still get tried.
+- The model is checked on simulated students with known answers (it must find their best hours and the effect of songs with lyrics, call a song with no effect unclear, and claim nothing for students whose ratings are pure noise) and, on your data, by predicting each block from the ones before it.
+
+</details>
+
 ## Is it safe?
 
 Study Duo has no servers and no account, and it sends nothing about you anywhere. Your history stays in your browser on your computer, and you can delete all of it with one button. The code is public, so anyone can check it.

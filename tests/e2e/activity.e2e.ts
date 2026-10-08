@@ -31,7 +31,9 @@ test('a block logs time per kind of site and opt-in input counts, with site name
   await page.keyboard.type('hunter2'); // never counted
   await page.mouse.click(400, 600);
   await page.mouse.click(400, 650);
+  await page.mouse.move(400, 300);
   await page.mouse.wheel(0, 300);
+  await page.waitForTimeout(300); // let the page take the wheel event before it unloads
   // Leaving the page hands over the counts.
   await page.goto('https://elsewhere.study-duo.test/page');
   await page.waitForTimeout(1_500);

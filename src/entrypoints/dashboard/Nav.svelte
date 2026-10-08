@@ -6,6 +6,8 @@
   const ITEMS = [
     ['today', 'Today', ICONS.clock],
     ['todo', 'To-do', ICONS.listChecks],
+    ['insights', 'Insights', ICONS.chartBar],
+    ['timeline', 'Timeline', ICONS.calendar],
     ['music', 'Music', ICONS.musicNotes],
     ['sites', 'Site lock', ICONS.lock],
     ['settings', 'Settings', ICONS.gear],
