@@ -4,6 +4,10 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+
+- A player card in the popup, under the clock: focus noise half out of its sleeve, with White, Pink and Brown, play and pause, and volume. The disc turns while it plays, starting softly and coasting to a stop, and the popup takes a light tint of the noise. Your music folder, YouTube links and streaming join it in 0.3.0.
+
 ### Changed
 
 - Focus noise loops with no click and fades in and out along an ear-shaped curve: 1 s for white, 1.4 s for pink, 1.8 s for brown. A fade-out that starts mid fade-in starts from what you hear, and brown noise no longer thumps at the loop.
