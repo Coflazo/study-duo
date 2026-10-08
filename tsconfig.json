@@ -1,3 +1,5 @@
 {
-  "extends": "./.wxt/tsconfig.json"
+  "extends": "./.wxt/tsconfig.json",
+  // demo/ is the Remotion project for the demo video: React, its own tsconfig and dependencies.
+  "exclude": ["**/node_modules", "build", ".test-build", "demo"]
 }

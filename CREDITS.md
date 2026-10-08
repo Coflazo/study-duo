@@ -22,3 +22,7 @@ Study Duo is built on other people's open work. Thank you.
 - **jsQR** by Cosmo Wolfe (Apache License 2.0) reads move codes from the camera; it loads only when you press Scan. https://github.com/cozmo/jsQR
 - The seven-segment digits are drawn from scratch as SVG, modelled on platform departure boards.
 - Design direction chosen with the Impeccable design skill; research sources for the default settings are listed in the README.
+
+## Demo video
+
+- The demo film in `docs/media` is composed with **Remotion** (free for individuals under the Remotion License, https://www.remotion.dev/license) from the **Agentic Product Demo** kit by Alex Ibragimov (MIT, kept in `demo/LICENSE`). Every page in it is a screenshot of the real extension; the insights show one simulated student.

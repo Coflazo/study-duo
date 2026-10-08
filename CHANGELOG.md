@@ -4,6 +4,10 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Added
+
+- A 45-second demo film at the top of the README (GIF, with a 1080p MP4). Every page in it is a screenshot of the real extension; the insights show one simulated student. `demo/` rebuilds it from fresh screenshots.
+
 ## [0.2.1] - 2026-10-08
 
 ### Fixed
