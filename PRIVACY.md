@@ -11,7 +11,7 @@ Everything Study Duo records is stored in your browser, in the extension's own s
 - while the timer runs, how long the page in front was a Study, Blocked, Not blocked or unfiled site, by site name only (for example `youtube.com`), never full addresses, titles or page text;
 - time away from the browser (another app, idle or locked), counted as away, never as distraction;
 - each time you try to open a blocked site during a block, and whether you opened it anyway (never the reason you typed);
-- songs that played: title, artist and album from music sites (YouTube Music, YouTube, Spotify, Apple Music, SoundCloud, Tidal, Deezer, Amazon Music) as the site tells your browser, from your own files, and which focus sound played;
+- songs that played while the timer ran (a study block or a break, never otherwise): title, artist and album from music sites (YouTube Music, YouTube, Spotify, Apple Music, SoundCloud, Tidal, Deezer, Amazon Music) as the site tells your browser, from your own files, and which focus sound played. On YouTube that is the video title and channel, so a lecture video playing during a block is kept too; turn off Songs you play in Your data to keep none;
 - only if you turn it on (off by default): how many keys, clicks and scrolls per minute during study blocks, never which key, and never in password fields.
 
 Study Duo never uses your camera, microphone or screenshots.

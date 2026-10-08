@@ -4,7 +4,7 @@
   import type { StoreName } from '@/core/db';
   import { countAll, deleteAll, exportAll } from '@/core/log';
   import { normalizeSettings, type Measure, type TimerSettings } from '@/core/settings';
-  import { settingsItem } from '@/core/store';
+  import { listeningItem, settingsItem, soundItem, trackerItem } from '@/core/store';
   import type { createLive } from '@/ui/live.svelte';
   import NumberField from '@/ui/NumberField.svelte';
   import SignButton from '@/ui/SignButton.svelte';
@@ -17,9 +17,9 @@
   const MEASURES: Array<[keyof Measure, string, string]> = [
     ['sites', 'Time on each kind of site', 'Study, Blocked, Not blocked or not filed yet.'],
     ['blocked', 'Blocked sites you try to open', 'And whether you opened one anyway. Never your reason.'],
-    ['outcome', 'How blocks end', 'Finished or skipped, pauses, and time added with +5.'],
+    ['outcome', 'How blocks end', 'Finished or skipped, pauses and +5 stay in your timer history; off leaves them out of the focus signals.'],
     ['away', 'Time away from the browser', 'Another app, idle or locked. Counted as away, never as distraction.'],
-    ['music', 'Songs you play', 'Title, artist and album from music sites and your own files.'],
+    ['music', 'Songs you play', 'Title, artist and album from music sites and your own files, only while the timer runs.'],
     ['input', 'Keys, clicks and scrolls per minute', 'How many, never which key. Off until you turn it on.'],
   ];
 
@@ -40,6 +40,14 @@
   async function deleteData() {
     if (typed.trim().toLowerCase() !== 'delete') return;
     await deleteAll();
+    // Records still open (the site in front, songs playing, a focus sound) start over now, so nothing older returns.
+    const now = Date.now();
+    const tracker = await trackerItem.getValue();
+    await trackerItem.setValue({ ...tracker, open: tracker.open && { ...tracker.open, startedAt: now }, last: null });
+    const listening = await listeningItem.getValue();
+    await listeningItem.setValue(Object.fromEntries(Object.entries(listening).map(([k, l]) => [k, { ...l, startedAt: now }])));
+    const sound = await soundItem.getValue();
+    if (sound) await soundItem.setValue({ ...sound, startedAt: now });
     confirming = false;
     typed = '';
     done = 'Deleted. Study Duo starts learning again from your next block.';

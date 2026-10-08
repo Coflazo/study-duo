@@ -36,8 +36,14 @@ export function createLive() {
     await loadToday();
     live.ready = true;
     let tickedFor: number | null = null;
+    let day = new Date().toDateString();
     const ticker = setInterval(() => {
       live.now = Date.now();
+      // A page left open past midnight starts the new day's Today.
+      if (new Date(live.now).toDateString() !== day) {
+        day = new Date(live.now).toDateString();
+        void loadToday();
+      }
       const t = live.timer;
       // An open page ends a late phase on time, once per phase end (the storage update follows a moment later).
       if (t.status === 'running' && t.endsAt !== null && live.now >= t.endsAt && tickedFor !== t.endsAt) {

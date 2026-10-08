@@ -265,6 +265,8 @@ export default defineContentScript({
       }
     };
     window.addEventListener('pagehide', send, { signal: life.signal });
+    // Switching tabs hides the page: hand over the partial minute while its site's record is still the open one.
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && send(), { signal: life.signal });
     life.signal.addEventListener('abort', () => clearInterval(minute));
     unwatch.push(timerItem.watch(() => syncCounting()), settingsItem.watch(() => syncCounting()));
     syncCounting();
@@ -274,13 +276,20 @@ export default defineContentScript({
       const media = pageMedia();
       const changed = changes();
       let beat: ReturnType<typeof setTimeout> | undefined;
+      let sentAt = 0;
       const read = () => {
         clearTimeout(beat);
         if (!alive()) return;
         if (!settings.measure.music) return void (beat = setTimeout(read, 60_000));
+        // The background takes one song report per 2 s; wait rather than send one it would drop.
+        const wait = sentAt + 2_100 - Date.now();
+        if (wait > 0) return void (beat = setTimeout(read, wait));
         const now = readNowPlaying(media);
         const news = changed(now);
-        if (news !== undefined) browser.runtime.sendMessage(news ? { kind: 'music', op: 'now', ...news } : { kind: 'music', op: 'none' }).catch(() => undefined);
+        if (news !== undefined) {
+          if (news) sentAt = Date.now();
+          browser.runtime.sendMessage(news ? { kind: 'music', op: 'now', ...news } : { kind: 'music', op: 'none' }).catch(() => undefined);
+        }
         beat = setTimeout(read, now?.playing ? 15_000 : 60_000);
       };
       let soon: ReturnType<typeof setTimeout> | undefined;

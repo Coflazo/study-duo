@@ -71,3 +71,19 @@ describe('input share', () => {
     expect(blockSignals({ block, activity: withInput, blocks, previous: null, measure: DEFAULT_SETTINGS.measure }).inputShare).toBeUndefined();
   });
 });
+
+describe('switches', () => {
+  it('counts a switch to an off-task site once, not again after a pause or time away on it', () => {
+    const steps = [
+      a(0, 10, 'study', 'khanacademy.org'),
+      a(10, 12, 'blocked', 'youtube.com'),
+      a(12, 14, 'unobserved', null),
+      a(14, 16, 'blocked', 'youtube.com'), // back on the same site after time away: not a new switch
+      a(16, 20, 'study', 'khanacademy.org'),
+      a(20, 22, 'unfiled', 'news.example'),
+      a(22, 30, 'study', 'khanacademy.org'),
+    ];
+    expect(blockSignals({ block, activity: steps, blocks: [], previous: null, measure: DEFAULT_SETTINGS.measure }).offSwitchesPerHour).toBeCloseTo(2 / (28 / 60));
+  });
+});
+

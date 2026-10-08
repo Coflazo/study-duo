@@ -1,4 +1,5 @@
 import { withDb } from './db';
+import { logVersionItem } from './store';
 import type { Phase, Segment, TimerState } from './timer';
 
 /** One study block or break, as the timer emitted it. Times and a task id only; never pages or titles. */
@@ -42,13 +43,14 @@ export function sessionsBetween(from: number, to: number): Promise<SessionRecord
   return withDb((db) => db.getAllFromIndex('sessions', 'endedAt', IDBKeyRange.bound(from, to, false, true)));
 }
 
-export function rateSession(id: string, rating: 1 | 2 | 3 | 4 | 5 | 'skip'): Promise<void> {
-  return withDb(async (db) => {
+export async function rateSession(id: string, rating: 1 | 2 | 3 | 4 | 5 | 'skip'): Promise<void> {
+  await withDb(async (db) => {
     const tx = db.transaction('sessions', 'readwrite');
     const rec = await tx.store.get(id);
     if (rec) await tx.store.put(rating === 'skip' ? { ...rec, ratingSkipped: true } : { ...rec, rating, ratingSkipped: false });
     await tx.done;
   });
+  await logVersionItem.setValue(Date.now()); // open dashboards show the rating
 }
 
 /** The local calendar day around `now`, as [start, next start). A block belongs to the day it ended. */

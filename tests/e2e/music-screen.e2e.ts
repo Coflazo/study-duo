@@ -21,6 +21,11 @@ test('Music: songs in tabs, focus noise, your own files, and today\'s listens', 
   test.setTimeout(90_000);
   const { ctx, sw } = await launch(tempProfile());
   await ctx.route('https://music.youtube.com/**', (r) => r.fulfill({ contentType: 'text/html', body: PLAYER }));
+  // Songs count only while the timer runs.
+  const popup = await ctx.newPage();
+  await popup.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  await popup.getByRole('button', { name: 'Start' }).click();
+  await popup.close();
   const page = await ctx.newPage();
   await page.goto(`chrome-extension://${EXT_ID}/dashboard.html#music`);
   await expect(page.getByRole('heading', { name: 'Music', level: 1 })).toBeVisible();

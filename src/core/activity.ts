@@ -75,8 +75,10 @@ export function track(state: TrackerState, event: TrackerEvent, at: number, site
   else if (event.type === 'away') next.away = true;
   else if (event.type === 'back') next.away = false;
 
-  const want = current(next, sites);
   const open = state.open;
+  // Away can be dated back to when the user left (idle is noticed late); never before the open record began.
+  if (open && at < open.startedAt) at = open.startedAt;
+  const want = current(next, sites);
   if (open && want && open.category === want.category && open.domain === want.domain && open.phase === want.phase) {
     return { state: { ...next, open }, closed: [] };
   }

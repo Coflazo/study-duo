@@ -69,11 +69,14 @@
     const item = queue[index];
     const r = foldListen(open, item ? { ...item.tags, playing: isPlaying } : null, Date.now(), 'file', current());
     open = r.open;
-    if (r.closed && live.settings.measure.music) void addRecords('listens', [{ ...r.closed, genre: queue.find((q) => q.tags.title === r.closed!.title)?.tags.genre || undefined }]).then(loadToday);
+    // Kept only if it played while the timer ran, like songs in tabs.
+    if (r.closed && live.settings.measure.music && (r.closed.sessionId !== null || current() !== null)) void addRecords('listens', [{ ...r.closed, genre: queue.find((q) => q.tags.title === r.closed!.title)?.tags.genre || undefined }]).then(loadToday);
   }
   audio.addEventListener('play', () => ((playing = true), log(true)));
   audio.addEventListener('pause', () => ((playing = false), log(false)));
   audio.addEventListener('ended', () => next());
+  // Closing the dashboard mid-song still saves what played.
+  window.addEventListener('pagehide', () => playing && log(false));
 
   async function choose() {
     const files = [...(input.files ?? [])];
@@ -114,7 +117,7 @@
       {:else}
         <div class="row"><div class="text"><p class="label">Nothing is playing in your tabs</p></div></div>
       {/each}
-      <div class="row"><div class="text"><p class="label">How this works</p><p class="help">Study Duo notices songs on YouTube Music, Spotify, Apple Music, SoundCloud and other music sites, from what the site tells your browser. It keeps the title, artist and album, never the address.</p></div></div>
+      <div class="row"><div class="text"><p class="label">How this works</p><p class="help">Study Duo notices songs on YouTube Music, Spotify, Apple Music, SoundCloud and other music sites, from what the site tells your browser. It keeps the title, artist and album, never the address, and only while the timer runs.</p></div></div>
     </section>
 
     <section aria-labelledby="sounds-title">

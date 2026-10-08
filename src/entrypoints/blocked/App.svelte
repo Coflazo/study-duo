@@ -42,7 +42,8 @@
     settings = normalizeSettings(await settingsItem.getValue());
     ticker = setInterval(() => (now = Date.now()), 250);
     // One attempt per visit during a block; tabs the block itself closed are not attempts.
-    if (target && !swept && lockActive(timer) && settings.measure.blocked) {
+    // Real redirects are top-level only: a page that frames this one must not be able to write attempts.
+    if (target && !swept && window.top === window && lockActive(timer) && settings.measure.blocked) {
       attempt = { id: `${opened}-${target.domain}`, at: opened, domain: target.domain, unlocked: false, reasonGiven: false };
       await addRecords('blocks', [attempt]).catch(console.error);
     }
