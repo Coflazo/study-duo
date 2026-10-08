@@ -13,6 +13,8 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ### Added
 
+- Timeline: every study block and break by day or week (06:00 to midnight; blocks across midnight show on both days), with the task and rating, and Export to calendar: one .ics file for Google Calendar, Apple Calendar or Outlook. Importing it again updates the same events. Settings > Calendar adds the songs that played.
+
 - Activity log while the timer runs: time per kind of site (Study, Blocked, Not blocked, unfiled) by site name only, time away from the browser counted as away, blocked-site attempts and unlocks, and, only if you turn it on, keys, clicks and scrolls per minute in study blocks.
 - Focus signals for every study block, worked out from that log: share of time on Study sites, switches to Blocked or unfiled sites per hour, the longest study stretch, pauses, +5 extensions, whether it ran to the end, and how fast it started after a break.
 - Music: songs playing on music sites (YouTube Music, YouTube, Spotify, Apple Music, SoundCloud, Tidal, Deezer, Amazon Music) become listens tied to the block they played in; white, pink and brown focus noise; your own MP3 or FLAC files, played in the Music screen.

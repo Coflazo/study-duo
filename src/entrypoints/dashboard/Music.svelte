@@ -8,6 +8,7 @@
   import { localDayRange, sessionId } from '@/core/sessions';
   import { listeningItem, soundItem } from '@/core/store';
   import { readTags, tagsOrName, type Tags } from '@/core/tags';
+  import { clockTime } from '@/core/today-view';
   import type { createLive } from '@/ui/live.svelte';
   import NumberField from '@/ui/NumberField.svelte';
   import Segmented from '@/ui/Segmented.svelte';
@@ -101,7 +102,6 @@
     audio.pause();
     if (url) URL.revokeObjectURL(url);
   }
-  const time = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const where = (l: ListenRecord) => (l.host === 'sound' ? 'Focus sound' : l.host === 'file' ? 'Your file' : l.host);
   const during = (l: ListenRecord) => (l.sessionId === null ? '' : l.sessionId.endsWith('-focus') ? ' · Study block' : ' · Break');
 </script>
@@ -160,7 +160,7 @@
     <section aria-labelledby="listens-title">
       <h2 class="section-title" id="listens-title">Today's listens</h2>
       {#each today as l (l.id)}
-        <div class="row"><div class="text"><p class="label"><span class="mono">{time(l.startedAt)}</span> {l.title}</p><p class="help">{[l.artist, where(l)].filter(Boolean).join(' · ')}{during(l)}</p></div></div>
+        <div class="row"><div class="text"><p class="label"><span class="mono">{clockTime(l.startedAt)}</span> {l.title}</p><p class="help">{[l.artist, where(l)].filter(Boolean).join(' · ')}{during(l)}</p></div></div>
       {:else}
         <div class="row"><div class="text"><p class="help">Songs and focus sounds you play today show up here.</p></div></div>
       {/each}
