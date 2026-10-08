@@ -27,6 +27,8 @@ pass "escapes quotes and backslashes and keeps non-ASCII text"
 
 got=$(once "x${TAB}y${TAB}z${TAB}Chrome${TAB}w")
 [ "$got" = '[{"kind": "now", "title": "", "artist": "", "album": "", "app": "", "playing": false}]' ] || die "extra fields: $got"
+got=$(once "$(printf 'a\tb\tc\tEvilApp\nrest\tb\tc\td')")
+[ "$got" = '[{"kind": "now", "title": "", "artist": "", "album": "", "app": "", "playing": false}]' ] || die "four fields before a line break: $got"
 got=$(once "$(printf 'Evil\nrest\tb\tc\td')")
 [ "$got" = '[{"kind": "now", "title": "", "artist": "", "album": "", "app": "", "playing": false}]' ] || die "line break: $got"
 pass "a title with tabs or line breaks cannot choose the app it is filed under"

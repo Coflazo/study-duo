@@ -12,6 +12,8 @@ set -u
 
 INTERVAL="${STUDY_DUO_HELPER_INTERVAL:-3}"
 TAB="$(printf '\t')"
+NL="
+"
 
 # JSON string body: backslash and quote escaped, control characters dropped.
 json_text() { printf '%s' "$1" | tr -d '\000-\010\012-\037' | tr '\t' ' ' | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
@@ -64,8 +66,9 @@ main() {
   reader=$!
   last="(nothing sent yet)"
   while kill -0 "$reader" 2>/dev/null || [ -n "${STUDY_DUO_HELPER_ONCE:-}" ]; do
-    line=$(now_playing | head -n 1)
-    # Exactly four fields: a title holding a tab or a line break must not get to choose the app it is filed under.
+    line=$(now_playing)
+    # One line of exactly four fields: a title holding a tab or a line break must not get to choose the app it is filed under.
+    case "$line" in *"$NL"*) line="" ;; esac
     if [ -n "$line" ] && [ "$(printf '%s' "$line" | tr -cd '\t' | wc -c | tr -d ' ')" != 3 ]; then line=""; fi
     if [ "$line" != "$last" ]; then
       if [ -n "$line" ]; then
