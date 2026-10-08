@@ -54,8 +54,10 @@ now_playing() {
 }
 
 main() {
-  # Chrome closes our stdin when Study Duo lets go of the helper; then we stop.
-  cat >/dev/null &
+  # Chrome closes our stdin when Study Duo lets go of the helper; then we stop. A background job's stdin is /dev/null
+  # unless redirected, so the reader gets our stdin through file descriptor 3.
+  exec 3<&0
+  cat <&3 >/dev/null &
   reader=$!
   last="(nothing sent yet)"
   while kill -0 "$reader" 2>/dev/null || [ -n "${STUDY_DUO_HELPER_ONCE:-}" ]; do

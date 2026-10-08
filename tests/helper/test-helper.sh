@@ -29,8 +29,10 @@ got=$(once none)
 [ "$got" = '[{"kind": "now", "title": "", "artist": "", "album": "", "app": "", "playing": false}]' ] || die "nothing playing: $got"
 pass "says so when nothing is playing"
 
-# Without ONCE it keeps watching until its input closes, as when Chrome lets go of it.
+# Without ONCE it keeps watching while its input is open, and stops soon after it closes, as when Chrome lets go.
 start=$(date +%s)
-sleep 1 | STUDY_DUO_HELPER_INTERVAL=1 STUDY_DUO_HELPER_FAKE="a${TAB}b${TAB}c${TAB}d" sh "$HELPER" >/dev/null
-[ $(($(date +%s) - start)) -le 5 ] || die "kept running after its input closed"
-pass "stops when its input closes"
+sleep 3 | STUDY_DUO_HELPER_INTERVAL=1 STUDY_DUO_HELPER_FAKE="a${TAB}b${TAB}c${TAB}d" sh "$HELPER" >/dev/null
+took=$(($(date +%s) - start))
+[ "$took" -ge 3 ] || die "stopped after ${took}s while its input was still open"
+[ "$took" -le 7 ] || die "kept running ${took}s after its input closed"
+pass "keeps running while its input is open, and stops when it closes"
