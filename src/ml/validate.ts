@@ -1,7 +1,7 @@
 import type { ActivityRecord, ListenRecord } from '@/core/db';
 import type { SessionRecord } from '@/core/sessions';
 import { addRow, emptyStats, fitStats, predict, type Group } from './blr';
-import { buildFeatures } from './features';
+import { buildFeatures, type FeatureSet } from './features';
 
 /**
  * Walk-forward check of the insights model: each block's rating is predicted from blocks that ended before it started,
@@ -11,14 +11,15 @@ import { buildFeatures } from './features';
  */
 export function walkForward(
   input: { sessions: SessionRecord[]; listens: ListenRecord[]; activity: ActivityRecord[] },
-  opts: { minTrain?: number; step?: number; alphas?: Record<string, number>; beta?: number } = {},
+  opts: { minTrain?: number; step?: number; alphas?: Record<string, number>; beta?: number; features?: FeatureSet; iterations?: number } = {},
 ) {
   const minTrain = opts.minTrain ?? 15;
   const step = opts.step ?? 5;
-  const f = buildFeatures(input);
+  const f = opts.features ?? buildFeatures(input);
   const { cols: p, x, y } = f.design;
   const groups: Group[] = opts.alphas ? f.groups.map((g) => ({ ...g, alpha: g.alpha ?? opts.alphas![g.name] ?? 1 })) : f.groups;
-  const ended = f.blocks.map((b) => input.sessions.find((s) => s.id === b.id)!.endedAt);
+  const endedById = new Map(input.sessions.map((s) => [s.id, s.endedAt]));
+  const ended = f.blocks.map((b) => endedById.get(b.id)!);
   const stats = emptyStats(p);
   let added = 0;
   let modelErr = 0;
@@ -28,13 +29,14 @@ export function walkForward(
     const cutoff = f.blocks[i]!.startedAt;
     // Rows are in start order; add every block that ended before this one started.
     while (added < i && ended[added]! <= cutoff) {
-      addRow(stats, x.subarray(added * p, (added + 1) * p), y[added]!);
+      if (f.blocks[added]!.rated) addRow(stats, x.subarray(added * p, (added + 1) * p), y[added]!); // ratings only, never the index
       added++;
     }
     if (added < minTrain) continue;
-    const fit = fitStats(stats, groups, opts.alphas ? { beta: opts.beta, iterations: 1 } : { iterations: 25 });
+    const fit = fitStats(stats, groups, opts.alphas ? { beta: opts.beta, iterations: 1 } : { iterations: opts.iterations ?? 25 });
     const avg = stats.ySum / stats.nEff;
     for (let r = i; r < Math.min(i + step, f.blocks.length); r++) {
+      if (!f.blocks[r]!.rated) continue;
       const guess = predict(fit, x.subarray(r * p, (r + 1) * p)).mean;
       modelErr += Math.abs(guess - y[r]!);
       baseErr += Math.abs(avg - y[r]!);

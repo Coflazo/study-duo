@@ -19,7 +19,8 @@ describe('time', () => {
   it('maps local hours into 17 bins from 06 to 22, and days Monday first', () => {
     expect(BINS).toBe(17);
     expect(binOf(new Date(2026, 9, 6, 9, 30).getTime())).toBe(3);
-    expect(binOf(new Date(2026, 9, 6, 2, 0).getTime())).toBe(0);
+    expect(binOf(new Date(2026, 9, 6, 2, 0).getTime())).toBe(16); // 02:00 belongs to the evening before
+    expect(binOf(new Date(2026, 9, 6, 5, 0).getTime())).toBe(0);
     expect(binOf(new Date(2026, 9, 6, 23, 50).getTime())).toBe(16);
     expect(dayOf(TUE_0930)).toBe(1);
     expect(dayOf(new Date(2026, 9, 11, 12).getTime())).toBe(6); // Sunday

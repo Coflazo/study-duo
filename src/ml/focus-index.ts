@@ -17,13 +17,19 @@ const WINDOW = 50;
 /** Ask for a rating when the index's predictive SD for this block is above half a rating step (0.125 on 0 to 1). */
 const UNSURE_SD = 0.11;
 
-/** (v - median) / (1.4826 MAD), clipped to plus or minus 3; all zeros when there is no spread. */
+/**
+ * (v - median) / (1.4826 MAD), clipped to plus or minus 3. When more than half the values are equal (counts, yes or no
+ * signals) the MAD is 0, so the scale falls back to 1.2533 times the mean absolute deviation; all zeros only when every
+ * value is the same.
+ */
 export function robustZ(values: number[]): number[] {
   const sorted = [...values].sort((a, b) => a - b);
   const med = (xs: number[]) => (xs.length % 2 ? xs[(xs.length - 1) / 2]! : (xs[xs.length / 2 - 1]! + xs[xs.length / 2]!) / 2);
   const m = med(sorted);
-  const mad = 1.4826 * med(values.map((v) => Math.abs(v - m)).sort((a, b) => a - b));
-  return values.map((v) => (mad > 0 ? Math.max(-3, Math.min(3, (v - m) / mad)) : 0));
+  const dev = values.map((v) => Math.abs(v - m));
+  let scale = 1.4826 * med([...dev].sort((a, b) => a - b));
+  if (!(scale > 0)) scale = (1.2533 * dev.reduce((s, v) => s + v, 0)) / (values.length || 1);
+  return values.map((v) => (scale > 0 ? Math.max(-3, Math.min(3, (v - m) / scale)) : 0));
 }
 
 export interface IndexBlock {
@@ -108,7 +114,8 @@ export function calibrate(blocks: IndexBlock[]): Calibration {
   const imputed = new Map<string, { y: number; w: number }>();
   if (ready) {
     const noise = 1 / fit.beta;
-    for (const b of recent) {
+    for (const b of blocks) {
+      // Every unrated block, old ones too: once the index is trusted the popup stops asking about the blocks it fills in.
       if (b.rating !== null) continue;
       const pr = predict(fit, zRow(ref, b.signals));
       const w = (noise / (noise + pr.variance)) * corr ** 2; // less weight when unsure or when the index explains less

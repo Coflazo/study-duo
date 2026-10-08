@@ -2,10 +2,11 @@ import type { ActivityRecord, BlockedAttempt, ListenRecord } from '@/core/db';
 import type { SessionRecord } from '@/core/sessions';
 import type { Measure } from '@/core/settings';
 import { blockSignals } from '@/core/signals';
-import { fitBLR, predict, sampleWeights, type Fit } from './blr';
-import { BINS, buildFeatures, cellWeights, DAYS, FIRST_HOUR, isWeekend, LENGTHS } from './features';
+import { fitBLR, predict, sampleWeights, type Fit, type Group } from './blr';
+import { BINS, buildFeatures, cellWeights, DAYS, FIRST_HOUR, isWeekend, LENGTHS, type FeatureSet } from './features';
 import { calibrate } from './focus-index';
 import { walkForward } from './validate';
+import { overlapping, seeded } from './random';
 
 const Z80 = 1.2816;
 /** A best window is the winner of about 14 candidates: it must clear a one-sided 97.5% bound, not 80% (winner's curse). */
@@ -34,6 +35,8 @@ export type BestWindow =
   | { label: string; learning: { have: number; need: number } }
   | { label: string; none: true };
 export interface MusicEffect {
+  /** Stable key: two songs can share a title. */
+  id: string;
   name: string;
   detail: string;
   /** Change in focus rating (points on 1 to 5) against silence, with its 80% interval. */
@@ -46,6 +49,8 @@ export interface MusicEffect {
 export interface Insights {
   blocks: number;
   rated: number;
+  /** Unrated blocks the focus index filled in. */
+  imputed: number;
   learning: { have: number; need: number } | null;
   cells: HeatCell[];
   windows: BestWindow[];
@@ -62,8 +67,40 @@ export interface InsightsInput {
   activity: ActivityRecord[];
   blocks: BlockedAttempt[];
   measure: Measure;
-  /** Uniform 0 to 1; seeded in tests. */
+  /** Uniform 0 to 1; by default seeded by the week of `now`, so suggestions hold for the week the copy promises. */
   random?: () => number;
+  now?: number;
+}
+
+/** ISO week-numbering year and week as one number (2026-W50 is 202650). */
+export function weekSeed(t: number): number {
+  const d = new Date(t);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7)); // the Thursday of this week
+  const jan4 = new Date(d.getFullYear(), 0, 4);
+  const week = 1 + Math.round(((d.getTime() - jan4.getTime()) / 86_400_000 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
+  return d.getFullYear() * 100 + week;
+}
+
+/** Heat-map shade 0 to 4 in fixed quarter-point steps around the middle: differences too small to claim stay one shade. */
+export function cellLevel(rating: number, lo: number, hi: number): number {
+  return Math.min(4, Math.max(0, 2 + Math.round((rating - (lo + hi) / 2) / 0.25)));
+}
+
+/** Each block's signals, each block reading only its own slice of the (sorted) activity and attempts. */
+export function indexBlocks(sessions: SessionRecord[], activity: ActivityRecord[], attempts: BlockedAttempt[], measure: Measure) {
+  const all = [...sessions].sort((a, b) => a.startedAt - b.startedAt);
+  const act = [...activity].sort((a, b) => a.startedAt - b.startedAt);
+  const tries = [...attempts].sort((a, b) => a.at - b.at);
+  const SPAN = 6 * 3_600_000;
+  return all
+    .map((block, i) => ({ block, previous: all[i - 1] ?? null }))
+    .filter(({ block }) => block.phase === 'focus')
+    .map(({ block, previous }) => {
+      const near = overlapping(act, block.startedAt, block.endedAt, SPAN);
+      const blocks = tries.filter((t) => t.at >= block.startedAt && t.at < block.endedAt);
+      return { id: block.id, rating: block.rating, signals: blockSignals({ block, activity: near, blocks, previous, measure }) };
+    });
 }
 
 const SOURCE_NAMES: Record<string, string> = { 'music site': 'Songs on music sites', file: 'Your own files', 'focus sound': 'Focus sounds' };
@@ -77,24 +114,20 @@ const sourceOf = (l: ListenRecord) => (l.host === 'file' ? 'file' : l.host === '
  * zero ("unclear" otherwise). Suggestions come from one Thompson sample of the posterior (Sutton and Barto, ch. 2).
  */
 export function computeInsights(input: InsightsInput): Insights {
-  const random = input.random ?? Math.random;
+  const random = input.random ?? seeded(weekSeed(input.now ?? Date.now())).u;
   const normal = () => Math.sqrt(-2 * Math.log(random() || 1e-12)) * Math.cos(2 * Math.PI * random());
   const all = [...input.sessions].sort((a, b) => a.startedAt - b.startedAt);
   const focus = all.filter((s) => s.phase === 'focus');
 
   // The focus index fills in unrated blocks once it predicts ratings well enough.
-  const indexBlocks = all
-    .map((block, i) => ({ block, previous: all[i - 1] ?? null }))
-    .filter(({ block }) => block.phase === 'focus')
-    .map(({ block, previous }) => ({ id: block.id, rating: block.rating, signals: blockSignals({ block, activity: input.activity, blocks: input.blocks, previous, measure: input.measure }) }));
-  const index = calibrate(indexBlocks);
+  const index = calibrate(indexBlocks(all, input.activity, input.blocks, input.measure));
   const f = buildFeatures({ sessions: all, listens: input.listens, activity: input.activity, imputed: index.ready ? index.imputed : undefined });
   const rated = focus.filter((s) => s.rating !== null).length;
   const rows = f.design.rows;
   const empty = (): HeatCell[] => DAYS.flatMap((_, day) => Array.from({ length: BINS }, (_, bin) => ({ day, bin, rating: 0, sd: Infinity, blocks: 0, enough: false })));
   const indexSummary = { ready: index.ready, rated: index.rated, r: index.looCorrelation };
   if (rows < NEED) {
-    return { blocks: focus.length, rated, learning: { have: rows, need: NEED }, cells: empty(), windows: [], music: [], tryNext: null, blockLength: null, health: null, index: indexSummary };
+    return { blocks: focus.length, rated, imputed: rows - rated, learning: { have: rows, need: NEED }, cells: empty(), windows: [], music: [], tryNext: null, blockLength: null, health: null, index: indexSummary };
   }
 
   const fit = fitBLR(f.design, f.groups, { iterations: 30 });
@@ -129,7 +162,7 @@ export function computeInsights(input: InsightsInput): Insights {
     const have = f.blocks.filter((b) => days.includes(b.day)).length;
     if (have < need) return { label, learning: { have, need } };
     const usable = Array.from({ length: BINS }, (_, b) => b).filter((b) => nearby(days, b) >= 2 && 4 * Math.sqrt(predict(fit, vec({ ...BASE, ...average(days, [b]) })).variance) < CELL_SD);
-    if (usable.length < 3) return { label, learning: { have, need: have + 5 } };
+    if (usable.length < 3) return { label, learning: { have, need: 0 } }; // enough blocks, spread over too many hours yet
     let best: { bin: number; score: number } | null = null;
     for (const b of usable) {
       if (!usable.includes(b + 1)) continue;
@@ -160,29 +193,37 @@ export function computeInsights(input: InsightsInput): Insights {
   }
   if (weekend) windows.push(weekend);
 
-  const music = musicEffects(fit, f.columns, f.design, vec, input.listens);
+  // Music claims need the music columns to earn their place in the evidence first: with many songs, a few can look
+  // certain by chance (review: 5 of 12 pure-noise screens claimed something). Compare against music pinned to zero.
+  const MUSIC = new Set(['source', 'genre', 'artist', 'track']);
+  const pinned = fitBLR(f.design, f.groups.map((g): Group => (MUSIC.has(g.name) ? { ...g, alpha: 1e8 } : g)), { iterations: 20 });
+  const musicMatters = fit.logEvidence - pinned.logEvidence > 2;
+  const { effects: music, named } = musicEffects(fit, f.columns, f.design, vec, input.listens, musicMatters);
   return {
     blocks: focus.length,
     rated,
+    imputed: rows - rated,
     learning: null,
     cells,
     windows,
     music,
-    tryNext: tryNext(fit, f.columns, vec, input.listens, normal),
+    tryNext: tryNext(fit, vec, named, normal),
     blockLength: blockLength(fit, col, normal),
-    health: rated >= 30 ? health(input, fit) : null,
+    health: rated >= 30 ? health(input, f) : null,
     index: indexSummary,
   };
 }
 
-function musicEffects(fit: Fit, columns: string[], design: { rows: number; cols: number; x: Float64Array }, vec: (w: Record<string, number>) => Float64Array, listens: ListenRecord[]): MusicEffect[] {
+type Named = Map<string, { name: string; detail: string; weights: Record<string, number> }>;
+
+function musicEffects(fit: Fit, columns: string[], design: { rows: number; cols: number; x: Float64Array }, vec: (w: Record<string, number>) => Float64Array, listens: ListenRecord[], musicMatters: boolean): { effects: MusicEffect[]; named: Named } {
   const blocksWith = (c: string) => {
     const i = columns.indexOf(c);
     let n = 0;
     for (let r = 0; r < design.rows; r++) if (design.x[r * design.cols + i]! > 0.1) n++;
     return n;
   };
-  const named = new Map<string, { name: string; detail: string; weights: Record<string, number> }>();
+  const named: Named = new Map();
   const bySource = new Map<string, Set<string>>();
   for (const l of listens) {
     const source = `source:${sourceOf(l)}`;
@@ -219,23 +260,20 @@ function musicEffects(fit: Fit, columns: string[], design: { rows: number; cols:
     const delta = 4 * p.mean;
     const lo = delta - Z80 * sd;
     const hi = delta + Z80 * sd;
-    out.push({ name: n.name, detail: n.detail, delta, lo, hi, claim: (lo > 0 || hi < 0) && Math.abs(delta) >= MIN_EFFECT, blocks: Number.isFinite(blocks) ? blocks : blocksWith(c) });
+    out.push({ id: c, name: n.name, detail: n.detail, delta, lo, hi, claim: musicMatters && (lo > 0 || hi < 0) && Math.abs(delta) >= MIN_EFFECT, blocks: Number.isFinite(blocks) ? blocks : blocksWith(c) });
   }
-  return out.sort((a, b) => Number(b.claim) - Number(a.claim) || Math.abs(b.delta) - Math.abs(a.delta) || b.blocks - a.blocks).slice(0, 6);
+  return { effects: out.sort((a, b) => Number(b.claim) - Number(a.claim) || Math.abs(b.delta) - Math.abs(a.delta) || b.blocks - a.blocks).slice(0, 6), named };
 }
 
-/** One Thompson sample over silence, the sources and the tracks heard: the best-looking draw is worth trying next. */
-function tryNext(fit: Fit, columns: string[], vec: (w: Record<string, number>) => Float64Array, listens: ListenRecord[], normal: () => number): string {
+/** One Thompson sample over silence and every track heard, each scored with its full effect (genre, artist, source). */
+function tryNext(fit: Fit, vec: (w: Record<string, number>) => Float64Array, named: Named, normal: () => number): string {
   const theta = sampleWeights(fit, normal);
   const score = (w: Record<string, number>) => vec(w).reduce((s, v, i) => s + v * theta[i]!, 0);
   let best = { name: 'Silence', value: score({ 'source:silence': 1 }) };
-  const seen = new Set<string>();
-  for (const l of listens) {
-    const track = `track:${l.artist.trim() ? `${key(l.artist)} — ${key(l.title)}` : key(l.title)}`;
-    if (seen.has(track) || !columns.includes(track)) continue;
-    seen.add(track);
-    const v = score({ [track]: 1, [`source:${sourceOf(l)}`]: 1, ...(l.artist.trim() ? { [`artist:${key(l.artist)}`]: 1 } : {}) });
-    if (v > best.value) best = { name: l.title, value: v };
+  for (const [key, n] of named) {
+    if (!key.startsWith('track:')) continue;
+    const v = score(n.weights);
+    if (v > best.value) best = { name: n.name, value: v };
   }
   return best.name;
 }
@@ -251,9 +289,9 @@ function blockLength(fit: Fit, col: Map<string, number>, normal: () => number): 
   return best.m;
 }
 
-/** Walk-forward accuracy against a running average, in rating points, with the fitted precisions held fixed. */
-function health(input: InsightsInput, fit: Fit) {
-  const n = input.sessions.filter((s) => s.phase === 'focus' && s.rating !== null).length;
-  const r = walkForward({ sessions: input.sessions, listens: input.listens, activity: input.activity }, { minTrain: 20, step: Math.max(5, Math.ceil((n - 20) / 8)), alphas: fit.alphas, beta: fit.beta });
+/** Walk-forward accuracy against a running average, in rating points: ratings only, precisions refitted on each prefix. */
+function health(input: InsightsInput, f: FeatureSet) {
+  const n = f.blocks.filter((b) => b.rated).length;
+  const r = walkForward({ sessions: input.sessions, listens: input.listens, activity: input.activity }, { features: f, minTrain: 20, step: Math.max(5, Math.ceil((n - 20) / 6)), iterations: 10 });
   return { modelMae: 4 * r.modelMae, baselineMae: 4 * r.baselineMae, n: r.n };
 }

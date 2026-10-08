@@ -8,7 +8,7 @@ test('Insights: a learning state with no data, then best hours and music from ei
   const page = await ctx.newPage();
   await page.goto(`chrome-extension://${EXT_ID}/dashboard.html#insights`);
   await expect(page.getByRole('heading', { name: 'Your best hours', level: 1 })).toBeVisible();
-  await expect(page.getByRole('status')).toHaveText('Insights start after 25 study blocks. 0 of 25 so far.');
+  await expect(page.getByRole('status')).toHaveText('Insights start after 25 rated study blocks. 0 of 25 so far.');
 
   // Eight weeks of a simulated student, written straight into the extension's database.
   // Moved ten weeks back (whole weeks keep the weekdays), so every block lies in the past.
@@ -32,13 +32,13 @@ test('Insights: a learning state with no data, then best hours and music from ei
     { sessions, listens },
   );
   await page.reload();
-  await expect(page.getByText(`From ${sessions.length} study blocks`)).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole('img', { name: /Weekdays: (09|10):00 to (11|12):00/ })).toBeVisible();
+  await expect(page.getByText(`From ${sessions.length} rated study blocks`)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('img', { name: /^Expected focus by day and hour\. Highest: (Monday|Tuesday|Wednesday|Thursday|Friday) (09|10|11):00/ })).toBeVisible();
   const weekdays = page.locator('.row', { hasText: 'Weekdays' });
   await expect(weekdays).toContainText(/(09|10):00 to (11|12):00/);
   const lyrics = page.locator('.row.music', { hasText: 'lyrics song' });
   await expect(lyrics).toContainText('−');
-  await expect(page.locator('.row', { hasText: 'Predicts your ratings' })).toContainText('within');
+  await expect(page.locator('.row', { hasText: 'Predicts your ratings' })).toContainText('on average');
   await expect(page.locator('.row', { hasText: 'Block length' })).toContainText(/(25|35|45|50) minutes for a week/);
   expect(await page.locator('.board .cell').count()).toBeGreaterThan(40);
   await ctx.close();

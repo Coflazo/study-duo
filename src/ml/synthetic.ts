@@ -4,17 +4,8 @@ import { binOf, dayOf, FIRST_HOUR, isWeekend } from './features';
 
 const MIN = 60_000;
 
-/** A seeded generator (mulberry32) with a standard normal, so simulations repeat exactly. */
-export function seeded(seed: number) {
-  let a = seed >>> 0;
-  const u = () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
-  };
-  return { u, normal: () => Math.sqrt(-2 * Math.log(u() || 1e-12)) * Math.cos(2 * Math.PI * u()) };
-}
+export { seeded } from './random';
+import { seeded } from './random';
 
 export interface StudentTruth {
   /** Effect of studying in this hour bin on this day (Monday 0), on the 0 to 1 rating scale. */

@@ -3,7 +3,7 @@
   import { onMount } from 'svelte';
   import { recordsBetween } from '@/core/log';
   import { sessionsBetween } from '@/core/sessions';
-  import { computeInsights, NEED, type Insights } from '@/ml/insights';
+  import { cellLevel, computeInsights, NEED, type Insights } from '@/ml/insights';
   import { BINS, DAYS, FIRST_HOUR } from '@/ml/features';
   import type { createLive } from '@/ui/live.svelte';
 
@@ -26,13 +26,23 @@
   });
 
   const hh = (h: number) => `${String(h).padStart(2, '0')}:00`;
-  const LABELED = [1, 4, 7, 10, 13, 16]; // 07, 10, 13, 16, 19, 22 as in Figma
-  /** Five steps of brightness across the cells that have enough data (the legend's Less to More focus). */
+  const LABELED = [1, 4, 7, 10, 13]; // 07, 10, 13, 16, 19, and 22+ (22:00 to 03:59) as the last column
+  /** Five shades in fixed quarter-point steps around the middle of the map: noise never turns into contrast. */
   const levels = $derived.by(() => {
     const shown = insights?.cells.filter((c) => c.enough).map((c) => c.rating) ?? [];
     const lo = Math.min(...shown);
     const hi = Math.max(...shown);
-    return (rating: number) => (hi - lo < 1e-9 ? 2 : Math.min(4, Math.floor(((rating - lo) / (hi - lo)) * 5)));
+    return (rating: number) => cellLevel(rating, lo, hi);
+  });
+  const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  /** What the board shows, in words: the best and the weakest hours with enough data. */
+  const boardLabel = $derived.by(() => {
+    const shown = insights?.cells.filter((c) => c.enough) ?? [];
+    if (!shown.length) return 'Expected focus by day and hour: not enough data yet.';
+    const top = shown.reduce((a, b) => (b.rating > a.rating ? b : a));
+    const low = shown.reduce((a, b) => (b.rating < a.rating ? b : a));
+    const name = (c: (typeof shown)[number]) => `${DAY_NAMES[c.day]} ${c.bin === BINS - 1 ? '22:00 or later' : hh(FIRST_HOUR + c.bin)}, about ${c.rating.toFixed(1)} of 5`;
+    return `Expected focus by day and hour. Highest: ${name(top)}. Lowest: ${name(low)}.`;
   });
   const signed = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}`;
   /** Position on a scale from -1.2 to +1.2 rating points, as a percentage of the bar. */
@@ -43,7 +53,7 @@
   <h1 class="screen-title">Your best hours</h1>
   <p class="sub">
     {#if insights && !insights.learning}
-      From {insights.blocks} study blocks, rated{insights.index.ready ? ' or filled in by your focus signals' : ''}. Small dots mean not enough data yet.
+      From {insights.rated} rated study blocks{insights.imputed ? ` and ${insights.imputed} filled in by your focus signals` : ''}. Small dots mean not enough data yet.
     {:else}
       Study Duo learns from your study blocks and how focused you felt. Nothing leaves this computer.
     {/if}
@@ -56,15 +66,15 @@
   <p class="sub" aria-live="polite">Working it out…</p>
 {:else}
   {#if insights.learning}
-    <p class="learning" role="status">Insights start after {NEED} study blocks. {insights.learning.have} of {NEED} so far.</p>
+    <p class="learning" role="status">Insights start after {NEED} rated study blocks. {insights.learning.have} of {NEED} so far.</p>
   {/if}
   <div class="columns">
     <section aria-labelledby="map-title">
       <h2 class="section-title" id="map-title">Focus by hour</h2>
-      <div class="board" role="img" aria-label="Expected focus by day and hour. {insights.windows.filter((w) => 'from' in w).map((w) => ('from' in w ? `${w.label}: ${hh(w.from)} to ${hh(w.to)}` : '')).join('. ') || 'No best hours yet.'}">
+      <div class="board" role="img" aria-label={boardLabel}>
         <div class="hours" aria-hidden="true">
           <span></span>
-          {#each Array.from({ length: BINS }, (_, b) => b) as b (b)}<span>{LABELED.includes(b) ? String(FIRST_HOUR + b).padStart(2, '0') : ''}</span>{/each}
+          {#each Array.from({ length: BINS }, (_, b) => b) as b (b)}<span>{b === BINS - 1 ? '22+' : LABELED.includes(b) ? String(FIRST_HOUR + b).padStart(2, '0') : ''}</span>{/each}
         </div>
         {#each DAYS as day, d (day)}
           <div class="dayrow" class:gap={d === 5} aria-hidden="true">
@@ -92,8 +102,8 @@
         <section aria-labelledby="sure-title">
           <h2 class="section-title" id="sure-title">How sure</h2>
           {#if insights.health}
-            <div class="row"><div class="text"><p class="label">Predicts your ratings</p></div><p class="value">within {insights.health.modelMae.toFixed(1)} points</p></div>
-            <div class="row"><div class="text"><p class="label">A plain average</p></div><p class="value">misses by {insights.health.baselineMae.toFixed(1)}</p></div>
+            <div class="row"><div class="text"><p class="label">Predicts your ratings</p></div><p class="value">off by {insights.health.modelMae.toFixed(1)} points on average</p></div>
+            <div class="row"><div class="text"><p class="label">A plain average</p></div><p class="value">off by {insights.health.baselineMae.toFixed(1)}</p></div>
           {:else}
             <div class="row"><div class="text"><p class="label">Accuracy</p><p class="help">Checked once there are 30 rated blocks.</p></div></div>
           {/if}
@@ -113,7 +123,7 @@
             {#if 'from' in w}
               <p class="value mono">{hh(w.from)} to {hh(w.to)}</p><p class="help">{w.rating.toFixed(1)} of 5</p>
             {:else if 'learning' in w}
-              <p class="value mono">Learning</p><p class="help">{w.learning.have} of {w.learning.need} blocks</p>
+              <p class="value mono">Learning</p><p class="help">{w.learning.need ? `${w.learning.have} of ${w.learning.need} blocks` : `${w.learning.have} blocks, at many different hours so far`}</p>
             {:else}
               <p class="value">No clear best time</p>
             {/if}
@@ -126,7 +136,7 @@
       <section aria-labelledby="music-title">
         <h2 class="section-title" id="music-title">Music and focus</h2>
         <p class="help intro">Change in focus rating compared with silence. Bars show the likely range.</p>
-        {#each insights.music as m (m.name)}
+        {#each insights.music as m (m.id)}
           <div class="row music" class:unclear={!m.claim}>
             <div class="text"><p class="label">{m.name}</p><p class="help">{m.detail}</p></div>
             <span class="range" aria-hidden="true">

@@ -147,7 +147,7 @@ export function fitStats(s: Stats, groups: Group[], opts: { beta?: number; itera
       moved = Math.max(moved, Math.abs(Math.log(next / beta)));
       beta = next;
     }
-    if (moved < 1e-4) break;
+    if (moved < 1e-3) break; // precisions within 0.1%: further rounds change no insight
   }
 
   // log evidence (Bishop PRML 3.86 with row weights and per-column prior precisions)

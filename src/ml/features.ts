@@ -1,17 +1,32 @@
 import type { ActivityRecord, ListenRecord } from '@/core/db';
 import type { SessionRecord } from '@/core/sessions';
 import type { Design, Group } from './blr';
+import { overlapping } from './random';
 
 const MIN = 60_000;
+/** Longest listen or activity record looked back for when searching sorted rows (a phase rarely runs longer). */
+const MAX_SPAN = 6 * 60 * MIN;
 /** Hour bins 06 to 22; earlier hours join 06 and later ones 22. */
 export const FIRST_HOUR = 6;
 export const BINS = 17;
 export const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 export const SOURCES = ['silence', 'music site', 'file', 'focus sound'] as const;
 
-export const binOf = (t: number) => Math.min(BINS - 1, Math.max(0, new Date(t).getHours() - FIRST_HOUR));
-/** Monday 0 to Sunday 6, local time. */
-export const dayOf = (t: number) => (new Date(t).getDay() + 6) % 7;
+/** A study day runs from 04:00 to 04:00: a block at 01:00 belongs to the evening before, in the last column. */
+export const DAY_START_HOUR = 4;
+export const binOf = (t: number) => {
+  const h = new Date(t).getHours();
+  return h < DAY_START_HOUR ? BINS - 1 : Math.min(BINS - 1, Math.max(0, h - FIRST_HOUR));
+};
+/** 04:00 local time on the study day that contains t. */
+export function studyDayStart(t: number): number {
+  const d = new Date(t);
+  if (d.getHours() < DAY_START_HOUR) d.setDate(d.getDate() - 1);
+  d.setHours(DAY_START_HOUR, 0, 0, 0);
+  return d.getTime();
+}
+/** Monday 0 to Sunday 6, by study day. */
+export const dayOf = (t: number) => (new Date(studyDayStart(t)).getDay() + 6) % 7;
 export const isWeekend = (day: number) => day >= 5;
 
 export interface Vocabulary {
@@ -83,9 +98,11 @@ export function buildFeatures(input: FeatureInput, cap: Vocabulary = DEFAULT_VOC
   type Mix = { source: Map<string, number>; genre: Map<string, number>; artist: Map<string, number>; track: Map<string, number> };
   const add = (m: Map<string, number>, k: string, v: number) => m.set(k, (m.get(k) ?? 0) + v);
   const totals: Mix = { source: new Map(), genre: new Map(), artist: new Map(), track: new Map() };
+  const listens = [...input.listens].sort((a, b) => a.startedAt - b.startedAt);
+  const activity = [...input.activity].sort((a, b) => a.startedAt - b.startedAt);
   const mixes = rows.map((b) => {
     const mix: Mix = { source: new Map(), genre: new Map(), artist: new Map(), track: new Map() };
-    for (const l of input.listens) {
+    for (const l of overlapping(listens, b.startedAt, b.endedAt, MAX_SPAN)) {
       const overlap = Math.min(l.endedAt, b.endedAt) - Math.max(l.startedAt, b.startedAt);
       if (overlap <= 0) continue;
       const m = overlap / MIN;
@@ -151,12 +168,12 @@ export function buildFeatures(input: FeatureInput, cap: Vocabulary = DEFAULT_VOC
     pooled('artist', artists);
     pooled('track', tracks);
 
-    const dayStart = new Date(b.startedAt).setHours(0, 0, 0, 0);
+    const dayStart = studyDayStart(b.startedAt);
     const before = focus.filter((o) => o.startedAt >= dayStart && o.startedAt < b.startedAt).length;
     set('control:block of the day', before / 4);
     set(`length:${lengthOf((b.plannedMs ?? 25 * MIN) / MIN)}`, 1);
     let leisure = 0;
-    for (const a of input.activity) {
+    for (const a of overlapping(activity, b.startedAt - 60 * MIN, b.startedAt, MAX_SPAN)) {
       if (a.category === 'study' || a.category === 'unobserved') continue;
       leisure += Math.max(0, Math.min(a.endedAt, b.startedAt) - Math.max(a.startedAt, b.startedAt - 60 * MIN));
     }
