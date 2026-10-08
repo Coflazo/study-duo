@@ -8,6 +8,8 @@ import { calibrate } from './focus-index';
 import { walkForward } from './validate';
 
 const Z80 = 1.2816;
+/** A best window is the winner of about 14 candidates: it must clear a one-sided 97.5% bound, not 80% (winner's curse). */
+const Z_WINDOW = 1.96;
 /** Rated (or index-filled) blocks before any map shows. */
 export const NEED = 25;
 /** A cell shows when its rating's SD is under half a point and blocks sit at or next to its hour. */
@@ -142,7 +144,7 @@ export function computeInsights(input: InsightsInput): Insights {
     const u = vec(usual);
     for (let i = 0; i < diff.length; i++) diff[i] = diff[i]! - u[i]!;
     const p = predict(fit, diff);
-    if (p.mean - Z80 * Math.sqrt(p.variance) <= 0) return { label, none: true };
+    if (p.mean - Z_WINDOW * Math.sqrt(p.variance) <= 0) return { label, none: true };
     const rating = Math.min(5, Math.max(1, 1 + 4 * predict(fit, vec({ ...BASE, ...window })).mean));
     return { label, from: FIRST_HOUR + best.bin, to: FIRST_HOUR + best.bin + 2, rating };
   };

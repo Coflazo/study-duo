@@ -24,6 +24,7 @@ describe('computeInsights', () => {
     const r = run(sessions, listens);
     expect(r.learning).toBeNull();
     const weekdays = r.windows.find((w) => w.label === 'Weekdays')!;
+    if (!('from' in weekdays)) throw new Error(`no weekday window: ${JSON.stringify(weekdays)}`);
     expect(weekdays.from).toBeGreaterThanOrEqual(9);
     expect(weekdays.to).toBeLessThanOrEqual(12);
     const weekend = r.windows.find((w) => w.label === 'Weekend');
@@ -66,8 +67,10 @@ describe('computeInsights', () => {
 
   it('works out a year of blocks in well under a second', () => {
     const { sessions, listens } = simulate(TYPICAL, { days: 365, seed: 5 });
-    const t = performance.now();
+    // CPU time of this test process, not wall time: other test files share the cores while this runs.
+    const t = process.cpuUsage();
     run(sessions, listens);
-    expect(performance.now() - t).toBeLessThan(1000);
+    const used = process.cpuUsage(t);
+    expect((used.user + used.system) / 1000).toBeLessThan(1000);
   }, 20_000);
 });

@@ -96,9 +96,9 @@ export function fitStats(s: Stats, groups: Group[], opts: { beta?: number; itera
   const variance = nEff > 1 ? Math.max(1e-9, yy / nEff - (ySum / nEff) ** 2) : 1;
   let beta = opts.beta ?? 1 / variance;
 
-  let mean = new Float64Array(p);
-  let factor = new Float64Array(0);
-  let varDiag = new Float64Array(p);
+  let mean: Float64Array = new Float64Array(p);
+  let factor: Float64Array = new Float64Array(0);
+  let varDiag: Float64Array = new Float64Array(p);
   let jitter = 0;
   let gamma = 0;
   let ed = 0;
