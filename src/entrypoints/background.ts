@@ -12,6 +12,7 @@ import { ensureOverlay, keepClocksOnOpenTabs } from '@/background/overlay-inject
 import { acceptCounts, trackActivity } from '@/background/activity';
 import { hearTab, trackMusic } from '@/background/music';
 import { isMusicStop, parseNowPlaying } from '@/core/music';
+import { parseSyncRequest, syncConnection, syncDue, trackConnections } from '@/background/connections';
 
 export default defineBackground(() => {
   const timer = createTimerService({
@@ -36,6 +37,12 @@ export default defineBackground(() => {
     if (counts && sender.tab?.id !== undefined && isFromWebPage(sender.url, base)) void acceptCounts(sender.tab.id, sender.url, counts);
     const pos = parseMove(raw);
     if (pos) void settingsItem.getValue().then((v) => settingsItem.setValue({ ...normalizeSettings(v), overlayPos: pos })).catch(console.error);
+    // "Check now" from the Connections screen; web pages cannot trigger requests.
+    const sync = parseSyncRequest(raw);
+    if (sync && !isFromWebPage(sender.url, base)) {
+      syncConnection(sync).then(() => sendResponse(true), () => sendResponse(false));
+      return true;
+    }
     const site = parseSiteMessage(raw);
     const req = site && resolveSiteRequest(site, sender.url, base);
     if (!req) return;
@@ -67,6 +74,8 @@ export default defineBackground(() => {
   keepClocksOnOpenTabs();
   trackActivity();
   trackMusic();
+  trackConnections();
+  void syncDue().catch(console.error);
 
   // Retention (Your data): drop history older than the kept period, at every worker start and when it changes.
   const purge = () => void loadSettings().then((s) => purgeOlderThan(s.retentionDays, Date.now())).catch(console.error);

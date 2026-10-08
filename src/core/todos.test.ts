@@ -77,3 +77,12 @@ describe('stored to-dos stay plain data', () => {
     expect(() => structuredClone(fakeStore())).not.toThrow();
   });
 });
+
+describe('feed fields', () => {
+  it('normalizeTodos keeps a due date and feed UID, and drops bad ones', async () => {
+    const { normalizeTodos } = await import('./todos');
+    expect(normalizeTodos([{ id: 'f1', text: 'HW', course: null, done: false, ifThen: null, due: 1_800_000_000_000, feedUid: 'event-assignment-1' }])[0]).toMatchObject({ due: 1_800_000_000_000, feedUid: 'event-assignment-1' });
+    const plain = normalizeTodos([{ id: 'p', text: 'x', due: 'soon', feedUid: 5 }])[0]!;
+    expect('due' in plain || 'feedUid' in plain).toBe(false);
+  });
+});

@@ -56,7 +56,6 @@ export default defineConfig({
     ],
     // Redirects and reading an open tab's address need host access; the corner clock already asks for every site.
     host_permissions: ['<all_urls>'],
-    // No network by default: integrations add their own origins when they ship.
     // Only the phase-word font, behind a per-session URL so pages cannot fetch it by a fixed address.
     web_accessible_resources: [
       {
@@ -70,7 +69,9 @@ export default defineConfig({
     // Right-click the toolbar button > Options opens Settings in a tab.
     options_ui: { page: 'dashboard.html', open_in_tab: true },
     content_security_policy: {
-      extension_pages: "script-src 'self'; object-src 'self'; connect-src 'self';",
+      // Course calendars live on any school's host, so https: is open here; src/core/net.ts is the allowlist (only the
+      // connections the user switched on) and nothing else in the extension fetches.
+      extension_pages: "script-src 'self'; object-src 'self'; connect-src 'self' https:;",
     },
     commands: {
       'toggle-timer': {
