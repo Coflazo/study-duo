@@ -2,6 +2,7 @@ import { storage } from 'wxt/utils/storage';
 import { IDLE_TRACKER, type TrackerState } from './activity';
 import type { OpenListen } from './music';
 import type { NoiseKind } from './noise';
+import { INITIAL_PLAYER, type PlayerState } from './player';
 
 /*
  * Session storage items, kept apart from store.ts: WXT reads every item the moment it is defined, and content
@@ -17,3 +18,5 @@ export const soundItem = storage.defineItem<{ noise: NoiseKind; volume: number; 
 export const logVersionItem = storage.defineItem<number>('session:logVersion', { fallback: 0 });
 /** The activity tracker's state between events (session only; the worker sleeps, the browser session does not). */
 export const trackerItem = storage.defineItem<TrackerState>('session:activityTracker', { fallback: IDLE_TRACKER });
+/** The one player: which source, playing or not, the noise colour and the volume (session only; #51). */
+export const playerItem = storage.defineItem<PlayerState>('session:player', { fallback: INITIAL_PLAYER });
