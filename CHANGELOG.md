@@ -6,7 +6,8 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ### Added
 
-- A 45-second demo film at the top of the README (GIF, with a 1080p MP4). Every page in it is a screenshot of the real extension; the insights show one simulated student. `demo/` rebuilds it from fresh screenshots.
+- A narrated launch film with subtitles (`docs/media/study-duo.mp4`, `.srt`, `.vtt`) and a silent loop of it at the top of the README. Every page in it is the real extension, the sounds come from Study Duo's own code, and the insights show one simulated student. `demo/` rebuilds it.
+- A benchmark against LeechBlock NG, BlockSite and Forest (`tests/e2e/bench.e2e.ts`, results in `bench/results/2026-10-08.md`): download size, script per page, memory, CPU and every outside server contacted.
 
 ## [0.2.1] - 2026-10-08
 

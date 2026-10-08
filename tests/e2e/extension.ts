@@ -13,7 +13,7 @@ export const EXT_ID = 'bcggiingdefmehpjcalkfpdnehpcieon';
  * so locally we drive Chrome for Testing (`npx @puppeteer/browsers install chrome@stable --path ~/.cache/chrome-for-testing`).
  * CI (Linux) falls back to Playwright's Chromium.
  */
-function chromePath(): string | undefined {
+export function chromePath(): string | undefined {
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
   const root = path.join(os.homedir(), '.cache/chrome-for-testing/chrome');
   if (!fs.existsSync(root)) return undefined;

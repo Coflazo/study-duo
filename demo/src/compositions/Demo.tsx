@@ -305,7 +305,7 @@ function timer(f: number): { phase: "focus" | "break"; left: number } | null {
 }
 
 /** The running dial, drawn with drawDial's geometry (src/background/dial-canvas.ts) at size 32. */
-function Dial({ phase, left }: { phase: "focus" | "break"; left: number }) {
+export function Dial({ phase, left, size = 22 }: { phase: "focus" | "break"; left: number; size?: number }) {
   const total = 30 * 60_000;
   const spent = phase === "focus" ? 25 * 60_000 - left : total - left;
   const arcs =
@@ -329,7 +329,7 @@ function Dial({ phase, left }: { phase: "focus" | "break"; left: number }) {
     return `M ${x1} ${y1} A ${r} ${r} 0 ${b - a > Math.PI ? 1 : 0} 1 ${x2} ${y2}`;
   };
   return (
-    <svg width={22} height={22} viewBox="0 0 32 32">
+    <svg width={size} height={size} viewBox="0 0 32 32">
       <rect width={32} height={32} rx={6.4} fill="#0B0C0D" />
       {arcs.map((a, i) => {
         const pad = a.c === "#363A37" ? 0 : gap / 2;

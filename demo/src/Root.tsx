@@ -1,6 +1,8 @@
 import { AbsoluteFill, Composition, Sequence, useCurrentFrame } from "remotion";
 import "./theme.css";
 import { Demo, DEMO_LEN } from "./compositions/Demo";
+import { Film, FILM_LEN } from "./compositions/Film";
+import { Loop, LOOP_LEN } from "./compositions/Loop";
 import { TITLE_LEN, TitleCard } from "./title-card";
 
 export const FPS = 30;
@@ -45,19 +47,25 @@ function Clip({
 
 export function RemotionRoot() {
   return (
-    <Composition
-      id="demo"
-      component={() => (
-        <Clip
-          body={<Demo />}
-          name="Study Duo"
-          kicker="A study timer that lives in your browser"
-        />
-      )}
-      durationInFrames={DEMO_LEN + TITLE_LEN}
-      fps={FPS}
-      width={WIDTH}
-      height={HEIGHT}
-    />
+    <>
+      <Composition
+        id="demo"
+        component={() => (
+          <Clip
+            body={<Demo />}
+            name="Study Duo"
+            kicker="A study timer that lives in your browser"
+          />
+        )}
+        durationInFrames={DEMO_LEN + TITLE_LEN}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+      />
+      {/* The launch film: narrated, subtitled, about 100 seconds. Its sound is mixed by scripts/mix.mjs. */}
+      <Composition id="film" component={Film} durationInFrames={FILM_LEN} fps={FPS} width={WIDTH} height={HEIGHT} />
+      {/* The README loop: a silent cut of the film with the same captions. */}
+      <Composition id="loop" component={Loop} durationInFrames={LOOP_LEN} fps={FPS} width={WIDTH} height={HEIGHT} />
+    </>
   );
 }

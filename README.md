@@ -3,19 +3,46 @@
   <img alt="Study Duo. The corner clock reads 25:00 beside the words Study time. A study timer that lives in your browser." src="docs/media/banner-light.png" width="100%">
 </picture>
 
-A free study timer that lives in your browser.
+<p align="center">
+  <a href="#get-study-duo">Install</a> ·
+  <a href="PRIVACY.md">Privacy</a> ·
+  <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="https://github.com/Coflazo/study-duo/releases">Releases</a>
+</p>
 
-It shows a small digital clock in the corner of every page, keeps distracting websites closed while you study, rings a soft bell when it's time for a break, and over a few weeks learns which hours and which music help you focus best. No account. Works without internet. Everything stays on your computer.
+<a href="docs/media/study-duo.mp4"><img alt="Study Duo in use: browser tabs pile up during a study session; a block starts on Problem set 5 from the course calendar; a small clock sits in the corner of the page; reddit.com stays closed; white, pink and brown noise play from the Music page; a bell rings in a break; a heat map shows the best hours of one simulated student." src="docs/media/demo.gif" width="100%"></a>
 
-<a href="docs/media/demo.mp4"><img alt="A 45-second tour: tabs pile up during a study session; Study Duo starts a block on Problem set 5, puts a clock in the corner of the page, keeps reddit.com closed, rings in a break and asks for a focus rating, then shows a heat map of best hours from one simulated student." src="docs/media/demo.gif" width="100%"></a>
+A free study timer that lives in your browser. It keeps a small clock in the corner of every page, keeps distracting sites closed while you study, rings a bell when it's time for a break, and over a few weeks learns which hours and which music help you focus. No account. Works offline. Everything stays on your computer.
 
-45 seconds, no sound. [Watch it as a video (MP4, 1080p)](docs/media/demo.mp4). The insights at the end come from one simulated student, not a real person's data.
+## What it does
 
-## Get Study Duo (about 2 minutes)
+| | |
+|---|---|
+| <img src="docs/media/features/timer.jpg" width="320" alt="The popup: Study, block 1 of 4, 25:00 on a digital clock."> | **Timer.** 25 minutes of study, 5 of break, a longer break every fourth round. Deadlines from your course calendar show up as to-dos. |
+| <img src="docs/media/features/clock.jpg" width="320" alt="A small digital clock reading 25:00 in the top right corner of a page of lecture notes."> | **Corner clock.** A small clock on every page that fades while you read and comes back when your mouse gets close. |
+| <img src="docs/media/features/lock.jpg" width="320" alt="Study Duo's blocked page asking: Why open reddit.com now?"> | **Site lock.** Chosen sites stay closed until the block ends. Opening one anyway takes ten seconds and a reason. |
+| <img src="docs/media/features/music.jpg" width="320" alt="The Music page playing two songs from this computer."> | **Music.** White, pink or brown noise made in the browser, your own song files, and the songs playing in your tabs. |
+| <img src="docs/media/features/insights.jpg" width="320" alt="A heat map of focus by hour and day."> | **Your best hours.** Rate each block with one tap. After a few weeks it shows your best hours and which music helps. |
+| <img src="docs/media/features/timeline.jpg" width="320" alt="The Timeline page with study blocks across a week and an Export to calendar button."> | **Timeline.** Every block and break on a week view, exported as one file for any calendar app. |
 
-**The easy way:** open **[coflazo.github.io/study-duo](https://coflazo.github.io/study-duo)**. It shows the right line for your computer with a copy button. Then do step 3 below.
+Also: the minutes left on the toolbar icon, a bell and a short line in the middle of the page when a block starts or ends, songs from your phone through ListenBrainz or Last.fm, and moving your settings and to-dos to another computer with a file or QR codes.
 
-**Or do it from here:**
+## How it compares
+
+Measured on 8 October 2026: each extension alone in a fresh browser, free version, default settings, no sign-in. [Full results and method](bench/results/2026-10-08.md).
+
+| | Download | Script added to every page | Outside servers contacted on install | Account needed to install |
+|---|---|---|---|---|
+| Study Duo 0.2.1 | 283 KB | 67 KB | 0 | No |
+| LeechBlock NG 1.7.3 | 425 KB | 5 KB | 0 | No |
+| Forest 6.5.0 | 14.2 MB | 309 KB | 0 | No |
+| BlockSite 7.1.1 | 18.8 MB | 6.7 MB | 56 | No |
+
+Study Duo is not the lightest on CPU: with a block running, its corner clock uses more than the others ([#41](https://github.com/Coflazo/study-duo/issues/41)).
+
+## Get Study Duo
+
+About 2 minutes. The easy way: open **[coflazo.github.io/study-duo](https://coflazo.github.io/study-duo)**, which shows the right line for your computer with a copy button, then do step 3 below. Or from here:
 
 **1. Open the Terminal app.** It's already on your computer.
 
@@ -66,19 +93,6 @@ powershell -c "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/C
 ```
 
 Then turn on **Desktop apps** in Study Duo's Connections. The helper is a short script you can read first ([helper/](helper/)); it only reports the song title, artist, album and app, and only to Study Duo. `--uninstall` removes it too.
-
-## What it does
-
-- **Timer:** 25 minutes of study, 5 minutes of break, a longer break every fourth round. Change any of it.
-- **Corner clock:** a small old-school digital clock on every page. It fades out of your way and comes back when your mouse gets close. Hide it any time.
-- **Time on the icon:** the minutes left show on the toolbar icon.
-- **Bell and big words:** a soft bell and a short line like "Break's over" in the middle of the screen when a block starts or ends.
-- **Website lock:** during study time, chosen sites stay closed. Or allow only the sites you need, plus your music.
-- **To-do list:** pick what you're working on before you start. Paste your course calendar link (Canvas, Moodle or any .ics) and your deadlines show up with their due dates.
-- **Music:** it notices what's playing on YouTube Music, Spotify, Apple Music or SoundCloud in your browser, and it can play songs you've downloaded, even offline. Connect ListenBrainz or Last.fm and songs from your phone count too.
-- **Calendar:** every study block and break is saved to a timeline you can export to any calendar app.
-- **Move to another computer:** take your settings, site lists and to-dos along as one small file, or as QR codes the other computer's camera reads. No account, no server.
-- **Your best hours:** after a few weeks it shows which hours of which days you focus best, and which music helps you most.
 
 ## How your best hours are worked out
 
@@ -140,15 +154,6 @@ Study Duo is switched off in private (Incognito) windows, so nothing from them i
 </details>
 
 <details>
-<summary>How "your best hours" works</summary>
-
-After each study block you can rate your focus from 1 to 5 with one click. Study Duo puts those ratings next to the time of day, the day of the week, the music that played, and how much time went to distracting sites. A small piece of statistics on your own computer then works out what goes with your best focus.
-
-Monday to Friday are treated as one group and Saturday and Sunday as another, so a day with only a few sessions can borrow from similar days. It only shows a pattern when it has enough of your sessions to back it up, and it tells you how sure it is. Expect the first results after about three weeks.
-
-</details>
-
-<details>
 <summary>The research behind the default settings</summary>
 
 - Fixed breaks leave students less tired than breaks they time themselves: [Biwer et al., 2023](https://pubmed.ncbi.nlm.nih.gov/36859717/).
@@ -190,4 +195,4 @@ git clone https://github.com/Coflazo/study-duo && cd study-duo && npm ci && npm 
 
 ## Credits and license
 
-Fonts, sounds and borrowed code are credited in [CREDITS.md](CREDITS.md) once they're added. Found a security problem? See [SECURITY.md](SECURITY.md). Study Duo is free and open source under the [MIT license](LICENSE).
+Fonts, music, the film's voice and borrowed code are credited in [CREDITS.md](CREDITS.md). The film is rebuilt from the real extension by [demo/](demo/). Found a security problem? See [SECURITY.md](SECURITY.md). Study Duo is free and open source under the [MIT license](LICENSE).
