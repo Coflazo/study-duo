@@ -1,14 +1,22 @@
 import type { ListenRecord } from './db';
 import { MUSIC_SITES } from './sites';
 
-/** Where Study Duo looks for now-playing: the music players, plus YouTube itself. */
-export const MUSIC_HOSTS = [...MUSIC_SITES, 'youtube.com'];
+/**
+ * Where Study Duo looks for now-playing: the music players only. Videos on YouTube itself are not songs, and what
+ * someone watches there is never read or kept.
+ */
+export const MUSIC_HOSTS = MUSIC_SITES;
 const MAX_TEXT = 200;
 /** Shorter listens are skips through a playlist, not listening. */
 const MIN_LISTEN_MS = 5_000;
 
 export function isMusicHost(host: string | null): boolean {
   return host !== null && MUSIC_HOSTS.some((d) => host === d || host.endsWith(`.${d}`));
+}
+
+/** YouTube's video site, as opposed to YouTube Music: its plays were kept before 0.2.3 and are deleted on update. */
+export function isYouTubeVideoHost(host: string): boolean {
+  return (host === 'youtube.com' || host.endsWith('.youtube.com')) && !isMusicHost(host);
 }
 
 export interface NowPlaying {

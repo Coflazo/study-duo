@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { addRecords, deleteAll, exportAll, purgeOlderThan, recordsBetween } from './log';
+import { addRecords, deleteAll, exportAll, forgetListens, purgeOlderThan, recordsBetween } from './log';
 import { addSessions, rateSession, sessionId, sessionsBetween } from './sessions';
 
 const DAY = 86_400_000;
@@ -58,5 +58,14 @@ describe('retention, export and delete', () => {
     await deleteAll();
     const after = await exportAll(NOW);
     expect([after.sessions, after.listens, after.activity, after.blocks].every((l) => l.length === 0)).toBe(true);
+  });
+});
+
+describe('forgetListens', () => {
+  it('deletes only the listens that match, and says how many', async () => {
+    const l = (id: string, host: string) => ({ id, host, title: id, artist: '', album: '', startedAt: NOW - 60_000, endedAt: NOW, sessionId: null });
+    await addRecords('listens', [l('video', 'www.youtube.com'), l('song', 'music.youtube.com'), l('file', 'file')]);
+    expect(await forgetListens((x) => x.host === 'www.youtube.com')).toBe(1);
+    expect((await recordsBetween('listens', 0, NOW + 1)).map((x) => x.id).sort()).toEqual(['file', 'song']);
   });
 });

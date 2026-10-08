@@ -34,6 +34,24 @@ export function purgeOlderThan(days: number, now: number): Promise<void> {
   });
 }
 
+/** Deletes the listens that match, whenever they played. Returns how many went. */
+export function forgetListens(drop: (l: ListenRecord) => boolean): Promise<number> {
+  return withDb(async (db) => {
+    const tx = db.transaction('listens', 'readwrite');
+    let gone = 0;
+    let cursor = await tx.store.openCursor();
+    while (cursor) {
+      if (drop(cursor.value as ListenRecord)) {
+        await cursor.delete();
+        gone++;
+      }
+      cursor = await cursor.continue();
+    }
+    await tx.done;
+    return gone;
+  });
+}
+
 export interface ExportFile {
   app: 'Study Duo';
   exportedAt: number;

@@ -3,7 +3,7 @@ import { createTimerService } from '@/background/timer-service';
 import { allowedFromSender, isFromWebPage, parseCounts, parseMessage, parseMove, parseSiteMessage, parseSound, resolveSiteRequest } from '@/core/messages';
 import { focusSound } from '@/background/sound';
 import { normalizeSettings } from '@/core/settings';
-import { purgeOlderThan } from '@/core/log';
+import { forgetListens, purgeOlderThan } from '@/core/log';
 import { createSiteMenu, handleSiteRequest, onSiteMenuClick } from '@/background/site-requests';
 import { loadSettings, loadState, musicSeededItem, settingsItem, sitesItem, timerItem } from '@/core/store';
 import { normalizeSites, seedMusicSites } from '@/core/sites';
@@ -11,7 +11,7 @@ import { unlockedItem } from '@/background/site-lock';
 import { ensureOverlay, keepClocksOnOpenTabs } from '@/background/overlay-inject';
 import { acceptCounts, trackActivity } from '@/background/activity';
 import { hearTab, trackMusic } from '@/background/music';
-import { isMusicStop, parseNowPlaying } from '@/core/music';
+import { isMusicStop, isYouTubeVideoHost, parseNowPlaying } from '@/core/music';
 import { inQueue, parseSyncRequest, syncConnection, syncDue, trackConnections } from '@/background/connections';
 import { trackHelper } from '@/background/helper';
 import { connectCalendar, disconnectCalendar, parseCalendarRequest } from '@/background/calendar';
@@ -69,6 +69,8 @@ export default defineBackground(() => {
   browser.runtime.onInstalled.addListener(() => void afterInstall().catch(console.error));
 
   async function afterInstall() {
+    // Before 0.2.3, videos on YouTube were kept as songs. Nobody asked for that: they go, and are no longer read.
+    await forgetListens((l) => isYouTubeVideoHost(l.host)).catch(console.error);
     // Music players stay open during study blocks, once; a site the user removes later stays removed.
     if (!(await musicSeededItem.getValue())) {
       await sitesItem.setValue(seedMusicSites(normalizeSites(await sitesItem.getValue())));
