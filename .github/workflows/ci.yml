@@ -49,8 +49,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - if: runner.os == 'Linux'
-        run: shellcheck install.sh tests/install/test-install.sh scripts/publish-release.sh
+        run: shellcheck install.sh tests/install/test-install.sh scripts/publish-release.sh helper/study-duo-helper.sh tests/helper/test-helper.sh
       - run: sh tests/install/test-install.sh
+      - run: sh tests/helper/test-helper.sh
 
   install-windows:
     runs-on: windows-latest
@@ -62,6 +63,8 @@ jobs:
       - name: PowerShell 7
         shell: pwsh
         run: ./tests/install/test-install.ps1 -Shell pwsh
+      - name: Desktop helper (Windows PowerShell 5.1, as Chrome starts it)
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tests/helper/test-helper.ps1
 
   secrets-scan:
     runs-on: ubuntu-latest

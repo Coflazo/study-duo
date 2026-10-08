@@ -72,6 +72,33 @@ try {
   if ((Invoke-Installer) -eq 0) { throw 'FAIL accepted a plain-HTTP download address on another computer' }
   if (Test-Path $dest) { throw 'FAIL a refused address still installed' }
   Write-Host 'ok   refuses a plain-HTTP download address that is not this computer'
+
+  # Desktop helper (-Helper): registered for Study Duo only, with the browsers that have a profile.
+  $env:STUDY_DUO_BASE_URL = "http://127.0.0.1:$port"
+  $env:LOCALAPPDATA = Join-Path $work 'appdata'
+  New-Item -ItemType Directory -Force -Path (Join-Path $env:LOCALAPPDATA 'Google\Chrome\User Data') | Out-Null
+  New-Release '0.1.5' $true
+  foreach ($f in @('study-duo-helper.ps1', 'study-duo-helper.bat')) {
+    Copy-Item (Join-Path $root "helper\$f") (Join-Path $rel $f)
+    $h = (Get-FileHash -Algorithm SHA256 -Path (Join-Path $rel $f)).Hash.ToLowerInvariant()
+    Add-Content -Path (Join-Path $rel 'SHA256SUMS') -Value "$h  $f"
+  }
+  if ((Invoke-Installer @('-Helper')) -ne 0) { throw 'FAIL helper install exit code' }
+  $manifestPath = Join-Path $env:STUDY_DUO_HOME "helper\com.coflazo.study_duo.json"
+  $chromeKey = 'HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.coflazo.study_duo'
+  if ((Get-Item $chromeKey).GetValue('') -ne $manifestPath) { throw 'FAIL registry value' }
+  $m = Get-Content $manifestPath -Raw | ConvertFrom-Json
+  if ($m.path -ne (Join-Path $env:STUDY_DUO_HOME 'helper\study-duo-helper.bat') -or $m.type -ne 'stdio' -or @($m.allowed_origins)[0] -ne 'chrome-extension://bcggiingdefmehpjcalkfpdnehpcieon/') { throw "FAIL manifest: $($m | ConvertTo-Json -Compress)" }
+  if (Test-Path 'HKCU:\Software\Microsoft\Edge\NativeMessagingHosts\com.coflazo.study_duo') { throw 'FAIL registered with a browser that has no profile' }
+  Write-Host 'ok   installs the desktop helper for Study Duo only, with the browsers that have a profile'
+
+  Add-Content -Path (Join-Path $rel 'study-duo-helper.ps1') -Value '# tampered'
+  if ((Invoke-Installer @('-Helper')) -eq 0) { throw 'FAIL accepted a tampered helper' }
+  Write-Host 'ok   refuses a helper that does not match its checksum'
+
+  if ((Invoke-Installer @('-Uninstall')) -ne 0) { throw 'FAIL uninstall exit code' }
+  if ((Test-Path $chromeKey) -or (Test-Path $manifestPath)) { throw 'FAIL uninstall left the helper behind' }
+  Write-Host 'ok   uninstall removes the helper and its registration'
 } finally {
   Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
   Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue

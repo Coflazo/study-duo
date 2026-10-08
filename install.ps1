@@ -8,11 +8,15 @@
 #   4. copies that path to your clipboard and opens your browser's extensions page,
 #   5. prints the three clicks left.
 # Uninstall: powershell -c "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Coflazo/study-duo/main/install.ps1))) -Uninstall"
+#
+# Optional, with -Helper (same form as -Uninstall above): also installs the desktop helper, a small script that tells
+# Study Duo what desktop music apps are playing, and registers it with your Chromium browsers for Study Duo only.
+# It is off until you turn on Desktop apps in Study Duo's Connections. Read it first: helper/study-duo-helper.ps1
 
-param([switch]$Uninstall)
+param([switch]$Uninstall, [switch]$Helper)
 
 function Install-StudyDuo {
-  param([switch]$Uninstall)
+  param([switch]$Uninstall, [switch]$Helper)
   $ErrorActionPreference = 'Stop'
   $ProgressPreference = 'SilentlyContinue' # the progress bar makes Invoke-WebRequest very slow on 5.1
   $repo = 'Coflazo/study-duo'
@@ -21,8 +25,24 @@ function Install-StudyDuo {
   $homeDir = if ($env:STUDY_DUO_HOME) { $env:STUDY_DUO_HOME } else { Join-Path $env:USERPROFILE 'Study Duo' }
   $dest = Join-Path $homeDir 'chromium'
   $zip = 'study-duo-chromium.zip'
+  $helperDir = Join-Path $homeDir 'helper'
+  $hostName = 'com.coflazo.study_duo'
+  $extensionId = 'bcggiingdefmehpjcalkfpdnehpcieon'
+  # Each Chromium browser: where its profile lives, and where it looks up native messaging hosts.
+  $browserHosts = @(
+    @("$env:LOCALAPPDATA\Google\Chrome\User Data", 'HKCU:\Software\Google\Chrome\NativeMessagingHosts'),
+    @("$env:LOCALAPPDATA\Chromium\User Data", 'HKCU:\Software\Chromium\NativeMessagingHosts'),
+    @("$env:LOCALAPPDATA\Microsoft\Edge\User Data", 'HKCU:\Software\Microsoft\Edge\NativeMessagingHosts'),
+    @("$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data", 'HKCU:\Software\BraveSoftware\Brave-Browser\NativeMessagingHosts'),
+    @("$env:LOCALAPPDATA\Vivaldi\User Data", 'HKCU:\Software\Vivaldi\NativeMessagingHosts')
+  )
 
   if ($Uninstall) {
+    foreach ($b in $browserHosts) { Remove-Item -Path "$($b[1])\$hostName" -Force -ErrorAction SilentlyContinue }
+    if (Test-Path $helperDir) {
+      Remove-Item -Recurse -Force $helperDir
+      Write-Host 'Removed the desktop helper.'
+    }
     if (Test-Path $dest) {
       Remove-Item -Recurse -Force $dest
       Write-Host "Removed $dest."
@@ -52,13 +72,17 @@ function Install-StudyDuo {
     Invoke-WebRequest -UseBasicParsing -Uri "$base/$zip" -OutFile $zipPath
     Invoke-WebRequest -UseBasicParsing -Uri "$base/SHA256SUMS" -OutFile $sumsPath
 
-    $expected = $null
-    foreach ($line in Get-Content $sumsPath) {
-      if ($line -match "^\s*([0-9a-fA-F]{64})\s+\*?$([regex]::Escape($zip))\s*$") { $expected = $Matches[1]; break }
+    # Stops the install unless a downloaded file matches its line in SHA256SUMS.
+    function Assert-Checksum([string]$name) {
+      $expected = $null
+      foreach ($line in Get-Content $sumsPath) {
+        if ($line -match "^\s*([0-9a-fA-F]{64})\s+\*?$([regex]::Escape($name))\s*$") { $expected = $Matches[1]; break }
+      }
+      if (-not $expected) { throw "the checksum file does not list $name. Nothing was installed." }
+      $actual = (Get-FileHash -Algorithm SHA256 -Path (Join-Path $tmp $name)).Hash
+      if ($expected.ToLowerInvariant() -ne $actual.ToLowerInvariant()) { throw "$name does not match its checksum. Nothing was installed." }
     }
-    if (-not $expected) { throw "the checksum file does not list $zip. Nothing was installed." }
-    $actual = (Get-FileHash -Algorithm SHA256 -Path $zipPath).Hash
-    if ($expected.ToLowerInvariant() -ne $actual.ToLowerInvariant()) { throw 'the download does not match its checksum. Nothing was installed.' }
+    Assert-Checksum $zip
     Write-Host 'Checksum matches.'
 
     if (-not $env:STUDY_DUO_BASE_URL -and (Get-Command gh -ErrorAction SilentlyContinue)) {
@@ -107,6 +131,34 @@ function Install-StudyDuo {
       }
       if (-not $opened) { Write-Host "Open your browser's extensions page (for example chrome://extensions)." }
     }
+    if ($Helper) {
+      $files = @('study-duo-helper.ps1', 'study-duo-helper.bat')
+      foreach ($f in $files) {
+        Invoke-WebRequest -UseBasicParsing -Uri "$base/$f" -OutFile (Join-Path $tmp $f)
+        Assert-Checksum $f
+      }
+      New-Item -ItemType Directory -Force -Path $helperDir | Out-Null
+      foreach ($f in $files) { Copy-Item -Force (Join-Path $tmp $f) (Join-Path $helperDir $f) }
+      $manifestPath = Join-Path $helperDir "$hostName.json"
+      $manifest = [ordered]@{
+        name            = $hostName
+        description     = 'Study Duo desktop helper: what desktop music apps are playing'
+        path            = (Join-Path $helperDir 'study-duo-helper.bat')
+        type            = 'stdio'
+        allowed_origins = @("chrome-extension://$extensionId/")
+      } | ConvertTo-Json
+      [IO.File]::WriteAllText($manifestPath, $manifest, (New-Object Text.UTF8Encoding $false))
+      $registered = 0
+      foreach ($b in $browserHosts) {
+        if (-not (Test-Path $b[0])) { continue } # that browser has no profile here
+        New-Item -Path "$($b[1])\$hostName" -Force | Out-Null
+        Set-Item -Path "$($b[1])\$hostName" -Value $manifestPath
+        $registered++
+      }
+      if ($registered -gt 0) { Write-Host "Desktop helper installed for $registered browser(s). Turn on Desktop apps in Study Duo's Connections to use it." }
+      else { Write-Host 'Desktop helper installed, but no Chrome, Chromium, Edge, Brave or Vivaldi profile was found to register it with.' }
+    }
+
     Write-Host ''
     Write-Host 'Three clicks left, once:'
     Write-Host '  1. Turn on Developer mode (on the extensions page).'
@@ -121,7 +173,7 @@ function Install-StudyDuo {
 
 # Everything runs from here, so a download cut off halfway never runs half a script.
 try {
-  Install-StudyDuo -Uninstall:$Uninstall
+  Install-StudyDuo -Uninstall:$Uninstall -Helper:$Helper
 } catch {
   Write-Host "Study Duo: $($_.Exception.Message)" -ForegroundColor Red
   exit 1

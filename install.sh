@@ -8,7 +8,11 @@
 #   3. unzips it to "~/Study Duo/chromium" (a visible folder: no sudo, no admin rights),
 #   4. copies that path to your clipboard and opens your browser's extensions page,
 #   5. prints the three clicks left.
-# Uninstall: sh install.sh --uninstall   (removes the folder; remove the card in your browser)
+# Uninstall: sh install.sh --uninstall   (removes the folder and the helper; remove the card in your browser)
+#
+# Optional, with --helper (curl ... | sh -s -- --helper): also installs the desktop helper, a small script that tells
+# Study Duo what desktop music apps are playing, and registers it with your Chromium browsers for Study Duo only.
+# It is off until you turn on Desktop apps in Study Duo's Connections. Read it first: helper/study-duo-helper.sh
 
 set -eu
 
@@ -18,6 +22,10 @@ BASE="${STUDY_DUO_BASE_URL:-$DEFAULT_BASE}"
 HOME_DIR="${STUDY_DUO_HOME:-$HOME/Study Duo}"
 DEST="$HOME_DIR/chromium"
 ZIP="study-duo-chromium.zip"
+HELPER="study-duo-helper.sh"
+HELPER_DIR="$HOME_DIR/helper"
+HOST="com.coflazo.study_duo"
+EXTENSION_ID="bcggiingdefmehpjcalkfpdnehpcieon"
 
 say() { printf '%s\n' "$*"; }
 fail() {
@@ -89,7 +97,60 @@ open_extensions() {
   return 1
 }
 
+# Where each Chromium browser looks for native messaging hosts, one per line.
+host_dirs() {
+  if [ "$(uname -s)" = "Darwin" ]; then
+    base="$HOME/Library/Application Support"
+    for b in "Google/Chrome" "Google/Chrome Beta" "Chromium" "Microsoft Edge" "BraveSoftware/Brave-Browser" "Vivaldi"; do printf '%s\n' "$base/$b/NativeMessagingHosts"; done
+  else
+    base="${XDG_CONFIG_HOME:-$HOME/.config}"
+    for b in "google-chrome" "google-chrome-beta" "chromium" "microsoft-edge" "BraveSoftware/Brave-Browser" "vivaldi"; do printf '%s\n' "$base/$b/NativeMessagingHosts"; done
+  fi
+}
+
+# Checks a downloaded file against SHA256SUMS; stops the install if it does not match.
+verify() {
+  expected="$(awk -v f="$1" '$2 == f || $2 == "*" f { print $1 }' "$tmp/SHA256SUMS")"
+  [ -n "$expected" ] || fail "the checksum file does not list $1. Nothing was installed."
+  [ "$expected" = "$(sha256_of "$tmp/$1")" ] || fail "$1 does not match its checksum. Nothing was installed."
+}
+
+install_helper() {
+  download "$BASE/$HELPER" "$tmp/$HELPER" || fail "could not download $BASE/$HELPER."
+  verify "$HELPER"
+  mkdir -p "$HELPER_DIR"
+  cp "$tmp/$HELPER" "$HELPER_DIR/$HELPER"
+  chmod 755 "$HELPER_DIR/$HELPER"
+  path_json="$(printf '%s' "$HELPER_DIR/$HELPER" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+  registered=0
+  # The loop reads from a here-document so registered survives it (a pipe would run it in a subshell).
+  while IFS= read -r dir; do
+    [ -d "$(dirname "$dir")" ] || continue # that browser has no profile here
+    mkdir -p "$dir"
+    printf '{\n  "name": "%s",\n  "description": "Study Duo desktop helper: what desktop music apps are playing",\n  "path": "%s",\n  "type": "stdio",\n  "allowed_origins": ["chrome-extension://%s/"]\n}\n' "$HOST" "$path_json" "$EXTENSION_ID" > "$dir/$HOST.json"
+    registered=$((registered + 1))
+  done <<EOF_DIRS
+$(host_dirs)
+EOF_DIRS
+  if [ "$registered" -gt 0 ]; then
+    say "Desktop helper installed for $registered browser(s). Turn on Desktop apps in Study Duo's Connections to use it."
+  else
+    say "Desktop helper installed, but no Chrome, Chromium, Edge, Brave or Vivaldi profile was found to register it with."
+  fi
+}
+
+uninstall_helper() {
+  while IFS= read -r dir; do rm -f "$dir/$HOST.json"; done <<EOF_DIRS
+$(host_dirs)
+EOF_DIRS
+  if [ -d "$HELPER_DIR" ]; then
+    rm -rf "$HELPER_DIR"
+    say "Removed the desktop helper."
+  fi
+}
+
 uninstall() {
+  uninstall_helper
   if [ -d "$DEST" ]; then
     rm -rf "$DEST"
     rmdir "$HOME_DIR" 2>/dev/null || true
@@ -101,10 +162,14 @@ uninstall() {
 }
 
 main() {
-  if [ "${1:-}" = "--uninstall" ]; then
-    uninstall
-    return 0
-  fi
+  with_helper=""
+  for arg in "$@"; do
+    case "$arg" in
+      --uninstall) uninstall; return 0 ;;
+      --helper) with_helper=1 ;;
+      *) fail "unknown option $arg (use --helper or --uninstall)." ;;
+    esac
+  done
   if grep -qi microsoft /proc/version 2>/dev/null; then
     fail "this looks like WSL. Run the Windows line in PowerShell instead: powershell -c \"irm https://raw.githubusercontent.com/$REPO/main/install.ps1 | iex\""
   fi
@@ -118,10 +183,7 @@ main() {
   download "$BASE/$ZIP" "$tmp/$ZIP" || fail "could not download $BASE/$ZIP."
   download "$BASE/SHA256SUMS" "$tmp/SHA256SUMS" || fail "could not download the checksums."
 
-  expected="$(awk -v f="$ZIP" '$2 == f || $2 == "*" f { print $1 }' "$tmp/SHA256SUMS")"
-  actual="$(sha256_of "$tmp/$ZIP")"
-  [ -n "$expected" ] || fail "the checksum file does not list $ZIP. Nothing was installed."
-  [ "$expected" = "$actual" ] || fail "the download does not match its checksum. Nothing was installed."
+  verify "$ZIP"
   say "Checksum matches."
 
   if [ -z "${STUDY_DUO_BASE_URL:-}" ] && command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
@@ -141,6 +203,8 @@ main() {
   say "  $DEST"
   if copy_path "$DEST"; then say "(That path is on your clipboard.)"; fi
   open_extensions || say "Open your browser's extensions page (for example chrome://extensions)."
+  say ""
+  [ -z "$with_helper" ] || install_helper
   say ""
   say "Three clicks left, once:"
   say "  1. Turn on Developer mode (top right of the extensions page)."

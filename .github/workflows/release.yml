@@ -35,7 +35,8 @@ jobs:
           cp build/study-duo-*-chrome.zip dist/study-duo-chromium.zip
           cp build/study-duo-*-firefox.zip dist/study-duo-firefox.zip
           cp build/study-duo-*-sources.zip dist/study-duo-sources.zip
-          cd dist && sha256sum study-duo-*.zip > SHA256SUMS && cat SHA256SUMS
+          cp helper/study-duo-helper.sh helper/study-duo-helper.ps1 helper/study-duo-helper.bat dist/
+          cd dist && sha256sum study-duo-* > SHA256SUMS && cat SHA256SUMS
       - name: Release notes from CHANGELOG
         run: |
           awk -v v="${GITHUB_REF_NAME#v}" 'index($0, "## [" v "]") == 1 {on=1; next} on && (/^## \[/ || /^\[[^]]*\]: /) {exit} on {print}' CHANGELOG.md > dist/notes.md
@@ -65,4 +66,4 @@ jobs:
       - name: Attest where the zips came from
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: dist/study-duo-*.zip
+          subject-path: dist/study-duo-*
