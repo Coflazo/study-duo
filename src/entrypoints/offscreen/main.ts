@@ -1,5 +1,6 @@
 import { playBell } from '@/core/bell';
-import { parseOffscreenMessage, parseSound } from '@/core/messages';
+import { parseFileCommand, parseOffscreenMessage, parseSound } from '@/core/messages';
+import { fileCommand } from './file';
 import { startNoise } from '@/core/noise';
 
 let ctx: AudioContext | null = null;
@@ -17,6 +18,11 @@ browser.runtime.onMessage.addListener((raw, sender) => {
   }
   // Only commands the background forwards; a page's own request to the background also reaches this page.
   if (!raw || typeof raw !== 'object' || (raw as { target?: unknown }).target !== 'offscreen') return;
+  const file = parseFileCommand(raw);
+  if (file) {
+    const audio = (ctx ??= new AudioContext());
+    return void audio.resume().then(() => fileCommand(audio, file)).catch(console.error);
+  }
   const cmd = parseSound(raw);
   if (!cmd) return;
   const audio = (ctx ??= new AudioContext());

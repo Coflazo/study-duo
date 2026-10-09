@@ -13,6 +13,7 @@
   import NumberField from '@/ui/NumberField.svelte';
   import Segmented from '@/ui/Segmented.svelte';
   import SignButton from '@/ui/SignButton.svelte';
+  import FolderLibrary from '@/ui/FolderLibrary.svelte';
 
   let { data }: { data: ReturnType<typeof createLive> } = $props();
   const live = $derived(data.live);
@@ -138,6 +139,8 @@
   </div>
 
   <div>
+    <FolderLibrary />
+
     <section aria-labelledby="files-title">
       <h2 class="section-title" id="files-title">Your files</h2>
       <div class="row">
