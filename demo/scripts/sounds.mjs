@@ -5,6 +5,7 @@
 import { chromium } from "@playwright/test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
+import { createJiti } from "jiti";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,8 +29,10 @@ function wav(channels) {
 }
 
 // Noise: the extension loops 6 seconds of it; the film needs a few seconds of each kind. Seeded so renders repeat.
-const { noiseSamples, NOISES } = await import(path.join(ROOT, "src/core/noise.ts"));
-const { seeded } = await import(path.join(ROOT, "src/ml/random.ts"));
+// jiti (already a build dependency) loads the TypeScript and its imports without file extensions, as the bundler does.
+const jiti = createJiti(import.meta.url);
+const { noiseSamples, NOISES } = await jiti.import(path.join(ROOT, "src/core/noise.ts"));
+const { seeded } = await jiti.import(path.join(ROOT, "src/ml/random.ts"));
 for (const kind of NOISES) {
   const r = seeded(11);
   writeFileSync(path.join(OUT, `noise-${kind}.wav`), wav([noiseSamples(kind, RATE * 8, () => r.u())]));
