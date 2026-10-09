@@ -59,6 +59,9 @@
         src = l.source === 'soundcloud' ? `${l.embed}&auto_play=${play}` : l.embed;
       }
     });
+    // What the last player said belongs to the last link.
+    news = {};
+    heard = false;
     problem = null;
     sent = { state: '', title: '', position: 0, at: 0, problem: '' };
     clearTimeout(skipping);
@@ -87,6 +90,10 @@
     if (CAPS[stream.source].volume) run({ op: 'volume', volume: player.volume });
     if (stream.source === 'youtube') post([JSON.stringify({ event: 'command', func: 'unMute', args: [], id: 1, channel: 'widget' })]);
     if (CAPS[stream.source].play) run({ op: wanted() ? 'play' : 'pause' });
+    // Back where it was: YouTube starts there from its address; the others are moved after play (Spotify's play
+    // starts the track from its beginning).
+    const at = streamAt(player, Date.now());
+    if (stream.source !== 'youtube' && CAPS[stream.source].seek && at > 1_000) run({ op: 'seek', ms: at });
   }
 
   function report() {

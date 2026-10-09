@@ -28,6 +28,15 @@ describe('parseStreamLink', () => {
     expect(ok('https://listen.tidal.com/playlist/0b1e7a4c-6b5a-4c1c-9d3e-2f5a6b7c8d9e').embed).toBe('https://embed.tidal.com/playlists/0b1e7a4c-6b5a-4c1c-9d3e-2f5a6b7c8d9e');
   });
 
+  it('never builds an embed on another host, whatever the address hides', () => {
+    expect(ok('https://evil@open.spotify.com/track/2i6veFyjDIodH3hgpkwxK6').embed).toBe('https://open.spotify.com/embed/track/2i6veFyjDIodH3hgpkwxK6');
+    expect(parseStreamLink('https://open.spotify.com@evil.com/track/2i6veFyjDIodH3hgpkwxK6')).toEqual({ ok: false, reason: 'unknown' });
+    expect(ok('HTTPS://OPEN.SPOTIFY.COM:443/track/2i6veFyjDIodH3hgpkwxK6').embed).toBe('https://open.spotify.com/embed/track/2i6veFyjDIodH3hgpkwxK6');
+    expect(parseStreamLink('https://soundcloud.com/forss/..%2F..%2Fevil')).toEqual({ ok: false, reason: 'unknown' });
+    expect(parseStreamLink('https://music.apple.com/us/album/x/1?i=1%26x%3Devil').ok && ok('https://music.apple.com/us/album/x/1?i=1%26x%3Devil').embed).toBe('https://embed.music.apple.com/us/album/x/1');
+    expect(ok('https://tidal.com/track/77646168/u').embed).toBe('https://embed.tidal.com/tracks/77646168');
+  });
+
   it('keeps YouTube as before, and names what it cannot play', () => {
     expect(ok('https://youtu.be/X0Cv0l-j86Y?t=60&si=s')).toMatchObject({ source: 'youtube', kind: 'video', url: 'https://www.youtube.com/watch?v=X0Cv0l-j86Y&t=60', start: 60 });
     expect(parseStreamLink('https://example.com/song')).toEqual({ ok: false, reason: 'unknown' });

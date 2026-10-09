@@ -59,7 +59,8 @@ export function parseStreamLink(raw: string): StreamParse {
     return { ok: true, link: { source: 'apple', kind: kind === 'song' ? 'track' : (kind as StreamLink['kind']), url: `https://music.apple.com/${tail}`, embed: `https://embed.music.apple.com/${tail}`, start: 0 } };
   }
   if (host === 'tidal.com' || host === 'www.tidal.com' || host === 'listen.tidal.com') {
-    const p = parts[0] === 'browse' ? parts.slice(1) : parts;
+    let p = parts[0] === 'browse' ? parts.slice(1) : parts;
+    if (p.length === 3 && p[2] === 'u') p = p.slice(0, 2); // share links end in /u
     const kind = p[0];
     if (p.length !== 2 || !['track', 'album', 'playlist'].includes(kind!) || !/^[\w-]{1,60}$/.test(p[1]!)) return { ok: false, reason: 'unknown' };
     return { ok: true, link: { source: 'tidal', kind: kind as StreamLink['kind'], url: `https://tidal.com/browse/${kind}/${p[1]}`, embed: `https://embed.tidal.com/${kind}s/${p[1]}`, start: 0 } };

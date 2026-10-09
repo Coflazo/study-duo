@@ -72,6 +72,38 @@ test('Spotify plays in the side panel: play, pause and seek from the card; previ
   await ctx.close();
 });
 
+test('a Spotify preview keeps play, pause and seek on the card, and says to sign in', async () => {
+  const { ctx } = await launch(tempProfile());
+  await ctx.route('https://open.spotify.com/embed/**', (r) => r.fulfill({ contentType: 'text/html', body: FAKE_SPOTIFY(30_000) }));
+  const panel = await openPanel(ctx);
+  await panel.getByLabel('Link to play').fill('spotify:track:2i6veFyjDIodH3hgpkwxK6');
+  await panel.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect.poll(async () => (await stateOf(panel))?.stream?.problem).toBe('preview');
+  const popup = await ctx.newPage();
+  await popup.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  await expect(popup.locator('.title')).toHaveText('Only 30 s previews');
+  await expect(popup.getByRole('button', { name: 'Pause' })).toBeVisible();
+  await expect(popup.getByRole('slider', { name: 'Position' })).toBeVisible();
+  await ctx.close();
+});
+
+test('a SoundCloud track picked again after noise picks up where it stopped', async () => {
+  const { ctx } = await launch(tempProfile());
+  await ctx.route('https://w.soundcloud.com/player/**', (r) => r.fulfill({ contentType: 'text/html', body: FAKE_SOUNDCLOUD }));
+  const panel = await openPanel(ctx);
+  await panel.getByLabel('Link to play').fill('https://soundcloud.com/forss/flickermood');
+  await panel.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect.poll(async () => (await stateOf(panel))?.stream?.title).toBe('Flickermood');
+  await panel.evaluate(() => chrome.runtime.sendMessage({ kind: 'player', op: 'seek', ms: 60_000 }));
+  await expect.poll(async () => (await stateOf(panel))?.stream?.position, { timeout: 8_000 }).toBeGreaterThanOrEqual(60_000);
+  await panel.evaluate(() => chrome.runtime.sendMessage({ kind: 'player', op: 'source', source: 'noise' }));
+  await expect.poll(async () => (await stateOf(panel))?.active).toBe('noise');
+  await panel.evaluate(() => chrome.runtime.sendMessage({ kind: 'player', op: 'source', source: 'soundcloud' }));
+  // The new player is moved back to where the last one stopped.
+  await expect.poll(() => embedTitle(panel, 'w.soundcloud.com'), { timeout: 8_000 }).toMatch(/seekTo:6\d{4}/);
+  await ctx.close();
+});
+
 test('a Spotify preview says to sign in, and Sign in opens a small window on Spotify', async () => {
   const { ctx } = await launch(tempProfile());
   await ctx.route('https://open.spotify.com/embed/**', (r) => r.fulfill({ contentType: 'text/html', body: FAKE_SPOTIFY(30_000) }));
@@ -113,6 +145,7 @@ test('Apple Music and Tidal play in their own player, and say to use its buttons
   const popup = await ctx.newPage();
   await popup.goto(`chrome-extension://${EXT_ID}/popup.html`);
   await expect(popup.getByText("Use Apple Music's own buttons there.")).toBeVisible();
+  await expect(popup.locator('.title')).toHaveText('In the side panel');
   await expect(popup.getByRole('button', { name: 'Pause' })).toHaveCount(0);
   await ctx.close();
 });

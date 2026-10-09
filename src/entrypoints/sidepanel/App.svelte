@@ -254,7 +254,7 @@
     {#if owner === me}
       <StreamFrame {player} {stream} onsignin={() => signIn(stream.source)} />
     {:else}
-      <p class="elsewhere">YouTube plays in the side panel of another window. <button class="link" onclick={() => panelOwnerItem.setValue(me)}>Play it here</button></p>
+      <p class="elsewhere">{SERVICES[streamView].name} plays in the side panel of another window. <button class="link" onclick={() => panelOwnerItem.setValue(me)}>Play it here</button></p>
     {/if}
   {/if}
 

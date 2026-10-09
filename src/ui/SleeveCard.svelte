@@ -233,14 +233,10 @@
           <p class="title">{streamView === 'youtube' ? 'This video only plays on YouTube' : `This only plays on ${name}`}</p>
           <p class="sub wrap problem">{stream.problem === 'embed' ? 'Its owner turned off playing elsewhere.' : 'It is gone or private.'}{ytLink?.list ? ' Skipping to the next one in 5 s.' : ''}</p>
           <button class="action" onclick={() => browser.tabs.create({ url: ytLink ? canonicalYouTube(ytLink) : stream.url })}>Open on {name}</button>
-        {:else if stream?.problem === 'preview'}
-          <p class="title">Only 30 s previews</p>
-          <p class="sub wrap problem">Sign in to Spotify in the side panel to hear full songs.</p>
-          <button class="action" onclick={() => openPanel('streaming')}>Open side panel</button>
         {:else if stream}
-          <p class="title" title={stream.title ?? ''}>{caps.title ? clip(stream.title ?? name) : 'Playing in the side panel'}</p>
-          <p class="sub" class:wrap={!caps.title} title={stream.artist ?? ''}>
-            {!player.panel ? 'Plays in the full player' : caps.title ? [stream.artist, ytLink?.list ? 'playlist' : stream.duration ? null : 'live'].filter(Boolean).join(' · ') || name : caps.play ? `${name} plays and seeks inside its own player there.` : `Use ${name}'s own buttons there.`}
+          <p class="title" title={stream.title ?? ''}>{caps.title ? clip(stream.title ?? name) : !caps.play ? 'In the side panel' : stream.problem === 'preview' ? 'Only 30 s previews' : playing ? 'Playing in the side panel' : 'Paused in the side panel'}</p>
+          <p class="sub" class:wrap={!caps.title} class:problem={stream.problem === 'preview'} title={stream.artist ?? ''}>
+            {stream.problem === 'preview' ? 'Sign in to Spotify in the side panel to hear full songs.' : !player.panel ? 'Plays in the full player' : caps.title ? [stream.artist, ytLink?.list ? 'playlist' : stream.duration ? null : 'live'].filter(Boolean).join(' · ') || name : caps.play ? `${name} plays and seeks inside its own player there.` : `Use ${name}'s own buttons there.`}
           </p>
           {#if caps.play}
             <div class="keys">
@@ -297,7 +293,7 @@
       <button type="submit">Play</button>
     </form>
     <p class="foot wrap" class:problem={linkProblem} id="paste-note" role={linkProblem ? 'alert' : undefined}>{linkProblem || 'Plays in the side panel. Links are kept on this computer.'}</p>
-  {:else if stream && !stream.problem}
+  {:else if stream && (!stream.problem || stream.problem === 'preview')}
     {#if caps.seek}<SeekLine position={streamAt(player, now)} duration={stream.duration ?? 0} stamp={stream.at} onseek={(ms) => send({ op: 'seek', ms })} />{/if}
     <p class="foot wrap">{!player.panel ? 'Open the full player to play it.' : FOOT[stream.source]}</p>
   {:else if track}

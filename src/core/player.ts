@@ -9,6 +9,8 @@ export type PlayerSource = (typeof PLAYER_SOURCES)[number];
 export const STREAM_SOURCES = ['youtube', 'spotify', 'apple', 'soundcloud', 'tidal'] as const;
 export type StreamSource = (typeof STREAM_SOURCES)[number];
 export const isStream = (s: unknown): s is StreamSource => (STREAM_SOURCES as readonly unknown[]).includes(s);
+/** Services whose embedded player publishes no way to control it or hear from it. */
+const QUIET: ReadonlySet<StreamSource> = new Set(['apple', 'tidal']);
 
 /** A music site in a tab, as its page reported it. Only music sites report, and only the song, never the page. */
 export interface TabMusic {
@@ -353,9 +355,11 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
     case 'stream': {
       const before = s.playing && s.active && s.active !== cmd.source ? stop(s.active, s) : [];
       const from = cmd.at ?? 0;
+      // Apple Music and Tidal start with their own Play button and never say whether they play: not counted as playing.
+      const plays = !QUIET.has(cmd.source);
       const stream: StreamState = { source: cmd.source, url: cmd.url, title: null, artist: null, position: from, at: now, duration: null, problem: null };
-      const state: PlayerState = { ...freeze(s, now), active: cmd.source, playing: true, startedAt: now, at: now, stream };
-      return { state, effects: [...before, { type: 'panel-load', source: cmd.source, url: cmd.url, at: from, play: true, volume: s.volume }] };
+      const state: PlayerState = { ...freeze(s, now), active: cmd.source, playing: plays, startedAt: plays ? now : null, at: now, stream };
+      return { state, effects: [...before, { type: 'panel-load', source: cmd.source, url: cmd.url, at: from, play: plays, volume: s.volume }] };
     }
     case 'stream-report': {
       const st = s.stream;
