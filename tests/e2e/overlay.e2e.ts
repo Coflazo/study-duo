@@ -99,3 +99,35 @@ test('corner clock and phase words survive a hostile page and never touch the ne
   await ctx.close();
   fs.rmSync(profile, { recursive: true, force: true });
 });
+
+test("a web page's scripts cannot read or write Study Duo's storage, and the clock still runs (#30)", async () => {
+  const { ctx } = await launch(tempProfile());
+  await ctx.route('https://study-duo.test/**', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><p>A page</p>' }));
+  const page = await ctx.newPage();
+  const cdp = await ctx.newCDPSession(page);
+  const worlds: number[] = [];
+  cdp.on('Runtime.executionContextCreated', (e: any) => e.context.auxData?.type === 'isolated' && worlds.push(e.context.id));
+  await cdp.send('Runtime.enable');
+  await page.goto('https://study-duo.test/');
+  // The clock's own script, the most a page could reach with a renderer exploit.
+  const inClock = async (expression: string) => {
+    for (const contextId of worlds) {
+      const { result } = await cdp.send('Runtime.evaluate', { expression: `(async () => { if (globalThis.chrome?.runtime?.id !== '${EXT_ID}') return null; ${expression} })()`, contextId, awaitPromise: true, returnByValue: true }).catch(() => ({ result: { value: null } }));
+      if (result.value !== null) return result.value as string;
+    }
+    return null;
+  };
+  await expect.poll(() => inClock("return 'here';")).toBe('here');
+  expect(await inClock("return chrome.storage.local.get(null).then(() => 'read', () => 'refused');")).toBe('refused');
+  expect(await inClock("return chrome.storage.local.set({ hacked: true }).then(() => 'written', () => 'refused');")).toBe('refused');
+
+  const popup = await ctx.newPage();
+  await popup.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  await popup.getByRole('button', { name: 'Start' }).click();
+  await page.bringToFront();
+  const dom = await shadow(page);
+  await expect.poll(async () => (await dom.style('clock'))?.display).toBe('flex');
+  await popup.getByRole('button', { name: 'Pause' }).click();
+  await expect.poll(async () => (await dom.prop('clock', 'this.dataset.status'))).toBe('paused');
+  await ctx.close();
+});

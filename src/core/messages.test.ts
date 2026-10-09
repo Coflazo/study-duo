@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { allowedFromSender, isFromWebPage, parseAnnounce, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest, isPing, parseMove, parseCounts, parseSound, parseFileCommand } from './messages';
+import { allowedFromSender, isClockHello, isFromWebPage, parseAnnounce, parseClockState, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest, isPing, parseMove, parseCounts, parseSound, parseFileCommand } from './messages';
+import { normalizeSettings } from './settings';
+import { initialState } from './timer';
 
 describe('parseMessage', () => {
   it('accepts every plain timer event', () => {
@@ -151,5 +153,16 @@ describe('parseFileCommand', () => {
     for (const raw of [{ kind: 'file', op: 'pause' }, { target: 'offscreen', kind: 'file', op: 'play', path: '', at: 0, volume: 1 }, { target: 'offscreen', kind: 'file', op: 'play', path: '../secret.mp3', at: 0, volume: 1 }, { target: 'offscreen', kind: 'file', op: 'play', path: '/etc/x.mp3', at: 0, volume: 1 }, { target: 'offscreen', kind: 'file', op: 'seek', at: -1 }]) {
       expect(parseFileCommand(raw)).toBeNull();
     }
+  });
+});
+
+describe('the clock on web pages (#30)', () => {
+  it('asks with a hello and takes only a well-formed state', () => {
+    expect(isClockHello({ kind: 'overlay', op: 'hello' })).toBe(true);
+    expect(isClockHello({ kind: 'overlay', op: 'ping' })).toBe(false);
+    const timer = initialState();
+    expect(parseClockState({ kind: 'overlay', op: 'state', timer, settings: { overlayEnabled: false } })).toEqual({ timer, settings: normalizeSettings({ overlayEnabled: false }) });
+    expect(parseClockState({ kind: 'overlay', op: 'state', timer: { v: 2 }, settings: {} })).toBeNull();
+    expect(parseClockState({ kind: 'overlay', op: 'state', settings: {} })).toBeNull();
   });
 });

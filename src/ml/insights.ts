@@ -115,8 +115,9 @@ const sourceOf = (l: ListenRecord) => (l.host === 'file' ? 'file' : l.host === '
  * zero ("unclear" otherwise). Suggestions come from one Thompson sample of the posterior (Sutton and Barto, ch. 2).
  */
 /** Hosts whose plays are shown but never learned from. Spotify's User Guidelines forbid using Spotify content in a
- *  machine learning model; Spotify plays reach insights only as the user's own ListenBrainz or Last.fm scrobbles. */
-export const NOT_FOR_INSIGHTS = SPOTIFY_HOSTS;
+ *  machine learning model. ListenBrainz plays from Spotify are filed under Spotify; Last.fm does not say which app
+ *  played a song, so none of its plays are learned from either (#46). */
+export const NOT_FOR_INSIGHTS: ReadonlySet<string> = new Set([...SPOTIFY_HOSTS, 'last.fm']);
 
 export function computeInsights(raw: InsightsInput): Insights {
   const input = { ...raw, listens: raw.listens.filter((l) => !NOT_FOR_INSIGHTS.has(l.host)) };

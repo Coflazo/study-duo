@@ -154,8 +154,18 @@ export async function syncCalendar(now = Date.now(), deps: CalendarDeps = real):
       }
       if (r.status === 404) return void (await patch({ calendarId: null, lastSync: now, error: gone, sent }));
       if (r.status === 409) {
-        // It is there already (a retry), or the user deleted it: update it, and leave a deleted one deleted.
+        // It is there already (a retry), or the user deleted it. Google keeps a deleted event as "cancelled" and would
+        // let a patch bring it back: look first, and leave a deleted one deleted.
         const { id, ...body } = event;
+        const seen = await call(`${events}/${id}`, { method: 'GET' });
+        if (seen === null) {
+          error = SIGN_IN_AGAIN;
+          break;
+        }
+        if (seen.status === 200 && (seen.data as { status?: unknown } | null)?.status === 'cancelled') {
+          sent[s.id] = hash;
+          continue;
+        }
         r = await call(`${events}/${id}`, { method: 'PATCH', body });
         if (r === null) {
           error = SIGN_IN_AGAIN;

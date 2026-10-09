@@ -1,5 +1,6 @@
 import { normalizeSettings } from '@/core/settings';
-import { settingsItem, timerItem } from '@/core/store';
+import type { ClockState } from '@/core/messages';
+import { loadSettings, loadState, settingsItem, timerItem } from '@/core/store';
 
 const OVERLAY = '/content-scripts/overlay.js';
 const asking = new Set<number>();
@@ -47,4 +48,17 @@ export function keepClocksOnOpenTabs(): void {
     if (!now || now.status === 'stopped' || (before && before.status !== 'stopped')) return;
     void clockWanted().then((yes) => (yes ? ensureFrontTabs() : undefined)).catch(console.error);
   });
+}
+
+/** What a page's clock needs: the timer and the settings. Web pages cannot read Study Duo's storage (#30). */
+export async function clockState(): Promise<ClockState> {
+  const [timer, settings] = await Promise.all([loadState(), loadSettings()]);
+  return { timer, settings };
+}
+
+/** Every web page's clock gets the timer and the settings when either changes; a tab without a clock ignores it. */
+export async function sendClocks(): Promise<void> {
+  const [state, tabs] = await Promise.all([clockState(), browser.tabs.query({ url: ['http://*/*', 'https://*/*'] })]);
+  const message = { kind: 'overlay', op: 'state', ...state };
+  await Promise.all(tabs.map((t) => (t.id === undefined ? undefined : browser.tabs.sendMessage(t.id, message).catch(() => undefined))));
 }

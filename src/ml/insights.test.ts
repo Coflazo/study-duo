@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '@/core/settings';
-import { computeInsights } from './insights';
+import { computeInsights, NOT_FOR_INSIGHTS } from './insights';
 import { NULL_STUDENT, seeded, simulate, TYPICAL } from './synthetic';
 
 const run = (sessions: ReturnType<typeof simulate>['sessions'], listens: ReturnType<typeof simulate>['listens'], seed = 1) =>
@@ -74,4 +74,14 @@ describe('computeInsights', { timeout: 20_000 }, () => {
     const used = process.cpuUsage(t);
     expect((used.user + used.system) / 1000).toBeLessThan(1000);
   }, 20_000);
+});
+
+describe('songs never learned from', () => {
+  it('leaves out Spotify, and Last.fm, which cannot say whether Spotify played a song', () => {
+    expect(NOT_FOR_INSIGHTS.has('open.spotify.com')).toBe(true);
+    expect(NOT_FOR_INSIGHTS.has('app:spotify')).toBe(true);
+    expect(NOT_FOR_INSIGHTS.has('last.fm')).toBe(true);
+    expect(NOT_FOR_INSIGHTS.has('listenbrainz')).toBe(false);
+    expect(NOT_FOR_INSIGHTS.has('file')).toBe(false);
+  });
 });

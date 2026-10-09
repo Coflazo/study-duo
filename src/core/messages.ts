@@ -1,8 +1,8 @@
 import { NOISES, type NoiseKind } from './noise';
-import { strictPos, type OverlayPos } from './settings';
+import { normalizeSettings, strictPos, type OverlayPos, type TimerSettings } from './settings';
 import type { BellKind } from './bell';
 import { siteOf, type SiteCategory } from './sites';
-import type { Phase, TimerEvent } from './timer';
+import type { Phase, TimerEvent, TimerState } from './timer';
 
 export type TimerMessage = { kind: 'timer'; event: TimerEvent };
 export type AnnounceMessage = { kind: 'announce'; line: string; sub: string; phase: Phase };
@@ -87,6 +87,21 @@ export function resolveSiteRequest(msg: SiteMessage, senderUrl: string | undefin
 }
 
 /** The background asking a page whether its corner clock still works (see overlay-inject.ts). */
+/** A page's clock asking for the timer and the settings: web pages cannot read Study Duo's storage (#30). */
+export function isClockHello(raw: unknown): boolean {
+  return isObj(raw) && raw.kind === 'overlay' && raw.op === 'hello';
+}
+
+/** The timer and the settings, sent to every page's clock when they change and in answer to its hello. */
+export interface ClockState {
+  timer: TimerState;
+  settings: TimerSettings;
+}
+export function parseClockState(raw: unknown): ClockState | null {
+  if (!isObj(raw) || raw.kind !== 'overlay' || raw.op !== 'state' || !isObj(raw.timer) || raw.timer.v !== 1) return null;
+  return { timer: raw.timer as unknown as TimerState, settings: normalizeSettings(raw.settings) };
+}
+
 export function isPing(raw: unknown): boolean {
   return raw !== null && typeof raw === 'object' && (raw as Record<string, unknown>).kind === 'overlay' && (raw as Record<string, unknown>).op === 'ping';
 }
