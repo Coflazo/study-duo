@@ -46,12 +46,12 @@ test('a YouTube link plays in the side panel, the popup controls it, and closing
 
   // A link that is not YouTube is refused in plain words.
   await panel.getByRole('radiogroup', { name: 'Sections' }).getByRole('radio', { name: 'Streaming' }).click();
-  await panel.getByLabel('YouTube link').fill('https://example.com/watch?v=X0Cv0l-j86Y');
+  await panel.getByLabel('Link to play').fill('https://example.com/watch?v=X0Cv0l-j86Y');
   await panel.getByRole('button', { name: 'Play', exact: true }).click();
-  await expect(panel.getByRole('alert')).toHaveText('That is not a YouTube link.');
+  await expect(panel.getByRole('alert')).toHaveText('Study Duo plays links from YouTube, Spotify, SoundCloud, Apple Music and Tidal.');
 
   // A shared link plays from its start time; who shared it is dropped and never kept.
-  await panel.getByLabel('YouTube link').fill('https://youtu.be/X0Cv0l-j86Y?t=60&si=sharer123');
+  await panel.getByLabel('Link to play').fill('https://youtu.be/X0Cv0l-j86Y?t=60&si=sharer123');
   await panel.getByRole('button', { name: 'Play', exact: true }).click();
   await expect.poll(async () => (await player())?.stream?.title).toBe('Fake video X0Cv0l-j86Y');
   expect(await player()).toMatchObject({ active: 'youtube', playing: true, stream: { url: 'https://www.youtube.com/watch?v=X0Cv0l-j86Y&t=60' } });
@@ -96,7 +96,7 @@ test('a video whose owner turned embedding off says so, with a way to YouTube', 
   const panel = await ctx.newPage();
   await panel.goto(`chrome-extension://${EXT_ID}/sidepanel.html`);
   await panel.getByRole('radiogroup', { name: 'Sections' }).getByRole('radio', { name: 'Streaming' }).click();
-  await panel.getByLabel('YouTube link').fill('youtube.com/watch?v=embedoffxyz');
+  await panel.getByLabel('Link to play').fill('youtube.com/watch?v=embedoffxyz');
   await panel.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(panel.getByRole('status')).toContainText('Its owner lets it play only on YouTube.');
   await expect(panel.getByRole('link', { name: 'Open on YouTube' })).toHaveAttribute('href', 'https://www.youtube.com/watch?v=embedoffxyz');
@@ -110,9 +110,9 @@ test('a link pasted into the popup card plays, and a wrong one is named plainly'
   await popup.goto(`chrome-extension://${EXT_ID}/popup.html`);
   await popup.evaluate(() => chrome.runtime.sendMessage({ kind: 'player', op: 'source', source: 'youtube' }));
   await expect(popup.getByText('Play a YouTube link')).toBeVisible();
-  await popup.getByLabel('YouTube link').fill('open.spotify.com/playlist/37i9dQZF1DX8Uebhn9wzrS');
+  await popup.getByLabel('YouTube link').fill('https://example.com/song');
   await popup.getByRole('button', { name: 'Play', exact: true }).click();
-  await expect(popup.getByRole('alert')).toHaveText('That is not a YouTube link. Use one from youtube.com, youtu.be or music.youtube.com.');
+  await expect(popup.getByRole('alert')).toHaveText('Study Duo plays links from YouTube, Spotify, SoundCloud, Apple Music and Tidal.');
   // The popup opens the side panel and closes itself, as it does for real; another page reads the result.
   const watcher = await ctx.newPage();
   await watcher.goto(`chrome-extension://${EXT_ID}/sidepanel.html`);
@@ -129,7 +129,7 @@ test('with side panels open in two windows, one plays; closing the other does no
   const first = await ctx.newPage();
   await first.goto(`chrome-extension://${EXT_ID}/sidepanel.html`);
   await first.getByRole('radiogroup', { name: 'Sections' }).getByRole('radio', { name: 'Streaming' }).click();
-  await first.getByLabel('YouTube link').fill('https://www.youtube.com/watch?v=X0Cv0l-j86Y');
+  await first.getByLabel('Link to play').fill('https://www.youtube.com/watch?v=X0Cv0l-j86Y');
   await first.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(first.locator('iframe[title="YouTube player"]')).toHaveCount(1);
   const second = await ctx.newPage();

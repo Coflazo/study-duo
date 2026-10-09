@@ -265,6 +265,12 @@ describe('streaming in the side panel', () => {
     expect(effects).toEqual([{ type: 'panel-load', source: 'youtube', url: URL1, at: 3_420_000, play: true, volume: 0.6 }]);
   });
 
+  it('Apple Music and Tidal links load but do not count as playing: their own Play button starts them', () => {
+    const { state, effects } = applyPlayer({ ...playingNoise, panel: true }, { op: 'stream', source: 'apple', url: 'https://music.apple.com/us/album/x/1' }, NOW);
+    expect(state).toMatchObject({ active: 'apple', playing: false, startedAt: null });
+    expect(effects).toEqual([{ type: 'noise-stop' }, { type: 'panel-load', source: 'apple', url: 'https://music.apple.com/us/album/x/1', at: 0, play: false, volume: 0.5 }]);
+  });
+
   it('a closed panel stops the stream; play waits for the panel to open', () => {
     const closed = applyPlayer(loaded(), { op: 'panel', open: false }, NOW + 5_000);
     expect(closed.state).toMatchObject({ playing: false, panel: false, stream: { position: 5_000 } });

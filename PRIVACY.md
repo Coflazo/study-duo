@@ -40,6 +40,10 @@ One part of the code makes every request, and it refuses any address that does n
 
 Google Calendar uses one permission, "Make secondary Google calendars, and see, create, change, and delete events on them": Study Duo can only reach the calendar it made, never your other calendars. You sign in with Google's own window; Study Duo never sees your password. The sign-in token stays in the browser's memory, is never written to disk by Study Duo, and is handed back to Google (revoked) when you press Disconnect. The Study Duo calendar and its events stay in your Google account until you delete them there; Disconnect stops new events at once. Google keeps what it receives under its own privacy policy.
 
+## Streaming links (optional)
+
+Spotify, SoundCloud, Apple Music and Tidal links work the way YouTube links do, below: nothing reaches a service until you paste a link and press Play, its own embedded player (open.spotify.com, w.soundcloud.com, embed.music.apple.com, embed.tidal.com) then loads in the side panel and sees what any embedded player sees, and it loads again only while that service is the source with the panel open. Sign in opens the service's own sign-in page in a small window: you sign in with the service, not with Study Duo, which never sees your password or any token. Study Duo keeps the links you played on this computer and never keeps what streaming players play as listens.
+
 ## YouTube links (optional)
 
 Nothing reaches YouTube until you paste a link and press Play. Then, and whenever YouTube is the source while the side panel is open, the panel loads YouTube's own player from www.youtube-nocookie.com, which sees what any embedded YouTube video sees: your IP address, the video, and that it plays on Study Duo's site (Study Duo sends coflazo.github.io as the page it plays on, because YouTube refuses to play without one). YouTube sets its cookies only once the video plays. Study Duo keeps the links you played, with their titles, on this computer, never the parts of a shared link that say who shared it, and never keeps YouTube plays as listens. Forget a link in Streaming, or Delete everything, to remove them.
