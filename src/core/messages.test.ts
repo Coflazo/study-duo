@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedFromSender, isClockHello, parseTabMedia, isFromWebPage, parseAnnounce, parseClockState, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest, isPing, parseMove, parseCounts, parseSound, parseFileCommand } from './messages';
+import { allowedFromSender, isClockHello, isSiteHello, parseTabMedia, isFromWebPage, parseAnnounce, parseClockState, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest, isPing, parseMove, parseCounts, parseSound, parseFileCommand } from './messages';
 import { normalizeSettings } from './settings';
 import { initialState } from './timer';
 
@@ -172,5 +172,15 @@ describe('tab media commands', () => {
     expect(parseTabMedia({ kind: 'tab-media', op: 'next' })).toBe('next');
     expect(parseTabMedia({ kind: 'tab-media', op: 'seekto' })).toBeNull();
     expect(parseTabMedia({ kind: 'music', op: 'play' })).toBeNull();
+  });
+});
+
+describe('the install page asking whether Study Duo arrived', () => {
+  it('answers only the project site, only its install page, only a hello', () => {
+    const site = { origin: 'https://coflazo.github.io', url: 'https://coflazo.github.io/study-duo/' };
+    expect(isSiteHello({ kind: 'hello' }, site)).toBe(true);
+    expect(isSiteHello({ kind: 'player', op: 'play' }, site)).toBe(false);
+    expect(isSiteHello({ kind: 'hello' }, { origin: 'https://coflazo.github.io', url: 'https://coflazo.github.io/other-project/' })).toBe(false);
+    expect(isSiteHello({ kind: 'hello' }, { origin: 'https://evil.test', url: 'https://evil.test/study-duo/' })).toBe(false);
   });
 });

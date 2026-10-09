@@ -64,6 +64,25 @@ try {
   Assert-Version '0.1.4' 'piped install'
   Write-Host 'ok   works piped into iex, as the one-line install does'
 
+  # -Browsers: each picked browser's page, Firefox's signed add-on only once it exists, plain words for what is missing.
+  $env:STUDY_DUO_FAKE_APPS = '1'
+  $env:STUDY_DUO_XPI_URL = "http://127.0.0.1:$port/study-duo.xpi"
+  $out = (& $Shell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'install.ps1') -Browsers 'chrome,brave,firefox' 6>&1 | Out-String)
+  if ($out -notmatch 'Would open Chrome at chrome://extensions' -or $out -notmatch 'Would open Brave at brave://extensions') { throw "FAIL -Browsers did not open the picked browsers: $out" }
+  if ($out -notmatch 'not published yet, so Firefox was skipped') { throw "FAIL -Browsers opened a Firefox add-on that does not exist: $out" }
+  Set-Content -Path (Join-Path $rel 'study-duo.xpi') -Value 'xpi'
+  # The install page's own line: the script run as a scriptblock, where "-Browsers chrome,brave" arrives as a list.
+  $line = "& ([scriptblock]::Create((Get-Content -Raw '$(Join-Path $root 'install.ps1')'))) -Browsers chrome,brave"
+  $out = (& $Shell -NoProfile -ExecutionPolicy Bypass -Command $line 6>&1 | Out-String)
+  if ($out -notmatch 'Would open Chrome at chrome://extensions' -or $out -notmatch 'Would open Brave at brave://extensions') { throw "FAIL the page's line with two browsers: $out" }
+  $out = (& $Shell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'install.ps1') -Browsers 'firefox' 6>&1 | Out-String)
+  if ($out -notmatch [regex]::Escape("Would open Firefox at http://127.0.0.1:$port/study-duo.xpi")) { throw "FAIL -Browsers firefox did not open the signed add-on: $out" }
+  if ($out -match 'Downloading') { throw 'FAIL -Browsers firefox downloaded the Chromium folder it does not need' }
+  Remove-Item Env:\STUDY_DUO_FAKE_APPS
+  Write-Host "ok   opens each picked browser, and Firefox's signed add-on only when it exists"
+  if ((Invoke-Installer @('-Browsers', 'netscape')) -eq 0) { throw 'FAIL accepted an unknown browser' }
+  Write-Host 'ok   refuses a browser it does not know'
+
   if ((Invoke-Installer @('-Uninstall')) -ne 0) { throw 'FAIL uninstall exit code' }
   if (Test-Path $dest) { throw 'FAIL uninstall' }
   Write-Host 'ok   uninstalls'

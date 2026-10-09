@@ -1,0 +1,320 @@
+{
+  "arc-devmode": {
+    "file": "chrome-devmode.webp",
+    "w": 1040,
+    "h": 600,
+    "ring": [
+      728,
+      20,
+      304,
+      72
+    ],
+    "arrow": [
+      660,
+      226,
+      720,
+      62
+    ],
+    "alt": "Arc's extensions page, with Developer mode marked"
+  },
+  "arc-unpacked": {
+    "file": "chrome-unpacked.webp",
+    "w": 1040,
+    "h": 600,
+    "ring": [
+      32,
+      116,
+      277,
+      104
+    ],
+    "arrow": [
+      390.5,
+      338,
+      317,
+      174
+    ],
+    "alt": "Arc's extensions page with Developer mode on, Load unpacked marked"
+  },
+  "brave-devmode": {
+    "file": "brave-devmode.webp",
+    "w": 1040,
+    "h": 600,
+    "ring": [
+      672,
+      15,
+      360,
+      82
+    ],
+    "arrow": [
+      632,
+      226,
+      664,
+      62
+    ],
+    "alt": "Brave's extensions page, with Developer mode marked"
+  },
+  "brave-pin": {
+    "file": "brave-pin.webp",
+    "w": 411,
+    "h": 269,
+    "ring": [
+      294,
+      149,
+      44,
+      56
+    ],
+    "alt": "Brave's extensions menu, with the pin beside Study Duo marked"
+  },
+  "brave-unpacked": {
+    "file": "brave-unpacked.webp",
+    "w": 1040,
+    "h": 600,
+    "ring": [
+      32,
+      116,
+      304,
+      104
+    ],
+    "arrow": [
+      404,
+      338,
+      344,
+      174
+    ],
+    "alt": "Brave's extensions page with Developer mode on, Load unpacked marked"
+  },
+  "chrome-devmode": {
+    "file": "chrome-devmode.webp",
+    "w": 1040,
+    "h": 600,
+    "ring": [
+      728,
+      20,
+      304,
+      72
+    ],
+    "arrow": [
+      660,
+      226,
+      720,
+      62
+    ],
+    "alt": "Chrome's extensions page, with Developer mode marked"
+  },
+  "chrome-pin": {
+    "file": "chrome-pin.webp",
+    "w": 423,
+    "h": 275,
+    "ring": [
+      294,
+      155,
+      56,
+      56
+    ],
+    "alt": "Chrome's extensions menu, with the pin beside Study Duo marked"
+  },
+  "chrome-unpacked": {
+    "file": "chrome-unpacked.webp",
+    "w": 1040,
+    "h": 600,
+    "ring": [
+      32,
+      116,
+      277,
+      104
+    ],
+    "arrow": [
+      390.5,
+      338,
+      317,
+      174
+    ],
+    "alt": "Chrome's extensions page with Developer mode on, Load unpacked marked"
+  },
+  "edge-devmode": {
+    "file": "edge-devmode.webp",
+    "w": 520,
+    "h": 241,
+    "ring": [
+      31,
+      84,
+      282,
+      32
+    ],
+    "alt": "Edge's extensions page, with Developer mode marked"
+  },
+  "edge-pin": {
+    "file": "edge-pin.webp",
+    "w": 395,
+    "h": 254,
+    "ring": [
+      294,
+      154,
+      36,
+      36
+    ],
+    "alt": "Edge's extensions menu, with the pin beside Study Duo marked"
+  },
+  "edge-unpacked": {
+    "file": "edge-unpacked.webp",
+    "w": 520,
+    "h": 300,
+    "ring": [
+      342,
+      84,
+      36,
+      36
+    ],
+    "alt": "Edge's extensions page with Developer mode on, Load unpacked marked"
+  },
+  "linux-folder": {
+    "file": "linux-folder.webp",
+    "w": 1120,
+    "h": 680,
+    "ring": [
+      204,
+      128,
+      856,
+      76
+    ],
+    "box": true,
+    "alt": "Drawing of the folder window with its location bar open and the Study Duo folder address pasted"
+  },
+  "linux-terminal": {
+    "file": "linux-terminal.webp",
+    "w": 1040,
+    "h": 288,
+    "ring": [
+      44,
+      110,
+      936,
+      88
+    ],
+    "box": true,
+    "alt": "Drawing of a Linux terminal with the Study Duo line pasted at the prompt"
+  },
+  "mac-folder": {
+    "file": "mac-folder.webp",
+    "w": 1120,
+    "h": 680,
+    "ring": [
+      368,
+      120,
+      656,
+      84
+    ],
+    "box": true,
+    "alt": "Drawing of the Go to Folder box with the Study Duo folder address pasted"
+  },
+  "mac-terminal": {
+    "file": "mac-terminal.webp",
+    "w": 1040,
+    "h": 288,
+    "ring": [
+      44,
+      98,
+      936,
+      88
+    ],
+    "box": true,
+    "alt": "Drawing of the Mac Terminal with the Study Duo line pasted at the prompt"
+  },
+  "opera-devmode": {
+    "file": "opera-devmode.webp",
+    "w": 466,
+    "h": 300,
+    "ring": [
+      278,
+      84,
+      164,
+      33
+    ],
+    "alt": "Opera's extensions page, with Developer mode marked"
+  },
+  "opera-pin": {
+    "file": "opera-pin.webp",
+    "w": 407,
+    "h": 271,
+    "ring": [
+      294,
+      151,
+      52,
+      56
+    ],
+    "alt": "Opera's extensions menu, with the pin beside Study Duo marked"
+  },
+  "opera-unpacked": {
+    "file": "opera-unpacked.webp",
+    "w": 520,
+    "h": 300,
+    "ring": [
+      292,
+      84,
+      136,
+      45
+    ],
+    "alt": "Opera's extensions page with Developer mode on, Load unpacked marked"
+  },
+  "vivaldi-devmode": {
+    "file": "chrome-devmode.webp",
+    "w": 1040,
+    "h": 600,
+    "ring": [
+      728,
+      20,
+      304,
+      72
+    ],
+    "arrow": [
+      660,
+      226,
+      720,
+      62
+    ],
+    "alt": "Vivaldi's extensions page, with Developer mode marked"
+  },
+  "vivaldi-unpacked": {
+    "file": "chrome-unpacked.webp",
+    "w": 1040,
+    "h": 600,
+    "ring": [
+      32,
+      116,
+      277,
+      104
+    ],
+    "arrow": [
+      390.5,
+      338,
+      317,
+      174
+    ],
+    "alt": "Vivaldi's extensions page with Developer mode on, Load unpacked marked"
+  },
+  "windows-folder": {
+    "file": "windows-folder.webp",
+    "w": 640,
+    "h": 480,
+    "ring": [
+      146,
+      35,
+      197,
+      46
+    ],
+    "alt": "The folder window that Load unpacked opens, with its address bar marked",
+    "box": true
+  },
+  "windows-terminal": {
+    "file": "windows-terminal.webp",
+    "w": 719,
+    "h": 170,
+    "ring": [
+      3,
+      43,
+      696,
+      50
+    ],
+    "alt": "Windows PowerShell with the Study Duo line pasted at the prompt",
+    "box": true
+  }
+}

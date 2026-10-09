@@ -67,3 +67,65 @@ jobs:
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/study-duo-*
+
+  # Mozilla signs the Firefox build as unlisted (never shown in its store) so Firefox installs it from the project site.
+  # The job knows only whether the two AMO keys exist; the keys themselves reach the one signing step. web-ext is
+  # installed in a step of its own, pinned, with no install scripts and no keys in sight.
+  firefox:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HAS_KEYS: ${{ secrets.WEB_EXT_API_KEY != '' && secrets.WEB_EXT_API_SECRET != '' }}
+    steps:
+      - name: Keys set?
+        if: env.HAS_KEYS != 'true'
+        run: echo "::notice::No AMO keys (WEB_EXT_API_KEY, WEB_EXT_API_SECRET), so Firefox was not signed."
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: env.HAS_KEYS == 'true'
+        with:
+          name: release
+          path: dist
+      - name: Install web-ext, without keys or install scripts
+        if: env.HAS_KEYS == 'true'
+        env:
+          npm_config_ignore_scripts: 'true'
+        run: mkdir tool && cd tool && npm init -y >/dev/null && npm install --no-audit --no-fund --save-exact web-ext@10.7.0
+      - name: Sign with Mozilla, unlisted
+        if: env.HAS_KEYS == 'true'
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+        run: |
+          cd dist && sha256sum -c SHA256SUMS && cd ..
+          mkdir ff signed && unzip -q dist/study-duo-firefox.zip -d ff
+          tool/node_modules/.bin/web-ext sign --channel=unlisted --source-dir ff --artifacts-dir signed --upload-source-code dist/study-duo-sources.zip --approval-timeout 1500000
+          mkdir out && cp signed/*.xpi out/study-duo-firefox.xpi && cd out && sha256sum study-duo-firefox.xpi > SHA256SUMS-firefox
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: env.HAS_KEYS == 'true'
+        with:
+          name: firefox
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
+
+  attest-firefox:
+    needs: firefox
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write
+      attestations: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        id: get
+        continue-on-error: true
+        with:
+          name: firefox
+          path: out
+      - name: Attest where the signed Firefox file came from
+        if: steps.get.outcome == 'success'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: out/study-duo-firefox.xpi
