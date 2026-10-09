@@ -1,6 +1,6 @@
 import { ALARM_PHASE_END, ALARM_REFRESH, applyEffects } from '@/background/effects';
 import { createTimerService } from '@/background/timer-service';
-import { allowedFromSender, isClockHello, isFromWebPage, parseCounts, parseMessage, parseMove, parseSiteMessage, parseSound, resolveSiteRequest } from '@/core/messages';
+import { allowedFromSender, isClockHello, isFromWebPage, isSiteHello, parseCounts, parseMessage, parseMove, parseSiteMessage, parseSound, resolveSiteRequest } from '@/core/messages';
 import { embedReferer, playerCommands, trackPanel } from '@/background/player';
 import { parsePlayer, soundToPlayer } from '@/core/player';
 import { normalizeSettings } from '@/core/settings';
@@ -26,6 +26,11 @@ export default defineBackground(() => {
     applyEffects,
   });
   const tick = () => void timer.dispatch({ type: 'tick' }).catch(console.error);
+
+  // The install page notices Study Duo arrived: it is told the version, nothing more (wxt.config.ts limits who may ask).
+  browser.runtime.onMessageExternal?.addListener((raw, sender, sendResponse) => {
+    if (isSiteHello(raw, sender as { origin?: string; url?: string })) sendResponse({ app: 'study-duo', version: browser.runtime.getManifest().version });
+  });
 
   browser.runtime.onMessage.addListener((raw, sender, sendResponse) => {
     if (sender.id !== browser.runtime.id) return;

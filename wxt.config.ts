@@ -39,7 +39,9 @@ export default defineConfig({
       ? {
           browser_specific_settings: {
             // Nothing leaves the browser, so Firefox's data-collection declaration is "none".
-            gecko: { id: 'study-duo@coflazo.github.io', data_collection_permissions: { required: ['none'] } },
+            // Signed by Mozilla as unlisted (never shown in its store) and served from the project site, which also
+            // lists newer versions for Firefox to update to.
+            gecko: { id: 'study-duo@coflazo.github.io', update_url: 'https://coflazo.github.io/study-duo/updates.json', data_collection_permissions: { required: ['none'] } },
           },
         }
       : {
@@ -69,6 +71,8 @@ export default defineConfig({
     optional_permissions: process.env.STUDY_DUO_OUT === '.test-build' ? [] : ['nativeMessaging', 'identity'],
     host_permissions: ['<all_urls>'],
     // Only the phase-word font, behind a per-session URL so pages cannot fetch it by a fixed address.
+    // The install page asks "is Study Duo here yet?" and is told the version, nothing else (Chromium only).
+    ...(browser === 'firefox' ? {} : { externally_connectable: { matches: ['https://coflazo.github.io/*'] } }),
     web_accessible_resources: [
       {
         resources: ['fonts/atkinson-next-latin.woff2', 'fonts/atkinson-next-latin-ext.woff2'],

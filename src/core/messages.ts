@@ -109,6 +109,12 @@ export function parseTabMedia(raw: unknown): TabMediaOp | null {
   return raw.op === 'play' || raw.op === 'pause' || raw.op === 'next' || raw.op === 'prev' ? raw.op : null;
 }
 
+/** The install page on coflazo.github.io asking whether Study Duo arrived; any other site or message is ignored. */
+export const SITE_ORIGIN = 'https://coflazo.github.io';
+export function isSiteHello(raw: unknown, sender: { origin?: string; url?: string }): boolean {
+  return isObj(raw) && raw.kind === 'hello' && sender.origin === SITE_ORIGIN && !!sender.url?.startsWith(`${SITE_ORIGIN}/study-duo/`);
+}
+
 export function isPing(raw: unknown): boolean {
   return raw !== null && typeof raw === 'object' && (raw as Record<string, unknown>).kind === 'overlay' && (raw as Record<string, unknown>).op === 'ping';
 }
