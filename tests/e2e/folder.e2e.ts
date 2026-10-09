@@ -142,3 +142,24 @@ test('the side panel: library, then now playing with shuffle, repeat and up next
   await expect.poll(async () => (await player())?.playing).toBe(false);
   await ctx.close();
 });
+
+test('a folder picked in the side panel shows at once on Now playing and in the source list, without reopening it', async () => {
+  const { ctx } = await launch(tempProfile());
+  const panel = await ctx.newPage();
+  await panel.setViewportSize({ width: 380, height: 900 });
+  await panel.goto(`chrome-extension://${EXT_ID}/sidepanel.html`);
+  await fakeFolder(panel);
+  const sections = panel.getByRole('radiogroup', { name: 'Sections' });
+  await sections.getByRole('radio', { name: 'Now playing' }).click();
+  await panel.getByRole('button', { name: /SOUNDS/ }).click();
+  await expect(panel.getByRole('menuitemradio', { name: /Your folder/ })).toContainText('Choose a folder');
+  await panel.keyboard.press('Escape');
+
+  await sections.getByRole('radio', { name: 'Library' }).click();
+  await panel.getByRole('button', { name: 'Choose a folder' }).click();
+  await expect(panel.getByText('Music · 2 songs · on this computer')).toBeVisible();
+  await sections.getByRole('radio', { name: 'Now playing' }).click();
+  await panel.getByRole('button', { name: /SOUNDS/ }).click();
+  await expect(panel.getByRole('menuitemradio', { name: /Your folder/ })).toContainText('Music · 2 songs');
+  await ctx.close();
+});

@@ -4,7 +4,7 @@
    * next, and the music folder's library. It drives the same player as the popup card.
    */
   import { onDestroy, onMount, tick } from 'svelte';
-  import { loadFolder, loadThumb, type FolderRecord } from '@/core/library-db';
+  import { loadFolder, loadThumb, onLibraryChange, type FolderRecord } from '@/core/library-db';
   import type { NoiseKind } from '@/core/noise';
   import { INITIAL_PLAYER, isStream, positionAt, streamAt, type PlayerCommand, type PlayerState, type PlayerTrack, type StreamSource } from '@/core/player';
   import type { Repeat } from '@/core/queue';
@@ -204,6 +204,8 @@
     connect();
     void panelOwnerItem.setValue(me);
     unwatch.push(
+      // The panel stays open: a folder picked, rescanned or forgotten anywhere shows here at once.
+      onLibraryChange(() => void loadFolder().then((f) => (folder = f), () => undefined)),
       panelOwnerItem.watch((v) => (owner = v)),
       playerItem.watch(() => !port && !closing && connect()),
       streamLinksItem.watch((v) => (links = v ?? [])),
