@@ -44,39 +44,31 @@ While a block runs, the dimmed corner clock shows minutes and wakes once a minut
 
 ## Get Study Duo
 
-About 2 minutes. The easy way: open **[coflazo.github.io/study-duo](https://coflazo.github.io/study-duo)**, which shows the right line for your computer with a copy button, then do step 3 below. Or from here:
+The easy way: open **[coflazo.github.io/study-duo](https://coflazo.github.io/study-duo)**, tick the browsers you want it in, and follow the page. It works out your computer, gives you one line to paste, shows a screenshot of each click, and tells you when Study Duo has arrived. About two minutes.
 
-**1. Open the Terminal app.** It's already on your computer.
-
-- Mac: press `⌘ Command` + `Space`, type **Terminal**, press Enter.
-- Windows: press the `Windows` key, type **PowerShell**, press Enter.
-- Linux: press `Ctrl` + `Alt` + `T`.
-
-**2. Copy your line, paste it into the Terminal, press Enter.** Click the copy icon at the right edge of the box to copy it.
-
-On a Mac or Linux:
+Or from here, on a Mac or Linux (name the browsers you use: chrome, edge, brave, arc, opera, vivaldi, firefox):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Coflazo/study-duo/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Coflazo/study-duo/main/install.sh | sh -s -- --browsers chrome
 ```
 
-On Windows:
+On Windows, in PowerShell:
 
 ```powershell
-powershell -c "irm https://raw.githubusercontent.com/Coflazo/study-duo/main/install.ps1 | iex"
+powershell -c "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Coflazo/study-duo/main/install.ps1))) -Browsers chrome"
 ```
 
-It downloads Study Duo, checks that the download isn't damaged, puts it in a folder on your computer, and opens your browser's extensions page.
+The line downloads Study Duo, checks that the download matches its checksum, puts it in a folder called Study Duo in your home folder, copies that folder's address, and opens each browser you named on its extensions page. Then, once per browser:
 
-**3. Three clicks in your browser.** Browsers ask you to approve extensions that don't come from their store, so:
-
-1. Switch on **Developer mode** (top right corner).
+1. Switch on **Developer mode** (top right on most browsers, in the left column on Edge).
 2. Click **Load unpacked**.
-3. Paste (`⌘ Command` + `V` on a Mac, `Ctrl` + `V` on Windows) and press Enter. The folder address is already copied for you.
+3. Paste the folder address and press Enter. On a Mac, press `⌘ Command` + `Shift` + `G` in that window first.
 
-That's it. Click the puzzle piece next to the address bar and pin Study Duo so its timer is always in sight.
+Click the puzzle piece next to the address bar and pin Study Duo so its timer is always in sight.
 
-Works in Chrome, Edge, Brave, Arc, Opera and Vivaldi. Firefox is coming later.
+Why the clicks? Chrome and the browsers built on it let only you allow an extension from outside their store. No website or installer can switch on Developer mode for you, and none should.
+
+**Firefox:** from 0.3.0, Mozilla signs Study Duo for Firefox without listing it in its store, so it installs from [the install page](https://coflazo.github.io/study-duo) with one click (Allow, then Add) and Firefox keeps it up to date by itself.
 
 **Getting a newer version:** paste the same line again, then click the round arrow on the Study Duo card in your extensions page. Your history stays.
 
