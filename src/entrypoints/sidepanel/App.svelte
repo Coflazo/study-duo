@@ -146,6 +146,8 @@
   let owner = $state<string | null>(null);
 
   const unwatch: Array<() => void> = [];
+  let heardPlayer = false;
+  let heardTracks = false;
   onMount(async () => {
     connect();
     void panelOwnerItem.setValue(me);
@@ -153,16 +155,21 @@
       panelOwnerItem.watch((v) => (owner = v)),
       playerItem.watch(() => !port && !closing && connect()),
       streamLinksItem.watch((v) => (links = v ?? [])),
-      playerItem.watch((v) => (player = v ?? INITIAL_PLAYER)),
-      playerTracksItem.watch((v) => (tracks = v ?? {})),
+      playerItem.watch((v) => ((heardPlayer = true), (player = v ?? INITIAL_PLAYER))),
+      playerTracksItem.watch((v) => ((heardTracks = true), (tracks = v ?? {}))),
       settingsItem.watch((v) => (always = normalizeSettings(v).discMotion === 'always')),
     );
-    [player, tracks, folder, always] = await Promise.all([
+    const [p, t, f, a] = await Promise.all([
       playerItem.getValue(),
       playerTracksItem.getValue(),
       loadFolder().catch(() => null),
       settingsItem.getValue().then((v) => normalizeSettings(v).discMotion === 'always'),
     ]);
+    // A change seen while the first read was on its way is newer than that read: it wins.
+    if (!heardPlayer) player = p;
+    if (!heardTracks) tracks = t;
+    folder = f;
+    always = a;
     links = await streamLinksItem.getValue();
     const asked = await panelSectionItem.getValue();
     if (asked) {

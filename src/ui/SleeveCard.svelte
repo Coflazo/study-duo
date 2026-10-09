@@ -186,14 +186,18 @@
   let unwatch: (() => void) | undefined;
   onMount(async () => {
     void browser.windows.getCurrent().then((w) => (windowId = w.id)).catch(() => undefined);
-    const unwatchPlayer = playerItem.watch((v) => (player = v ?? INITIAL_PLAYER));
+    // A change seen while the first read is on its way is newer than that read: it wins.
+    let heard = false;
+    const unwatchPlayer = playerItem.watch((v) => ((heard = true), (player = v ?? INITIAL_PLAYER)));
     const unwatchSettings = settingsItem.watch((v) => (always = normalizeSettings(v).discMotion === 'always'));
     unwatch = () => (unwatchPlayer(), unwatchSettings());
-    [player, always, folder] = await Promise.all([
+    let first: PlayerState;
+    [first, always, folder] = await Promise.all([
       playerItem.getValue(),
       settingsItem.getValue().then((v) => normalizeSettings(v).discMotion === 'always'),
       loadFolder().catch(() => null),
     ]);
+    if (!heard) player = first;
     loaded = true;
     document.addEventListener('pointerdown', outside);
   });
