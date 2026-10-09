@@ -2,7 +2,7 @@ import { storage } from 'wxt/utils/storage';
 import { IDLE_TRACKER, type TrackerState } from './activity';
 import type { OpenListen } from './music';
 import type { NoiseKind } from './noise';
-import { INITIAL_PLAYER, type PlayerState } from './player';
+import { INITIAL_PLAYER, type PlayerState, type PlayerTrack } from './player';
 
 /*
  * Session storage items, kept apart from store.ts: WXT reads every item the moment it is defined, and content
@@ -20,3 +20,5 @@ export const logVersionItem = storage.defineItem<number>('session:logVersion', {
 export const trackerItem = storage.defineItem<TrackerState>('session:activityTracker', { fallback: IDLE_TRACKER });
 /** The one player: which source, playing or not, the noise colour and the volume (session only; #51). */
 export const playerItem = storage.defineItem<PlayerState>('session:player', { fallback: INITIAL_PLAYER });
+/** The folder queue's songs by id, written only when a new list starts, so a volume change never rewrites them. */
+export const playerTracksItem = storage.defineItem<Record<string, PlayerTrack>>('session:playerTracks', { fallback: {} });

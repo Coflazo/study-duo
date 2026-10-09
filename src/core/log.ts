@@ -1,3 +1,4 @@
+import { forgetLibrary } from './library-db';
 import { logVersionItem } from './session-store';
 import { STORES, TIME_INDEX, withDb, type ActivityRecord, type BlockedAttempt, type ListenRecord, type StoreName } from './db';
 import type { SessionRecord } from './sessions';
@@ -76,6 +77,7 @@ export async function deleteAll(): Promise<void> {
   await withDb(async (db) => {
     for (const store of STORES) await db.clear(store);
   });
+  await forgetLibrary(); // the music folder and its song list
   await logVersionItem.setValue(Date.now()); // open pages drop what they showed
 }
 

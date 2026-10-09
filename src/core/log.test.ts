@@ -3,6 +3,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { addRecords, deleteAll, exportAll, forgetListens, purgeOlderThan, recordsBetween } from './log';
 import { addSessions, rateSession, sessionId, sessionsBetween } from './sessions';
+import { loadTracks, saveLibrary } from './library-db';
 
 const DAY = 86_400_000;
 const NOW = new Date(2026, 9, 7, 12).getTime();
@@ -55,9 +56,11 @@ describe('retention, export and delete', () => {
     expect(data.activity).toHaveLength(2);
     expect(data.blocks).toHaveLength(1);
     await rateSession(sessionId({ phase: 'focus', startedAt: NOW - 1000 }), 4);
+    await saveLibrary({ handle: {}, name: 'Music', indexedAt: 1 }, [{ id: 'a', path: 'a.mp3', title: 'a', artist: '', album: '', genre: '', cover: false, color: null, size: 1, modified: 1 }]);
     await deleteAll();
     const after = await exportAll(NOW);
     expect([after.sessions, after.listens, after.activity, after.blocks].every((l) => l.length === 0)).toBe(true);
+    expect(await loadTracks()).toEqual([]); // the music folder's list goes too
   });
 });
 

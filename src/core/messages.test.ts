@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedFromSender, isFromWebPage, parseAnnounce, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest, isPing, parseMove, parseCounts, parseSound } from './messages';
+import { allowedFromSender, isFromWebPage, parseAnnounce, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest, isPing, parseMove, parseCounts, parseSound, parseFileCommand } from './messages';
 
 describe('parseMessage', () => {
   it('accepts every plain timer event', () => {
@@ -136,5 +136,20 @@ describe('parseSound', () => {
     expect(parseSound({ kind: 'sound', op: 'volume', volume: 0.2 })).toEqual({ op: 'volume', volume: 0.2 });
     expect(parseSound({ kind: 'sound', op: 'play', noise: 'rain', volume: 0.4 })).toBeNull();
     expect(parseSound({ kind: 'sound', op: 'play', noise: 'white' })).toBeNull();
+  });
+});
+
+describe('parseFileCommand', () => {
+  it('accepts the folder player commands the background forwards to the offscreen page', () => {
+    expect(parseFileCommand({ target: 'offscreen', kind: 'file', op: 'play', path: 'Chopin/a.mp3', at: 1500, volume: 0.5 })).toEqual({ op: 'play', path: 'Chopin/a.mp3', at: 1500, volume: 0.5 });
+    expect(parseFileCommand({ target: 'offscreen', kind: 'file', op: 'pause' })).toEqual({ op: 'pause' });
+    expect(parseFileCommand({ target: 'offscreen', kind: 'file', op: 'seek', at: 57_000 })).toEqual({ op: 'seek', at: 57_000 });
+    expect(parseFileCommand({ target: 'offscreen', kind: 'file', op: 'volume', volume: 2 })).toEqual({ op: 'volume', volume: 1 });
+  });
+
+  it('refuses anything else, and paths that climb out of the folder', () => {
+    for (const raw of [{ kind: 'file', op: 'pause' }, { target: 'offscreen', kind: 'file', op: 'play', path: '', at: 0, volume: 1 }, { target: 'offscreen', kind: 'file', op: 'play', path: '../secret.mp3', at: 0, volume: 1 }, { target: 'offscreen', kind: 'file', op: 'play', path: '/etc/x.mp3', at: 0, volume: 1 }, { target: 'offscreen', kind: 'file', op: 'seek', at: -1 }]) {
+      expect(parseFileCommand(raw)).toBeNull();
+    }
   });
 });
