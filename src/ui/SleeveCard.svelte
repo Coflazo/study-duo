@@ -3,13 +3,13 @@
   import { sortTracks } from '@/core/library';
   import { loadFolder, loadThumb, loadTracks, type FolderRecord } from '@/core/library-db';
   import type { NoiseKind } from '@/core/noise';
-  import { INITIAL_PLAYER, playingTrack, positionAt, type PlayerCommand, type PlayerSource, type PlayerState } from '@/core/player';
+  import { INITIAL_PLAYER, positionAt, type PlayerCommand, type PlayerSource, type PlayerState } from '@/core/player';
   import { playerItem } from '@/core/session-store';
   import { normalizeSettings } from '@/core/settings';
   import { settingsItem } from '@/core/store';
-  import { FULL_SPEED, SPIN_STILL, stepSpin, type Spin } from '@/core/spin';
   import { clip } from '@/core/text';
   import { ICONS } from '@/ui/icons';
+  import SleeveArt from '@/ui/SleeveArt.svelte';
 
   /**
    * The popup's player card, Figma "Screens: Player (approved)", direction B (Sleeve): the record half out of its
@@ -34,26 +34,19 @@
   let folder = $state<FolderRecord | null>(null);
   let menuOpen = $state(false);
   let menuFromKeys = $state(false);
-  let out = $state(false);
-  let ready = $state(false);
   let now = $state(Date.now());
   let dragging = $state<number | null>(null);
   let cover = $state<string | null>(null);
-  let spinEl: HTMLDivElement | undefined = $state();
   let srcEl: HTMLButtonElement | undefined = $state();
   let menuEl: HTMLDivElement | undefined = $state();
 
   const view = $derived<'noise' | 'folder'>(player.active === 'folder' ? 'folder' : 'noise');
   const noise = $derived(NOISE[player.noise]);
-  const track = $derived(view === 'folder' ? playingTrack(player) : null);
+  const track = $derived(view === 'folder' ? player.now : null);
   const playing = $derived(player.playing && (view === 'folder' ? player.active === 'folder' : player.active === 'noise' || player.active === null));
   const duration = $derived(player.duration ?? 0);
   const position = $derived(dragging ?? positionAt(player, now));
-  const upNext = $derived.by(() => {
-    const q = player.queue;
-    if (!q || q.at + 1 >= q.order.length) return null;
-    return player.tracks[q.items[q.order[q.at + 1]!]!]?.title ?? null;
-  });
+  const upNext = $derived(view === 'folder' ? player.upNext : null);
   const tint = $derived(view === 'folder' ? (track?.color ?? NO_COVER) : noise.tint);
   const label = $derived(view === 'folder' ? 'FOLDER' : 'SOUNDS');
   const sleeveText = $derived(track ? [track.artist, track.album].filter(Boolean).join('\n').toUpperCase() || 'YOUR\nFOLDER' : 'YOUR\nFOLDER');
@@ -66,66 +59,15 @@
     return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
   };
 
-  // The disc: frame by frame only while its speed changes; at full speed the compositor turns it (no work per frame).
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
   /** Settings, Spinning disc: "Always" turns it even when the computer asks for less motion. */
   let always = $state(false);
-  const still = () => reduce.matches && !always;
-  let spin: Spin = SPIN_STILL;
-  let raf = 0;
-  let last = 0;
-  let steady: Animation | null = null;
-  let steadyFrom = 0;
-
-  function paint() {
-    if (spinEl) spinEl.style.transform = `rotate(${spin.angle}deg)`;
-  }
-  function stopSteady() {
-    if (!steady) return;
-    const t = Number(steady.currentTime ?? 0);
-    spin = { ...spin, angle: (steadyFrom + ((t % 1800) / 1800) * 360) % 360 };
-    steady.cancel();
-    steady = null;
-  }
-  function startSteady() {
-    if (!spinEl || steady) return;
-    steadyFrom = spin.angle;
-    steady = spinEl.animate([{ transform: `rotate(${steadyFrom}deg)` }, { transform: `rotate(${steadyFrom + 360}deg)` }], { duration: 1800, iterations: Infinity });
-  }
-  function frame(t: number) {
-    const dt = Math.min(0.05, (t - last) / 1000);
-    last = t;
-    spin = stepSpin(spin, playing, dt);
-    paint();
-    // Back into the sleeve during the last of the coast, so stopping and tucking in read as one movement.
-    out = playing || spin.speed > FULL_SPEED * 0.12;
-    if (spin.settled) {
-      raf = 0;
-      if (playing) startSteady();
-      return;
-    }
-    raf = requestAnimationFrame(frame);
-  }
-  function drive() {
-    if (still()) {
-      stopSteady();
-      cancelAnimationFrame(raf);
-      raf = 0;
-      out = false;
-      return;
-    }
-    stopSteady();
-    if (!raf) {
-      last = performance.now();
-      raf = requestAnimationFrame(frame);
-    }
-  }
-  $effect(() => {
-    void playing;
-    void always;
-    void spinEl; // a source change swaps the disc on screen: hand the turning to the new one
-    drive();
-  });
+  const art = $derived(
+    view === 'noise'
+      ? { kind: 'noise' as const, c: noise.c, ring: noise.ring, mark: noise.mark, sleeve: noise.sleeve, ink: noise.ink }
+      : track
+        ? { kind: 'cd' as const, color: track.color ?? NO_COVER, cover, sleeve: sleeveText }
+        : { kind: 'empty' as const, sleeve: folder ? 'YOUR\nFOLDER' : 'CHOOSE A\nFOLDER' },
+  );
 
   // The popup takes a light tint of what plays (the cover's colour for a song); it fades back when it stops.
   $effect(() => {
@@ -210,24 +152,11 @@
       settingsItem.getValue().then((v) => normalizeSettings(v).discMotion === 'always'),
       loadFolder().catch(() => null),
     ]);
-    // Opened while it plays: the disc is already out and turning at full speed. The music did not just start.
-    if (playing && !still()) {
-      spin = { angle: Math.random() * 360, speed: FULL_SPEED, accel: 0, settled: true };
-      out = true;
-      paint();
-      startSteady();
-    }
-    await tick();
-    requestAnimationFrame(() => (ready = true));
     document.addEventListener('pointerdown', outside);
-    reduce.addEventListener('change', drive);
   });
   onDestroy(() => {
     unwatch?.();
-    cancelAnimationFrame(raf);
-    steady?.cancel();
     document.removeEventListener('pointerdown', outside);
-    reduce.removeEventListener('change', drive);
     document.body.style.backgroundColor = '';
   });
 </script>
@@ -238,33 +167,9 @@
   </button>
 {/snippet}
 
-<section class="card" class:ready class:still={!always} aria-label="Player">
+<section class="card" aria-label="Player">
   <div class="body">
-    <div class="art" aria-hidden="true">
-      {#if view === 'noise'}
-        <div class="disc noise" class:out style:--c1={noise.c[0]} style:--c2={noise.c[1]} style:--ring={noise.ring} style:--mark={noise.mark}>
-          <div class="spin" bind:this={spinEl}><i></i><i></i><i></i><b></b></div>
-          <div class="hole"></div>
-        </div>
-        <div class="sleeve" style:--c1={noise.c[0]} style:--c2={noise.c[1]} style:color={noise.ink}>{noise.sleeve}</div>
-      {:else}
-        {#if track}
-          <div class="disc cd" class:out style:--c1={track.color ?? NO_COVER}>
-            <div class="spin" bind:this={spinEl}>
-              <div class="label">{#if cover}<img src={cover} alt="" />{/if}</div>
-              <span class="band"></span><b></b>
-              <div class="hub"></div>
-            </div>
-            <div class="hole"></div>
-          </div>
-        {/if}
-        {#if cover}
-          <div class="sleeve cover"><img src={cover} alt="" /></div>
-        {:else}
-          <div class="sleeve" class:empty={!folder} style:--c1={track?.color ?? NO_COVER} style:--c2="#1f2f5c" style:color={folder ? '#ffffff' : undefined}>{folder ? sleeveText : 'CHOOSE A\nFOLDER'}</div>
-        {/if}
-      {/if}
-    </div>
+    <SleeveArt {art} {playing} {always} />
     <div class="col">
       <button class="src" bind:this={srcEl} aria-haspopup="menu" aria-expanded={menuOpen} aria-controls="player-sources" onclick={(e) => (menuOpen ? closeMenu(false) : openMenu(e.detail === 0))}>
         <span class="lamp"></span>{label}<svg viewBox="0 0 256 256" aria-hidden="true"><path d={CARET} /></svg>
@@ -356,37 +261,6 @@
     background: var(--color-bg-panel);
   }
   .body { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center; }
-  .art { position: relative; inline-size: 150px; block-size: 112px; }
-  .disc {
-    position: absolute; inset-inline-start: 8px; inset-block-start: 6px; inline-size: 100px; block-size: 100px; border-radius: 50%;
-    transform: translateX(0); will-change: transform;
-  }
-  .ready .disc { transition: transform 380ms cubic-bezier(0.45, 0, 0.2, 1); }
-  .disc.out { transform: translateX(40px); }
-  .ready .disc.out { transition-duration: 560ms; }
-  .spin { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 1px rgb(23 25 28 / 0.12) inset; }
-  .noise .spin { background: radial-gradient(var(--c1), var(--c2)); }
-  .noise .spin i { position: absolute; border-radius: 50%; border: 1.5px dashed var(--ring); }
-  .noise .spin i:nth-child(1) { inset: 10%; }
-  .noise .spin i:nth-child(2) { inset: 20%; border: 1px solid var(--ring); }
-  .noise .spin i:nth-child(3) { inset: 30%; }
-  /* A printed mark on one side of every disc, so the turning reads at a glance. */
-  .spin b { position: absolute; inset-inline-start: 66%; inset-block-start: 24%; inline-size: 9%; block-size: 9%; border-radius: 50%; background: var(--mark, rgb(255 255 255 / 0.85)); z-index: 2; }
-  /* A CD: one rainbow sweep (not a symmetric ring, or the turning would not show), the cover as its label. */
-  .cd .spin { background: conic-gradient(#c9cdd2, #f7f8f9 6%, #bfe3ea 12%, #e7d3f2 18%, #f5ebc8 24%, #d4d8dc 32%, #c2c6cb 55%, #eceef0 66%, #c9cdd2 74%); }
-  .cd .label { position: absolute; inset: 18%; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, var(--c1), color-mix(in oklab, var(--c1) 55%, #ffffff)); }
-  .cd .label img { inline-size: 100%; block-size: 100%; object-fit: cover; }
-  .cd .band { position: absolute; inset: 18%; border-radius: 50%; z-index: 1; background: conic-gradient(from 200deg, rgb(255 255 255 / 0.42) 0 110deg, transparent 110deg); -webkit-mask: radial-gradient(circle, transparent 62%, #000 63%); mask: radial-gradient(circle, transparent 62%, #000 63%); }
-  .cd .hub { position: absolute; inset: 40%; border-radius: 50%; background: #f4f4f1; box-shadow: 0 0 0 1px rgb(23 25 28 / 0.14); z-index: 1; }
-  .hole { position: absolute; inset: 46%; border-radius: 50%; background: var(--color-bg-panel); box-shadow: 0 0 0 1px rgb(23 25 28 / 0.22); z-index: 3; }
-  .sleeve {
-    position: absolute; inset-inline-start: 0; inset-block-start: 2px; inline-size: 108px; block-size: 108px; box-sizing: border-box; padding: 10px;
-    border-radius: 3px; background: linear-gradient(135deg, var(--c2), var(--c1)); box-shadow: 2px 3px 8px rgb(0 0 0 / 0.16);
-    font: 600 10px/13px var(--font-family-mono); white-space: pre-line; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 6; line-clamp: 6; -webkit-box-orient: vertical;
-  }
-  .sleeve.cover { padding: 0; }
-  .sleeve.cover img { inline-size: 100%; block-size: 100%; object-fit: cover; display: block; }
-  .sleeve.empty { background: var(--color-bg-sunken); border: 1.5px dashed var(--color-text-secondary); box-shadow: none; color: var(--color-text-secondary); }
   .col { display: grid; gap: 6px; align-content: center; min-inline-size: 0; }
   .src {
     justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 6px; border: 1px solid var(--color-border-control);
@@ -469,7 +343,6 @@
   .menu small { display: block; font: 400 11px/14px var(--font-family-ui); color: var(--color-text-secondary); }
   button:focus-visible, input:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) {
-    .still.ready .disc, .still.ready .disc.out { transition: none; }
     .src svg, .noises button, .key, .action { transition: none; }
     .menu { animation: none; }
   }
