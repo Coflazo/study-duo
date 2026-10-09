@@ -31,9 +31,9 @@ test('the popup card plays focus noise through the one player, and its disc turn
 
   // The disc slides out and turns.
   await expect(page.locator('.disc')).toHaveClass(/out/);
+  // It starts softly, so give it a moment, then the angle keeps changing.
   const a1 = await angle();
-  await page.waitForTimeout(400);
-  expect(await angle()).not.toBe(a1);
+  await expect.poll(angle, { timeout: 3_000 }).not.toBe(a1);
 
   // Brown while it plays; then a quieter volume.
   await card.getByRole('radio', { name: 'Brown' }).click();

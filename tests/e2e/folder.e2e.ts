@@ -68,3 +68,77 @@ test('a picked music folder is listed, searched and played song after song by th
   await expect(section.getByRole('button', { name: 'Choose a folder' })).toBeVisible();
   await ctx.close();
 });
+
+test('the popup card shows the folder song: cover, seek line, previous and next, and the source list', async () => {
+  const { ctx } = await launch(tempProfile());
+  const page = await ctx.newPage();
+  await page.goto(`chrome-extension://${EXT_ID}/dashboard.html#music`);
+  await fakeFolder(page);
+  const section = page.getByRole('region', { name: 'Your music folder' });
+  await section.getByRole('button', { name: 'Choose a folder' }).click();
+  await expect(section.getByRole('listitem')).toHaveCount(2);
+
+  const popup = await ctx.newPage();
+  await popup.setViewportSize({ width: 360, height: 600 });
+  await popup.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  const card = popup.getByRole('region', { name: 'Player' });
+
+  // Pick the folder from the source list: nothing queued yet, so the card offers Play all.
+  await card.getByRole('button', { name: /SOUNDS/ }).click();
+  await popup.getByRole('menuitemradio', { name: /Your folder/ }).click();
+  await expect(card.getByRole('button', { name: /FOLDER/ })).toBeVisible();
+  await expect(card.getByText('2 songs on this computer')).toBeVisible();
+  await card.getByRole('button', { name: 'Play all' }).click();
+
+  // The song: its title, the seek line with its length, previous and next.
+  await expect(card.locator('.title')).toHaveText('Gymnopedie');
+  await expect(card.getByRole('slider', { name: 'Position' })).toBeEnabled({ timeout: 5_000 });
+  await expect(card.getByText('Your folder · 1 of 2 · Up next: Nocturne')).toBeVisible();
+  await card.getByRole('button', { name: 'Next' }).click();
+  await expect(card.locator('.title')).toHaveText('Nocturne');
+  await card.getByRole('button', { name: 'Pause' }).click();
+  await expect(card.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
+  await ctx.close();
+});
+
+test('the side panel: library, then now playing with shuffle, repeat and up next', async () => {
+  const { ctx } = await launch(tempProfile());
+  const page = await ctx.newPage();
+  await page.setViewportSize({ width: 400, height: 900 });
+  await page.goto(`chrome-extension://${EXT_ID}/sidepanel.html`);
+  await fakeFolder(page);
+  const player = () => page.evaluate(async () => (await chrome.storage.session.get('player')).player);
+
+  // Noise first: the panel plays it and shows its colours.
+  await page.getByRole('radiogroup', { name: 'Noise colour' }).getByRole('radio', { name: 'White' }).click();
+  await expect.poll(async () => (await player())?.noise).toBe('white');
+
+  // The library tab reads the folder; a song plays and Now playing shows it with what comes next.
+  await page.getByRole('radiogroup', { name: 'Sections' }).getByRole('radio', { name: 'Library' }).click();
+  await page.getByRole('button', { name: 'Choose a folder' }).click();
+  await expect(page.getByRole('listitem')).toHaveCount(2);
+  await page.getByRole('listitem').nth(0).getByRole('button').click();
+  await page.getByRole('radiogroup', { name: 'Sections' }).getByRole('radio', { name: 'Now playing' }).click();
+  await expect(page.locator('.title')).toHaveText('Gymnopedie');
+  await expect(page.getByRole('heading', { name: 'Up next' })).toBeVisible();
+
+  // Repeat cycles off, all songs, this song; shuffle is a toggle.
+  await page.getByRole('button', { name: 'Repeat: off' }).click();
+  await expect(page.getByRole('button', { name: 'Repeat: all songs' })).toBeVisible();
+  await page.getByRole('button', { name: 'Shuffle' }).click();
+  await expect(page.getByRole('button', { name: 'Shuffle' })).toHaveAttribute('aria-pressed', 'true');
+
+  // Up next: a click jumps to that song.
+  await page.getByRole('list').getByRole('button', { name: /Nocturne/ }).click();
+  await expect(page.locator('.title')).toHaveText('Nocturne');
+
+  // The popup opened mid-song shows the disc already out and turning at full speed, never spinning up from rest.
+  const popup = await ctx.newPage();
+  await popup.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  await expect(popup.locator('.art.ready')).toBeVisible();
+  expect(await popup.evaluate(() => ({ out: document.querySelector('.disc')!.classList.contains('out'), turning: document.querySelector('.spin')!.getAnimations().length > 0 }))).toEqual({ out: true, turning: true });
+  await popup.close();
+  await page.getByRole('button', { name: 'Pause' }).click();
+  await expect.poll(async () => (await player())?.playing).toBe(false);
+  await ctx.close();
+});

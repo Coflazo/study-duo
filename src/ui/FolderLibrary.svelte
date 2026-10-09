@@ -161,6 +161,8 @@
 </section>
 
 <style>
+  /* The page's own spacing between sections does not reach into this component. */
+  section { margin-block-end: 32px; }
   .tools { display: grid; gap: 12px; margin-block: 12px; }
   .search {
     block-size: 40px; padding: 0 12px; border: 1px solid var(--color-border-control); border-radius: var(--radius-md); background: var(--color-bg-panel);

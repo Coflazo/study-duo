@@ -73,6 +73,7 @@ export type PlayerCommand =
   | { op: 'folder'; tracks: PlayerTrack[]; start: number; shuffle: boolean }
   | { op: 'next' }
   | { op: 'prev' }
+  | { op: 'jump'; at: number }
   | { op: 'seek'; ms: number }
   | { op: 'shuffle' }
   | { op: 'repeat'; repeat: Repeat }
@@ -132,6 +133,10 @@ export function parsePlayer(raw: unknown): PlayerCommand | null {
     case 'volume': {
       const v = num(r.volume);
       return v === null ? null : { op: 'volume', volume: Math.min(1, Math.max(0, v)) };
+    }
+    case 'jump': {
+      const at = num(r.at);
+      return at === null ? null : { op: 'jump', at: Math.max(0, Math.floor(at)) };
     }
     case 'seek': {
       const ms = num(r.ms);
@@ -250,6 +255,10 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
       if (!next) return atEnd(s, now);
       if (s.queue.repeat === 'one') return { state: { ...s, position: 0, at: now, startedAt: now }, effects: [{ type: 'file-play', track: nowTrack(s)!, at: 0, volume: s.volume }] };
       return toSong(s, next, now);
+    }
+    case 'jump': {
+      if (s.active !== 'folder' || !s.queue || cmd.at >= s.queue.order.length) return { state: s, effects: [] };
+      return toSong({ ...s, playing: true, problem: null, startedAt: s.playing ? s.startedAt : now }, { ...s.queue, at: cmd.at }, now);
     }
     case 'prev': {
       if (s.active !== 'folder' || !s.queue) return { state: s, effects: [] };
