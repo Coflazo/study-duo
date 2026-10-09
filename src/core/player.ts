@@ -10,6 +10,16 @@ export const STREAM_SOURCES = ['youtube', 'spotify', 'apple', 'soundcloud', 'tid
 export type StreamSource = (typeof STREAM_SOURCES)[number];
 export const isStream = (s: unknown): s is StreamSource => (STREAM_SOURCES as readonly unknown[]).includes(s);
 
+/** A music site in a tab, as its page reported it. Only music sites report, and only the song, never the page. */
+export interface TabMusic {
+  tabId: number;
+  host: string;
+  title: string;
+  artist: string;
+  playing: boolean;
+}
+const MAX_TABS = 8;
+
 /** A link playing in the side panel, and what its player last said. Its place runs forward like the folder's. */
 export interface StreamState {
   source: StreamSource;
@@ -64,6 +74,9 @@ export interface PlayerState {
   /** The link in the side panel, and whether the panel is open to play it. */
   stream: StreamState | null;
   panel: boolean;
+  /** Music sites playing or paused in tabs, newest first, and the one the card controls. */
+  tabs: TabMusic[];
+  tab: number | null;
 }
 
 export const INITIAL_PLAYER: PlayerState = {
@@ -83,6 +96,8 @@ export const INITIAL_PLAYER: PlayerState = {
   upNext: null,
   stream: null,
   panel: false,
+  tabs: [],
+  tab: null,
 };
 
 export type PlayerCommand =
@@ -103,6 +118,11 @@ export type PlayerCommand =
   // From the side panel:
   | { op: 'stream-report'; url: string; title: string | null; artist: string | null; position: number; duration: number | null; playing: boolean; problem: 'embed' | 'gone' | null }
   | { op: 'panel'; open: boolean }
+  // A tab listed in the panel, from the extension's pages:
+  | { op: 'tab'; tabId: number; action: 'pick' | 'play' | 'pause' | 'next' | 'prev' }
+  // From the background only, built from a music page's own report (never parsed from a message):
+  | ({ op: 'tab-report' } & TabMusic)
+  | { op: 'tab-gone'; tabId: number }
   // From the page that plays the file:
   | { op: 'ended'; path?: string }
   | { op: 'loaded'; duration: number; path?: string }
@@ -121,8 +141,7 @@ export type PlayerEffect =
   | { type: 'panel'; op: 'play' | 'pause' | 'next' | 'prev' }
   | { type: 'panel-seek'; at: number }
   | { type: 'panel-volume'; volume: number }
-  | { type: 'source-start'; source: PlayerSource }
-  | { type: 'source-stop'; source: PlayerSource };
+  | { type: 'tab'; op: 'play' | 'pause' | 'next' | 'prev'; tabId: number };
 
 const MAX_QUEUE = 5_000;
 const text = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : null);
@@ -192,6 +211,11 @@ export function parsePlayer(raw: unknown): PlayerCommand | null {
     }
     case 'panel':
       return typeof r.open === 'boolean' ? { op: 'panel', open: r.open } : null;
+    case 'tab': {
+      const tabId = num(r.tabId);
+      const action = r.action;
+      return tabId !== null && Number.isInteger(tabId) && (action === 'pick' || action === 'play' || action === 'pause' || action === 'next' || action === 'prev') ? { op: 'tab', tabId, action } : null;
+    }
     case 'repeat':
       return r.repeat === 'off' || r.repeat === 'all' || r.repeat === 'one' ? { op: 'repeat', repeat: r.repeat } : null;
     case 'problem':
@@ -247,10 +271,16 @@ function start(s: PlayerState): PlayerEffect | null {
     // A closed panel cannot play: the state says playing, and the panel starts it when it opens.
     return s.panel ? { type: 'panel', op: 'play' } : null;
   }
-  return { type: 'source-start', source: s.active };
+  if (s.active === 'tab') return s.tab !== null && s.tabs.some((t) => t.tabId === s.tab) ? { type: 'tab', op: 'play', tabId: s.tab } : null;
+  return null;
 }
-const stop = (source: PlayerSource): PlayerEffect =>
-  source === 'noise' ? { type: 'noise-stop' } : source === 'folder' ? { type: 'file-pause' } : isStream(source) ? { type: 'panel', op: 'pause' } : { type: 'source-stop', source };
+/** What stops a source when another takes over or it pauses. */
+function stop(source: PlayerSource, s: PlayerState): PlayerEffect[] {
+  if (source === 'noise') return [{ type: 'noise-stop' }];
+  if (source === 'folder') return [{ type: 'file-pause' }];
+  if (isStream(source)) return [{ type: 'panel', op: 'pause' }];
+  return s.tab !== null ? [{ type: 'tab', op: 'pause', tabId: s.tab }] : [];
+}
 const streamOn = (s: PlayerState) => isStream(s.active) && s.stream?.source === s.active;
 
 /** Moves the folder to another song: from its start, playing it if the folder was playing. */
@@ -277,7 +307,7 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
     }
     case 'pause':
       if (!s.playing || !s.active) return { state: s, effects: [] };
-      return { state: { ...freeze(s, now), playing: false, startedAt: null, at: now }, effects: [stop(s.active)] };
+      return { state: { ...freeze(s, now), playing: false, startedAt: null, at: now }, effects: stop(s.active, s) };
     case 'toggle':
       return applyPlayer(s, { op: s.playing ? 'pause' : 'play' }, now);
     case 'source': {
@@ -288,11 +318,11 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
       const state: PlayerState = { ...leaving, ...back, active: h.active, at: now, ...(h.start ? { startedAt: now } : {}) };
       if (!h.start) return { state, effects: [] };
       const go = start(state);
-      if (go) return { state, effects: [stop(h.fadeOut!), go] };
+      if (go) return { state, effects: [...stop(h.fadeOut!, s), go] };
       // A link whose panel is closed plays when the panel opens.
-      if (streamOn(state)) return { state, effects: [stop(h.fadeOut!)] };
+      if (streamOn(state)) return { state, effects: stop(h.fadeOut!, s) };
       // A folder with nothing queued: the old source stops and the card shows the folder, waiting.
-      return { state: { ...state, playing: false, startedAt: null }, effects: [stop(h.fadeOut!)] };
+      return { state: { ...state, playing: false, startedAt: null }, effects: stop(h.fadeOut!, s) };
     }
     case 'noise': {
       const coloured = { ...s, noise: cmd.noise };
@@ -316,12 +346,12 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
       let queue = newQueue(cmd.tracks.map((t) => t.id), cmd.start);
       if (cmd.shuffle) queue = toggleShuffle(queue);
       // Whatever else played stops; a folder already playing just moves to the new list.
-      const before = s.playing && s.active && s.active !== 'folder' ? [stop(s.active)] : [];
+      const before = s.playing && s.active && s.active !== 'folder' ? stop(s.active, s) : [];
       const state: PlayerState = { ...s, active: 'folder', playing: true, queue: { ...queue, repeat: s.queue?.repeat ?? 'off' }, tracks, position: 0, at: now, startedAt: now, duration: null, problem: null };
       return { state, effects: [...before, start(state)!] };
     }
     case 'stream': {
-      const before = s.playing && s.active && s.active !== cmd.source ? [stop(s.active)] : [];
+      const before = s.playing && s.active && s.active !== cmd.source ? stop(s.active, s) : [];
       const from = cmd.at ?? 0;
       const stream: StreamState = { source: cmd.source, url: cmd.url, title: null, artist: null, position: from, at: now, duration: null, problem: null };
       const state: PlayerState = { ...freeze(s, now), active: cmd.source, playing: true, startedAt: now, at: now, stream };
@@ -336,7 +366,7 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
         return { state: { ...s, stream, playing, startedAt: playing ? (s.playing ? s.startedAt : now) : null }, effects: [] };
       }
       // Play pressed inside the service's own player: it takes over from whatever played.
-      if (cmd.playing) return { state: { ...s, stream, active: st.source, playing: true, startedAt: now, at: now }, effects: s.playing && s.active ? [stop(s.active)] : [] };
+      if (cmd.playing) return { state: { ...s, stream, active: st.source, playing: true, startedAt: now, at: now }, effects: s.playing && s.active ? stop(s.active, s) : [] };
       return { state: { ...s, stream }, effects: [] };
     }
     case 'panel': {
@@ -344,7 +374,36 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
       const state: PlayerState = { ...s, panel: false };
       return streamOn(s) && s.playing ? { state: { ...freeze(state, now), playing: false, startedAt: null }, effects: [] } : { state, effects: [] };
     }
+    case 'tab-report': {
+      const t: TabMusic = { tabId: cmd.tabId, host: cmd.host, title: cmd.title, artist: cmd.artist, playing: cmd.playing };
+      const tabs = [t, ...s.tabs.filter((x) => x.tabId !== t.tabId)].slice(0, MAX_TABS);
+      if (s.active === 'tab' && s.tab === t.tabId) return { state: { ...s, tabs, playing: t.playing, startedAt: t.playing ? (s.playing ? s.startedAt : now) : null }, effects: [] };
+      // Music started in a tab takes over: only one source plays.
+      if (t.playing) return { state: { ...s, tabs, active: 'tab', tab: t.tabId, playing: true, startedAt: now, at: now }, effects: s.playing && s.active ? stop(s.active, s) : [] };
+      return { state: { ...s, tabs }, effects: [] };
+    }
+    case 'tab-gone': {
+      if (!s.tabs.some((t) => t.tabId === cmd.tabId)) return { state: s, effects: [] };
+      const tabs = s.tabs.filter((t) => t.tabId !== cmd.tabId);
+      if (s.tab !== cmd.tabId) return { state: { ...s, tabs }, effects: [] };
+      // The card's own tab closed: the card goes back to its default, so Play plays noise rather than nothing.
+      return { state: { ...s, tabs, tab: null, ...(s.active === 'tab' ? { active: null, playing: false, startedAt: null } : {}) }, effects: [] };
+    }
+    case 'tab': {
+      if (!s.tabs.some((t) => t.tabId === cmd.tabId)) return { state: s, effects: [] };
+      const mine = s.active === 'tab' && s.tab === cmd.tabId;
+      // Picked in the source list: it takes over if something plays, otherwise the card just shows it.
+      if (cmd.action === 'pick' && !s.playing) return { state: { ...s, active: 'tab', tab: cmd.tabId }, effects: [] };
+      if (cmd.action === 'play' || cmd.action === 'pick') {
+        if (mine && s.playing) return { state: s, effects: [] };
+        const before = s.playing && s.active ? stop(s.active, s) : [];
+        return { state: { ...freeze(s, now), active: 'tab', tab: cmd.tabId, playing: true, startedAt: now, at: now }, effects: [...before, { type: 'tab', op: 'play', tabId: cmd.tabId }] };
+      }
+      if (cmd.action === 'pause') return { state: mine ? { ...s, playing: false, startedAt: null } : s, effects: [{ type: 'tab', op: 'pause', tabId: cmd.tabId }] };
+      return { state: s, effects: [{ type: 'tab', op: cmd.action, tabId: cmd.tabId }] };
+    }
     case 'next': {
+      if (s.active === 'tab' && s.tab !== null) return { state: s, effects: [{ type: 'tab', op: 'next', tabId: s.tab }] };
       if (streamOn(s)) return { state: s, effects: [{ type: 'panel', op: 'next' }] };
       if (s.active !== 'folder' || !s.queue) return { state: s, effects: [] };
       // Next always moves on, even with repeat one (which only repeats a song that ends by itself).
@@ -364,6 +423,7 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
       return toSong({ ...s, playing: true, problem: null, startedAt: s.playing ? s.startedAt : now }, { ...s.queue, at: cmd.at }, now);
     }
     case 'prev': {
+      if (s.active === 'tab' && s.tab !== null) return { state: s, effects: [{ type: 'tab', op: 'prev', tabId: s.tab }] };
       if (streamOn(s)) return { state: s, effects: [{ type: 'panel', op: 'prev' }] };
       if (s.active !== 'folder' || !s.queue) return { state: s, effects: [] };
       const back = prevIn(s.queue, positionAt(s, now));
@@ -403,7 +463,7 @@ export function nextTitle(s: PlayerState): string | null {
 
 /** The Music page's focus sound buttons, as player commands, so there is one player and one state. */
 export function soundToPlayer(cmd: SoundCommand): PlayerCommand[] {
-  if (cmd.op === 'play') return [{ op: 'volume', volume: cmd.volume }, { op: 'noise', noise: cmd.noise }, { op: 'play' }];
+  if (cmd.op === 'play') return [{ op: 'volume', volume: cmd.volume }, { op: 'noise', noise: cmd.noise }, { op: 'source', source: 'noise' }, { op: 'play' }];
   if (cmd.op === 'stop') return [{ op: 'pause' }];
   return [{ op: 'volume', volume: cmd.volume }];
 }

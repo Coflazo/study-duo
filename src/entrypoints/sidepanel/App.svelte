@@ -19,7 +19,9 @@
   import Segmented from '@/ui/Segmented.svelte';
   import SeekLine from '@/ui/SeekLine.svelte';
   import SleeveArt from '@/ui/SleeveArt.svelte';
+  import SourceMenu, { type SourcePick } from '@/ui/SourceMenu.svelte';
   import StreamFrame from '@/ui/StreamFrame.svelte';
+  import { serviceOf } from '@/ui/logos';
 
   const NOISE: Record<NoiseKind, { name: string; title: string; sleeve: string; c: [string, string]; ink: string; ring: string; mark: string; tint: string; chip: string; chipInk: string }> = {
     white: { name: 'White', title: 'White noise', sleeve: 'WHITE\nNOISE', c: ['#FFFFFF', '#CDD1D5'], ink: '#17191C', ring: 'rgb(23 25 28 / 0.3)', mark: 'rgb(23 25 28 / 0.55)', tint: '#9AA3AD', chip: '#FFFFFF', chipInk: '#17191C' },
@@ -28,9 +30,8 @@
   };
   const KINDS: NoiseKind[] = ['white', 'pink', 'brown'];
   const NO_COVER = '#5876C2';
-  type Section = 'now' | 'library' | 'streaming';
-  const SECTIONS: Array<[Section, string]> = [['now', 'Now playing'], ['library', 'Library'], ['streaming', 'Streaming']];
-  const SOURCES: Array<['folder' | 'noise' | 'youtube', string]> = [['folder', 'Your folder'], ['noise', 'Noise'], ['youtube', 'YouTube']];
+  type Section = 'now' | 'library' | 'streaming' | 'tabs';
+  const SECTIONS: Array<[Section, string]> = [['now', 'Now playing'], ['library', 'Library'], ['streaming', 'Streaming'], ['tabs', 'Tabs']];
   const YT_RED = '#FF0033';
   const LINK_PROBLEM = { 'not-youtube': 'That is not a YouTube link.', 'no-video': 'That link has no video or playlist in it.', 'private-list': 'Watch later and Liked videos are private: only YouTube can play them.' } as const;
   /** Phosphor Bold on a 256 grid: shuffle, repeat, speaker-high. */
@@ -52,7 +53,9 @@
   let loaded = $state(false);
   let cover = $state<string | null>(null);
 
-  const view = $derived<'noise' | 'folder' | 'youtube'>(player.active === 'folder' ? 'folder' : player.active === 'youtube' ? 'youtube' : 'noise');
+  const view = $derived<'noise' | 'folder' | 'youtube' | 'tab'>(player.active === 'folder' || player.active === 'youtube' || player.active === 'tab' ? player.active : 'noise');
+  const tabMusic = $derived(view === 'tab' ? (player.tabs.find((t) => t.tabId === player.tab) ?? null) : null);
+  const label = $derived(view === 'folder' ? 'FOLDER' : view === 'youtube' ? 'YOUTUBE' : view === 'tab' ? 'TAB' : 'SOUNDS');
   const stream = $derived(player.stream?.source === 'youtube' ? player.stream : null);
   const noise = $derived(NOISE[player.noise]);
   const track = $derived(view === 'folder' ? player.now : null);
@@ -74,11 +77,23 @@
   const art = $derived(
     view === 'noise'
       ? { kind: 'noise' as const, c: noise.c, ring: noise.ring, mark: noise.mark, sleeve: noise.sleeve, ink: noise.ink }
+      : view === 'tab' && tabMusic
+        ? (() => {
+            const s = serviceOf(tabMusic.host);
+            return { kind: 'cd' as const, color: s.color, cover: null, sleeve: s.name.toUpperCase(), logo: { path: s.path, grid: s.grid } };
+          })()
       : track
         ? { kind: 'cd' as const, color: track.color ?? NO_COVER, cover, sleeve: [track.artist, track.album].filter(Boolean).join('\n').toUpperCase() || 'YOUR\nFOLDER' }
-        : { kind: 'empty' as const, sleeve: view === 'youtube' ? 'PASTE A\nLINK' : folder ? 'YOUR\nFOLDER' : 'CHOOSE A\nFOLDER' },
+        : { kind: 'empty' as const, sleeve: view === 'youtube' ? 'PASTE A\nLINK' : view === 'tab' ? 'MUSIC IN\nA TAB' : folder ? 'YOUR\nFOLDER' : 'CHOOSE A\nFOLDER' },
   );
   const streamPosition = $derived(stream ? streamAt(player, now) : 0);
+
+  function pick(p: SourcePick) {
+    if ('tab' in p) return void send({ op: 'tab', tabId: p.tab, action: 'pick' });
+    // No link yet: show where to paste one, and let what plays keep playing.
+    if (p.source === 'youtube' && player.stream?.source !== 'youtube') return void (section = 'streaming');
+    if (p.source !== player.active) void send({ op: 'source', source: p.source });
+  }
 
   function playLink(e: SubmitEvent) {
     e.preventDefault();
@@ -122,7 +137,7 @@
   $effect(() => {
     const body = document.body;
     body.style.transition = 'background-color 600ms ease';
-    body.style.backgroundColor = playing ? `color-mix(in oklab, var(--color-bg-canvas) 88%, ${view === 'folder' ? (track?.color ?? NO_COVER) : view === 'youtube' ? YT_RED : noise.tint})` : '';
+    body.style.backgroundColor = playing ? `color-mix(in oklab, var(--color-bg-canvas) 88%, ${view === 'folder' ? (track?.color ?? NO_COVER) : view === 'youtube' ? YT_RED : view === 'tab' && tabMusic ? serviceOf(tabMusic.host).color : noise.tint})` : '';
   });
 
   // A saved link takes the title its player reports; unchanged names write nothing.
@@ -209,7 +224,7 @@
   {#if section === 'now'}
     <div class="now">
       {#if !(view === 'youtube' && stream)}<div class="art"><SleeveArt {art} {playing} {always} live={loaded} size="large" /></div>{/if}
-      <Segmented options={SOURCES} value={view} label="Play from" onchange={(v) => v !== view && send({ op: 'source', source: v })} />
+      <SourceMenu {player} {folder} {label} anchor="self" onpick={pick} />
 
       {#if view === 'noise'}
         <div class="song">
@@ -224,6 +239,23 @@
           </div>
           {@render key(playing ? 'Pause' : 'Play', playing ? ICONS.pause : ICONS.play, () => send({ op: 'toggle' }), { main: true })}
         </div>
+      {:else if view === 'tab'}
+        {#if tabMusic}
+          <div class="song">
+            <p class="title" title={tabMusic.title}>{clip(tabMusic.title)}</p>
+            <p class="sub">{[tabMusic.artist, `${serviceOf(tabMusic.host).name} tab`].filter(Boolean).join(' · ')}</p>
+          </div>
+          <div class="transport">
+            {@render key('Previous', ICONS.skip, () => send({ op: 'prev' }), { flip: true })}
+            {@render key(playing ? 'Pause' : 'Play', playing ? ICONS.pause : ICONS.play, () => send({ op: 'toggle' }), { main: true })}
+            {@render key('Next', ICONS.skip, () => send({ op: 'next' }))}
+          </div>
+        {:else}
+          <div class="song">
+            <p class="title">No music in your tabs</p>
+            <p class="sub">Play something on a music site; it shows up here and in Tabs.</p>
+          </div>
+        {/if}
       {:else if view === 'youtube'}
         {#if stream}
           <div class="song">
@@ -272,11 +304,14 @@
         </div>
       {/if}
 
-      <label class="vol">
-        <svg viewBox="0 0 256 256" aria-hidden="true"><path d={SPEAKER} /></svg>
-        <input type="range" min="0" max="100" value={Math.round(player.volume * 100)} aria-label="Volume" style:--v="{Math.round(player.volume * 100)}%" oninput={(e) => send({ op: 'volume', volume: Number(e.currentTarget.value) / 100 })} />
-        <span>{Math.round(player.volume * 100)}%</span>
-      </label>
+      <!-- A tab keeps its own volume: Study Duo cannot set it. -->
+      {#if view !== 'tab'}
+        <label class="vol">
+          <svg viewBox="0 0 256 256" aria-hidden="true"><path d={SPEAKER} /></svg>
+          <input type="range" min="0" max="100" value={Math.round(player.volume * 100)} aria-label="Volume" style:--v="{Math.round(player.volume * 100)}%" oninput={(e) => send({ op: 'volume', volume: Number(e.currentTarget.value) / 100 })} />
+          <span>{Math.round(player.volume * 100)}%</span>
+        </label>
+      {/if}
 
       {#if view === 'folder' && upNext.length && player.problem !== 'reconnect'}
         <section aria-labelledby="next-title">
@@ -291,6 +326,32 @@
     </div>
   {:else if section === 'library'}
     <FolderLibrary />
+  {:else if section === 'tabs'}
+    <section class="tabs" aria-labelledby="tabs-title">
+      <h2 id="tabs-title" class="visually-hidden">Music in your tabs</h2>
+      <p class="sub">Music already playing in your tabs. Study Duo can play, pause and skip it; when you start something here, the tab pauses first.</p>
+      {#if player.tabs.length}
+        <ul class="tablist">
+          {#each player.tabs as t (t.tabId)}
+            {@const s = serviceOf(t.host)}
+            {@const on = player.active === 'tab' && player.tab === t.tabId && player.playing}
+            <li class:current={player.active === 'tab' && player.tab === t.tabId}>
+              <svg class="svc" viewBox="0 0 {s.grid} {s.grid}" aria-hidden="true" style:fill={s.color}><path d={s.path} /></svg>
+              <div class="info">
+                <span class="name" title={t.title}>{clip(t.title)}</span>
+                <span class="meta">{[t.artist, t.playing ? null : 'paused'].filter(Boolean).join(' · ')}</span>
+                <span class="host">{t.host}</span>
+              </div>
+              {@render key(on ? `Pause ${t.title}` : `Play ${t.title}`, on ? ICONS.pause : ICONS.play, () => send({ op: 'tab', tabId: t.tabId, action: on ? 'pause' : 'play' }), { main: true })}
+              {@render key(`Next in ${s.name}`, ICONS.skip, () => send({ op: 'tab', tabId: t.tabId, action: 'next' }))}
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="empty">No music site is playing in a tab right now.</p>
+      {/if}
+      <p class="note">Only music sites are listed, and only while they play or are paused. The page itself is never read.</p>
+    </section>
   {:else}
     <section class="streaming" aria-labelledby="yt-title">
       <h2 id="yt-title">YouTube</h2>
@@ -362,6 +423,18 @@
   .streaming { display: grid; gap: 8px; }
   .elsewhere { margin: 0; font: 400 13px/18px var(--font-family-ui); color: var(--color-text-secondary); }
   .link { padding: 0; border: 0; background: none; color: var(--color-text-primary); font: 600 13px/18px var(--font-family-ui); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .tabs { display: grid; gap: 12px; }
+  .tabs .sub { margin: 0; }
+  .tablist { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .tablist li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--color-border-subtle); border-radius: 6px; background: var(--color-bg-panel); }
+  .tablist li.current { border-color: var(--color-border-strong); }
+  .tablist .key.main { inline-size: 40px; block-size: 40px; }
+  .svc { inline-size: 22px; block-size: 22px; }
+  .info { display: grid; min-inline-size: 0; }
+  .host { font: 500 11px/14px var(--font-family-mono); color: var(--color-text-secondary); }
+  .empty, .note { margin: 0; font: 400 13px/18px var(--font-family-ui); color: var(--color-text-secondary); }
+  .note { font: 500 11px/16px var(--font-family-mono); }
+  .visually-hidden { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .streaming h2:first-child { margin: 0; font: 700 16px/20px var(--font-family-ui); }
   form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
   form input { min-inline-size: 0; padding: 10px 12px; border: 1px solid var(--color-border-control); border-radius: 6px; background: var(--color-bg-panel); color: var(--color-text-primary); font: 400 14px/18px var(--font-family-ui); }

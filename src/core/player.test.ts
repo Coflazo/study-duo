@@ -69,7 +69,7 @@ describe('applyPlayer', () => {
 
 describe('soundToPlayer', () => {
   it('turns the Music page\'s focus sound buttons into player commands', () => {
-    expect(soundToPlayer({ op: 'play', noise: 'brown', volume: 0.4 })).toEqual([{ op: 'volume', volume: 0.4 }, { op: 'noise', noise: 'brown' }, { op: 'play' }]);
+    expect(soundToPlayer({ op: 'play', noise: 'brown', volume: 0.4 })).toEqual([{ op: 'volume', volume: 0.4 }, { op: 'noise', noise: 'brown' }, { op: 'source', source: 'noise' }, { op: 'play' }]);
     expect(soundToPlayer({ op: 'stop' })).toEqual([{ op: 'pause' }]);
     expect(soundToPlayer({ op: 'volume', volume: 0.3 })).toEqual([{ op: 'volume', volume: 0.3 }]);
   });
@@ -276,5 +276,80 @@ describe('streaming in the side panel', () => {
     const picked = applyPlayer({ ...playingNoise, stream: closed.state.stream }, { op: 'source', source: 'youtube' }, NOW);
     expect(picked.state).toMatchObject({ active: 'youtube', playing: true });
     expect(picked.effects).toEqual([{ type: 'noise-stop' }]);
+  });
+});
+
+describe('music in your tabs', () => {
+  const yt = { tabId: 7, host: 'music.youtube.com', title: 'Weightless', artist: 'Marconi Union', playing: true };
+  const sp = { tabId: 9, host: 'open.spotify.com', title: 'Deep Focus', artist: 'Spotify', playing: false };
+  const report = (t: typeof yt) => ({ op: 'tab-report' as const, ...t });
+
+  it('lists music tabs, newest first, and drops a tab that closes', () => {
+    let s = applyPlayer(INITIAL_PLAYER, report(sp), NOW).state;
+    s = applyPlayer(s, report(yt), NOW + 1).state;
+    expect(s.tabs.map((t) => t.tabId)).toEqual([7, 9]);
+    s = applyPlayer(s, report({ ...yt, title: 'Electra' }), NOW + 2).state;
+    expect(s.tabs).toHaveLength(2);
+    expect(s.tabs[0]!.title).toBe('Electra');
+    s = applyPlayer(s, { op: 'tab-gone', tabId: 9 }, NOW + 3).state;
+    expect(s.tabs.map((t) => t.tabId)).toEqual([7]);
+  });
+
+  it("closing the card's tab hands the card back, so Play plays noise again", () => {
+    let s = applyPlayer(INITIAL_PLAYER, report(yt), NOW).state;
+    s = applyPlayer(s, { op: 'tab-gone', tabId: 7 }, NOW + 1).state;
+    expect(s).toMatchObject({ active: null, tab: null, playing: false, tabs: [] });
+    expect(applyPlayer(s, { op: 'play' }, NOW + 2).effects).toEqual([{ type: 'noise-start', noise: 'pink', volume: 0.6 }]);
+  });
+
+  it("the Music page's noise button plays noise whatever the card showed", () => {
+    let s = applyPlayer(INITIAL_PLAYER, report({ ...yt, playing: false }), NOW).state;
+    s = applyPlayer(s, { op: 'tab', tabId: 7, action: 'pick' }, NOW).state;
+    let effects: unknown[] = [];
+    for (const cmd of soundToPlayer({ op: 'play', noise: 'brown', volume: 0.4 })) {
+      const r = applyPlayer(s, cmd, NOW + 1);
+      s = r.state;
+      effects = [...effects, ...r.effects];
+    }
+    expect(s).toMatchObject({ active: 'noise', playing: true, noise: 'brown' });
+    expect(effects).toEqual([{ type: 'noise-start', noise: 'brown', volume: 0.4 }]);
+  });
+
+  it('music started in a tab takes over: what Study Duo played stops', () => {
+    const { state, effects } = applyPlayer(playingNoise, report(yt), NOW);
+    expect(state).toMatchObject({ active: 'tab', tab: 7, playing: true });
+    expect(effects).toEqual([{ type: 'noise-stop' }]);
+  });
+
+  it('controls a tab from the card: pause, play, next, and the tab hands back when noise starts', () => {
+    let s = applyPlayer(INITIAL_PLAYER, report(yt), NOW).state;
+    let r = applyPlayer(s, { op: 'pause' }, NOW + 1);
+    expect(r.effects).toEqual([{ type: 'tab', op: 'pause', tabId: 7 }]);
+    s = r.state;
+    expect(applyPlayer(s, { op: 'play' }, NOW + 2).effects).toEqual([{ type: 'tab', op: 'play', tabId: 7 }]);
+    expect(applyPlayer(s, { op: 'next' }, NOW + 2).effects).toEqual([{ type: 'tab', op: 'next', tabId: 7 }]);
+    s = applyPlayer(s, { op: 'play' }, NOW + 2).state;
+    r = applyPlayer(s, { op: 'source', source: 'noise' }, NOW + 3);
+    expect(r.effects).toEqual([{ type: 'tab', op: 'pause', tabId: 7 }, { type: 'noise-start', noise: 'pink', volume: 0.6 }]);
+  });
+
+  it('plays another listed tab from the panel, pausing the one that played', () => {
+    let s = applyPlayer(INITIAL_PLAYER, report(sp), NOW).state;
+    s = applyPlayer(s, report(yt), NOW + 1).state;
+    const r = applyPlayer(s, { op: 'tab', tabId: 9, action: 'play' }, NOW + 2);
+    expect(r.state).toMatchObject({ active: 'tab', tab: 9, playing: true });
+    expect(r.effects).toEqual([{ type: 'tab', op: 'pause', tabId: 7 }, { type: 'tab', op: 'play', tabId: 9 }]);
+    expect(applyPlayer(s, { op: 'tab', tabId: 99, action: 'play' }, NOW).state).toBe(s);
+    // Picked in the list while nothing plays: the card shows it, nothing starts.
+    const quiet = applyPlayer({ ...s, playing: false }, { op: 'tab', tabId: 9, action: 'pick' }, NOW);
+    expect(quiet.state).toMatchObject({ active: 'tab', tab: 9, playing: false });
+    expect(quiet.effects).toEqual([]);
+  });
+
+  it('pages may ask for a tab action but never report one', () => {
+    expect(parsePlayer({ kind: 'player', op: 'tab', tabId: 9, action: 'next' })).toEqual({ op: 'tab', tabId: 9, action: 'next' });
+    expect(parsePlayer({ kind: 'player', op: 'tab', tabId: 9, action: 'close' })).toBeNull();
+    expect(parsePlayer({ kind: 'player', op: 'tab-report', tabId: 9, host: 'x', title: 'y', artist: '', playing: true })).toBeNull();
+    expect(parsePlayer({ kind: 'player', op: 'tab-gone', tabId: 9 })).toBeNull();
   });
 });
