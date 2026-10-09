@@ -29,16 +29,18 @@ Also: the minutes left on the toolbar icon, a bell and a short line in the middl
 
 ## How it compares
 
-Measured on 8 October 2026: each extension alone in a fresh browser, free version, default settings, no sign-in. [Full results and method](bench/results/2026-10-08.md).
+Measured on 9 October 2026: each extension alone in a fresh browser, free version, default settings, no sign-in. [Full results and method](bench/results/2026-10-09.md).
 
 | | Download | Script added to every page | CPU per idle minute | Outside servers contacted on install | Account needed to install |
 |---|---|---|---|---|---|
-| Study Duo 0.2.1 | 283 KB | 67 KB | 0.11 s, block running | 0 | No |
-| LeechBlock NG 1.7.3 | 425 KB | 5 KB | 0.41 s | 0 | No |
-| Forest 6.5.0 | 14.2 MB | 309 KB | 0.11 s | 0 | No |
-| BlockSite 7.1.1 | 18.8 MB | 6.7 MB | 0.36 s | 56 | No |
+| Study Duo 0.3.0 | 332 KB | 59 KB | 0.13 s, block running | 0 | No |
+| LeechBlock NG 1.7.3 | 425 KB | 5 KB | 0.33 s | 0 | No |
+| Forest 6.5.0 | 14.2 MB | 309 KB | 0.10 s | 0 | No |
+| Focus To-Do 7.1.1 | 26.1 MB | 0 KB | below the noise | 0 | No |
+| StayFocusd 4.6.15 | 10.3 MB | 7.0 MB | 0.71 s | 9 | No |
+| BlockSite 7.1.1 | 18.8 MB | 6.7 MB | 0.50 s | 57 | No |
 
-While a block runs, the dimmed corner clock shows minutes and wakes once a minute, which took Study Duo from 1.27 s to 0.11 s of CPU per idle minute ([#41](https://github.com/Coflazo/study-duo/issues/41), [results](bench/results/2026-10-08-clock-fix.md)). The other rows are measured idle.
+While a block runs, the dimmed corner clock shows minutes and wakes once a minute ([#41](https://github.com/Coflazo/study-duo/issues/41), [results](bench/results/2026-10-08-clock-fix.md)). The other rows are measured idle; Focus To-Do adds no script to pages and stays below the run-to-run noise.
 
 ## Get Study Duo
 

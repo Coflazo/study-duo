@@ -1,0 +1,1206 @@
+{
+  "date": "2026-10-09",
+  "idleMs": 120000,
+  "runs": [
+    [
+      {
+        "id": "baseline",
+        "name": "No extension",
+        "browser": "Chrome/155.0.8059.39",
+        "version": null,
+        "packedKb": 0,
+        "unpackedKb": 0,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          },
+          {
+            "page": "/videos",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          },
+          {
+            "page": "/article",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          }
+        ],
+        "memoryMb": 427,
+        "extensionProcessMb": 0,
+        "cpuSecPerMin": 0.295,
+        "wakeupsPerMin": 239,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 26,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.517578125,
+            "android.clients.google.com:443": 4.2744140625,
+            "mtalk.google.com:5228": 2.087890625
+          }
+        },
+        "networkSession": {
+          "connections": 1,
+          "hosts": [
+            "mtalk.google.com:5228"
+          ],
+          "kbUp": 2,
+          "kbDown": 7,
+          "upKbByHost": {
+            "mtalk.google.com:5228": 2.185546875
+          }
+        }
+      },
+      {
+        "id": "study-duo",
+        "name": "Study Duo",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "0.2.3",
+        "packedKb": 332,
+        "unpackedKb": 774,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 1,
+            "kb": 58.94140625,
+            "heapKb": 1081.11328125
+          },
+          {
+            "page": "/videos",
+            "scripts": 1,
+            "kb": 58.94140625,
+            "heapKb": 1081.11328125
+          },
+          {
+            "page": "/article",
+            "scripts": 1,
+            "kb": 58.94140625,
+            "heapKb": 1081.11328125
+          }
+        ],
+        "memoryMb": 581,
+        "extensionProcessMb": 46,
+        "cpuSecPerMin": 0.15,
+        "wakeupsPerMin": 214,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 27,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.4873046875,
+            "android.clients.google.com:443": 4.3056640625,
+            "mtalk.google.com:5228": 2.087890625
+          }
+        },
+        "networkSession": {
+          "connections": 1,
+          "hosts": [
+            "mtalk.google.com:5228"
+          ],
+          "kbUp": 2,
+          "kbDown": 7,
+          "upKbByHost": {
+            "mtalk.google.com:5228": 2.185546875
+          }
+        }
+      },
+      {
+        "id": "study-duo-timer",
+        "name": "Study Duo, timer running",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "0.2.3",
+        "packedKb": 332,
+        "unpackedKb": 774,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 1,
+            "kb": 58.94140625,
+            "heapKb": 1089.296875
+          },
+          {
+            "page": "/videos",
+            "scripts": 1,
+            "kb": 58.94140625,
+            "heapKb": 1088.984375
+          },
+          {
+            "page": "/article",
+            "scripts": 1,
+            "kb": 58.94140625,
+            "heapKb": 1088.984375
+          }
+        ],
+        "memoryMb": 579,
+        "extensionProcessMb": 76,
+        "cpuSecPerMin": 0.385,
+        "wakeupsPerMin": 342,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 27,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.455078125,
+            "android.clients.google.com:443": 4.6025390625,
+            "mtalk.google.com:5228": 2.119140625
+          }
+        },
+        "networkSession": {
+          "connections": 1,
+          "hosts": [
+            "mtalk.google.com:5228"
+          ],
+          "kbUp": 2,
+          "kbDown": 7,
+          "upKbByHost": {
+            "mtalk.google.com:5228": 2.123046875
+          }
+        }
+      },
+      {
+        "id": "leechblock",
+        "name": "LeechBlock NG",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "1.7.3",
+        "packedKb": 425,
+        "unpackedKb": 938,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 1,
+            "kb": 5.181640625,
+            "heapKb": 802.49609375
+          },
+          {
+            "page": "/videos",
+            "scripts": 1,
+            "kb": 5.181640625,
+            "heapKb": 802.49609375
+          },
+          {
+            "page": "/article",
+            "scripts": 1,
+            "kb": 5.181640625,
+            "heapKb": 802.49609375
+          }
+        ],
+        "memoryMb": 561,
+        "extensionProcessMb": 54,
+        "cpuSecPerMin": 0.54,
+        "wakeupsPerMin": 140,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 26,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.517578125,
+            "android.clients.google.com:443": 4.40234375,
+            "mtalk.google.com:5228": 2.087890625
+          }
+        },
+        "networkSession": {
+          "connections": 1,
+          "hosts": [
+            "mtalk.google.com:5228"
+          ],
+          "kbUp": 2,
+          "kbDown": 7,
+          "upKbByHost": {
+            "mtalk.google.com:5228": 2.123046875
+          }
+        }
+      },
+      {
+        "id": "blocksite",
+        "name": "BlockSite",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "7.1.1",
+        "packedKb": 19245,
+        "unpackedKb": 36453,
+        "openedOnInstall": [
+          "https://user.blocksite.co/options/BLOCK_SITES"
+        ],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 6,
+            "kb": 6867.8330078125,
+            "heapKb": 13152.390625
+          },
+          {
+            "page": "/videos",
+            "scripts": 6,
+            "kb": 6867.8330078125,
+            "heapKb": 13149.3125
+          },
+          {
+            "page": "/article",
+            "scripts": 6,
+            "kb": 6867.8330078125,
+            "heapKb": 13150.609375
+          }
+        ],
+        "memoryMb": 971,
+        "extensionProcessMb": 100,
+        "cpuSecPerMin": 0.78,
+        "wakeupsPerMin": 294,
+        "networkInstall": {
+          "connections": 139,
+          "hosts": [
+            "accounts.google.com:443",
+            "ad.doubleclick.net:443",
+            "analytics-ipv6.tiktokw.us:443",
+            "analytics.blocksite.co:443",
+            "analytics.tiktok.com:443",
+            "android.clients.google.com:443",
+            "api-js.mixpanel.com:443",
+            "api.mixpanel.com:443",
+            "bat.bing.com:443",
+            "bat.bing.net:443",
+            "category.blocksite.co:443",
+            "cdn.popt.in:443",
+            "cdn.taboola.com",
+            "cdn.taboola.com:443",
+            "cdnjs.cloudflare.com:443",
+            "connect.facebook.net:443",
+            "display.popt.in:443",
+            "edge.fullstory.com:443",
+            "embed.typeform.com:443",
+            "feature-flag.blocksite.co:443",
+            "firebase.googleapis.com:443",
+            "firebaseinstallations.googleapis.com:443",
+            "fonts.googleapis.com:443",
+            "fonts.gstatic.com:443",
+            "gtm.blocksite.co:443",
+            "identitytoolkit.googleapis.com:443",
+            "js.stripe.com:443",
+            "l.clarity.ms:443",
+            "m.stripe.com:443",
+            "m.stripe.network:443",
+            "mtalk.google.com:5228",
+            "o330699.ingest.sentry.io:443",
+            "o4504554485645312.ingest.us.sentry.io:443",
+            "px.ads.linkedin.com:443",
+            "region1.analytics.google.com:443",
+            "rs.fullstory.com:443",
+            "scripts.clarity.ms:443",
+            "sdk.iad-07.braze.com:443",
+            "snap.licdn.com:443",
+            "static.hotjar.com:443",
+            "stats.g.doubleclick.net:443",
+            "trc.taboola.com:443",
+            "update.googleapis.com:443",
+            "use.fontawesome.com:443",
+            "user-management.blocksite.co:443",
+            "user-state.blocksite.co:443",
+            "user.blocksite.co",
+            "user.blocksite.co:443",
+            "wa.appsflyersdk.com:443",
+            "wa.onelink.me:443",
+            "websdk.appsflyersdk.com:443",
+            "www.clarity.ms:443",
+            "www.google-analytics.com:443",
+            "www.google.com:443",
+            "www.google.nl:443",
+            "www.googleapis.com:443",
+            "www.googletagmanager.com:443"
+          ],
+          "kbUp": 481,
+          "kbDown": 6945,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.5166015625,
+            "feature-flag.blocksite.co:443": 8.16015625,
+            "identitytoolkit.googleapis.com:443": 8.1533203125,
+            "user-state.blocksite.co:443": 20.3095703125,
+            "api.mixpanel.com:443": 9.421875,
+            "android.clients.google.com:443": 4.0400390625,
+            "mtalk.google.com:5228": 2.119140625,
+            "user.blocksite.co:443": 39.509765625,
+            "analytics.blocksite.co:443": 4.2998046875,
+            "gtm.blocksite.co:443": 28.26171875,
+            "user.blocksite.co": 0,
+            "fonts.googleapis.com:443": 7.3984375,
+            "accounts.google.com:443": 5.5810546875,
+            "fonts.gstatic.com:443": 5.1455078125,
+            "www.googletagmanager.com:443": 5.8974609375,
+            "static.hotjar.com:443": 4.9365234375,
+            "websdk.appsflyersdk.com:443": 2.55078125,
+            "snap.licdn.com:443": 5.2138671875,
+            "bat.bing.com:443": 6.6689453125,
+            "edge.fullstory.com:443": 5.24609375,
+            "www.clarity.ms:443": 5.2666015625,
+            "analytics.tiktok.com:443": 16.2041015625,
+            "www.google.com:443": 8.2861328125,
+            "ad.doubleclick.net:443": 5.4453125,
+            "connect.facebook.net:443": 6.9287109375,
+            "cdn.taboola.com": 0,
+            "wa.onelink.me:443": 2.548828125,
+            "wa.appsflyersdk.com:443": 4.0869140625,
+            "firebase.googleapis.com:443": 5.787109375,
+            "region1.analytics.google.com:443": 6.392578125,
+            "www.google.nl:443": 6.5771484375,
+            "stats.g.doubleclick.net:443": 2.84765625,
+            "scripts.clarity.ms:443": 4.9677734375,
+            "trc.taboola.com:443": 6.4658203125,
+            "rs.fullstory.com:443": 6.236328125,
+            "category.blocksite.co:443": 3.3564453125,
+            "firebaseinstallations.googleapis.com:443": 6.4970703125,
+            "px.ads.linkedin.com:443": 12.974609375,
+            "analytics-ipv6.tiktokw.us:443": 8.2568359375,
+            "bat.bing.net:443": 12.5859375,
+            "l.clarity.ms:443": 86.5869140625,
+            "api-js.mixpanel.com:443": 12.8974609375,
+            "use.fontawesome.com:443": 5.1982421875,
+            "sdk.iad-07.braze.com:443": 4.595703125,
+            "js.stripe.com:443": 7.7216796875,
+            "o4504554485645312.ingest.us.sentry.io:443": 2.8662109375,
+            "www.google-analytics.com:443": 5.208984375,
+            "embed.typeform.com:443": 2.494140625,
+            "cdn.taboola.com:443": 2.498046875,
+            "cdn.popt.in:443": 2.4599609375,
+            "cdnjs.cloudflare.com:443": 2.4833984375,
+            "display.popt.in:443": 5.759765625,
+            "m.stripe.network:443": 2.7734375,
+            "user-management.blocksite.co:443": 3.3994140625,
+            "m.stripe.com:443": 6.0234375,
+            "www.googleapis.com:443": 4.90625,
+            "o330699.ingest.sentry.io:443": 14.1689453125
+          }
+        },
+        "networkSession": {
+          "connections": 1,
+          "hosts": [
+            "category.blocksite.co:443"
+          ],
+          "kbUp": 4,
+          "kbDown": 184,
+          "upKbByHost": {
+            "category.blocksite.co:443": 4.3740234375
+          }
+        }
+      },
+      {
+        "id": "forest",
+        "name": "Forest",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "6.5.0",
+        "packedKb": 14573,
+        "unpackedKb": 15599,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 1,
+            "kb": 309.09375,
+            "heapKb": 1386.30859375
+          },
+          {
+            "page": "/videos",
+            "scripts": 1,
+            "kb": 309.09375,
+            "heapKb": 1386.30859375
+          },
+          {
+            "page": "/article",
+            "scripts": 1,
+            "kb": 309.09375,
+            "heapKb": 1386.30859375
+          }
+        ],
+        "memoryMb": 549,
+        "extensionProcessMb": 50,
+        "cpuSecPerMin": 0.335,
+        "wakeupsPerMin": 302,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 27,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.455078125,
+            "android.clients.google.com:443": 4.6357421875,
+            "mtalk.google.com:5228": 2.0869140625
+          }
+        },
+        "networkSession": {
+          "connections": 1,
+          "hosts": [
+            "mtalk.google.com:5228"
+          ],
+          "kbUp": 2,
+          "kbDown": 7,
+          "upKbByHost": {
+            "mtalk.google.com:5228": 2.2158203125
+          }
+        }
+      },
+      {
+        "id": "stayfocusd",
+        "name": "StayFocusd",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "4.6.15",
+        "packedKb": 10596,
+        "unpackedKb": 20284,
+        "openedOnInstall": [
+          "chrome-extension://kpohachmmglalhfmfeppnpnpphcpagll/options.html#/"
+        ],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 6,
+            "kb": 7136.7080078125,
+            "heapKb": 15372.01171875
+          },
+          {
+            "page": "/videos",
+            "scripts": 6,
+            "kb": 7136.7080078125,
+            "heapKb": 15367.48828125
+          },
+          {
+            "page": "/article",
+            "scripts": 6,
+            "kb": 7136.7080078125,
+            "heapKb": 15368.03125
+          }
+        ],
+        "memoryMb": 795,
+        "extensionProcessMb": 114,
+        "cpuSecPerMin": 0.885,
+        "wakeupsPerMin": 216,
+        "networkInstall": {
+          "connections": 17,
+          "hosts": [
+            "android.clients.google.com:443",
+            "cmp.osano.com:443",
+            "fonts.googleapis.com:443",
+            "fonts.gstatic.com:443",
+            "mtalk.google.com:5228",
+            "sessions.bugsnag.com:443",
+            "stayfocusd.st-panel-api.com:443",
+            "update.googleapis.com:443",
+            "www.google-analytics.com:443",
+            "www.googletagmanager.com:443",
+            "www.stayfocusd.com:443",
+            "x-ad-assets.s3.us-east-1.amazonaws.com:443"
+          ],
+          "kbUp": 49,
+          "kbDown": 3707,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.486328125,
+            "www.stayfocusd.com:443": 4.833984375,
+            "stayfocusd.st-panel-api.com:443": 4.5498046875,
+            "cmp.osano.com:443": 5.2841796875,
+            "www.googletagmanager.com:443": 2.5927734375,
+            "sessions.bugsnag.com:443": 6.5732421875,
+            "x-ad-assets.s3.us-east-1.amazonaws.com:443": 2.4873046875,
+            "fonts.googleapis.com:443": 2.5224609375,
+            "fonts.gstatic.com:443": 4.580078125,
+            "www.google-analytics.com:443": 4.751953125,
+            "android.clients.google.com:443": 4.3935546875,
+            "mtalk.google.com:5228": 2.119140625
+          }
+        },
+        "networkSession": {
+          "connections": 3,
+          "hosts": [
+            "chromewebstore.googleapis.com:443",
+            "mtalk.google.com:5228",
+            "sessions.bugsnag.com:443"
+          ],
+          "kbUp": 10,
+          "kbDown": 19,
+          "upKbByHost": {
+            "sessions.bugsnag.com:443": 4.779296875,
+            "mtalk.google.com:5228": 2.216796875,
+            "chromewebstore.googleapis.com:443": 2.6630859375
+          }
+        }
+      },
+      {
+        "id": "focustodo",
+        "name": "Focus To-Do",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "7.1.1",
+        "packedKb": 26757,
+        "unpackedKb": 31171,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          },
+          {
+            "page": "/videos",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          },
+          {
+            "page": "/article",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          }
+        ],
+        "memoryMb": 500,
+        "extensionProcessMb": 34,
+        "cpuSecPerMin": 0.155,
+        "wakeupsPerMin": 147,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 27,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.5498046875,
+            "android.clients.google.com:443": 4.6962890625,
+            "mtalk.google.com:5228": 2.150390625
+          }
+        },
+        "networkSession": {
+          "connections": 0,
+          "hosts": [],
+          "kbUp": 0,
+          "kbDown": 0,
+          "upKbByHost": {}
+        }
+      }
+    ],
+    [
+      {
+        "id": "focustodo",
+        "name": "Focus To-Do",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "7.1.1",
+        "packedKb": 26757,
+        "unpackedKb": 31171,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          },
+          {
+            "page": "/videos",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          },
+          {
+            "page": "/article",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          }
+        ],
+        "memoryMb": 550,
+        "extensionProcessMb": 37,
+        "cpuSecPerMin": 0.16,
+        "wakeupsPerMin": 168,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 27,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.5498046875,
+            "android.clients.google.com:443": 4.6962890625,
+            "mtalk.google.com:5228": 2.150390625
+          }
+        },
+        "networkSession": {
+          "connections": 1,
+          "hosts": [
+            "mtalk.google.com:5228"
+          ],
+          "kbUp": 2,
+          "kbDown": 7,
+          "upKbByHost": {
+            "mtalk.google.com:5228": 2.154296875
+          }
+        }
+      },
+      {
+        "id": "stayfocusd",
+        "name": "StayFocusd",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "4.6.15",
+        "packedKb": 10596,
+        "unpackedKb": 20284,
+        "openedOnInstall": [
+          "chrome-extension://kpohachmmglalhfmfeppnpnpphcpagll/options.html#/"
+        ],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 6,
+            "kb": 7136.7080078125,
+            "heapKb": 15368.64453125
+          },
+          {
+            "page": "/videos",
+            "scripts": 6,
+            "kb": 7136.7080078125,
+            "heapKb": 15373.53515625
+          },
+          {
+            "page": "/article",
+            "scripts": 6,
+            "kb": 7136.7080078125,
+            "heapKb": 15368.79296875
+          }
+        ],
+        "memoryMb": 782,
+        "extensionProcessMb": 114,
+        "cpuSecPerMin": 0.995,
+        "wakeupsPerMin": 266,
+        "networkInstall": {
+          "connections": 17,
+          "hosts": [
+            "android.clients.google.com:443",
+            "cmp.osano.com:443",
+            "fonts.googleapis.com:443",
+            "fonts.gstatic.com:443",
+            "mtalk.google.com:5228",
+            "sessions.bugsnag.com:443",
+            "stayfocusd.st-panel-api.com:443",
+            "update.googleapis.com:443",
+            "www.google-analytics.com:443",
+            "www.googletagmanager.com:443",
+            "www.stayfocusd.com:443",
+            "x-ad-assets.s3.us-east-1.amazonaws.com:443"
+          ],
+          "kbUp": 49,
+          "kbDown": 3709,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.4853515625,
+            "www.stayfocusd.com:443": 4.771484375,
+            "stayfocusd.st-panel-api.com:443": 4.642578125,
+            "cmp.osano.com:443": 5.3779296875,
+            "www.googletagmanager.com:443": 2.5302734375,
+            "sessions.bugsnag.com:443": 6.54296875,
+            "x-ad-assets.s3.us-east-1.amazonaws.com:443": 2.3935546875,
+            "fonts.googleapis.com:443": 2.6162109375,
+            "fonts.gstatic.com:443": 4.548828125,
+            "www.google-analytics.com:443": 4.783203125,
+            "android.clients.google.com:443": 4.419921875,
+            "mtalk.google.com:5228": 2.087890625
+          }
+        },
+        "networkSession": {
+          "connections": 2,
+          "hosts": [
+            "mtalk.google.com:5228",
+            "sessions.bugsnag.com:443"
+          ],
+          "kbUp": 7,
+          "kbDown": 12,
+          "upKbByHost": {
+            "sessions.bugsnag.com:443": 4.7490234375,
+            "mtalk.google.com:5228": 2.185546875
+          }
+        }
+      },
+      {
+        "id": "forest",
+        "name": "Forest",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "6.5.0",
+        "packedKb": 14573,
+        "unpackedKb": 15599,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 1,
+            "kb": 309.09375,
+            "heapKb": 1386.359375
+          },
+          {
+            "page": "/videos",
+            "scripts": 1,
+            "kb": 309.09375,
+            "heapKb": 1386.3203125
+          },
+          {
+            "page": "/article",
+            "scripts": 1,
+            "kb": 309.09375,
+            "heapKb": 1386.3203125
+          }
+        ],
+        "memoryMb": 581,
+        "extensionProcessMb": 54,
+        "cpuSecPerMin": 0.33,
+        "wakeupsPerMin": 284,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 12,
+          "kbDown": 27,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.48828125,
+            "android.clients.google.com:443": 5.009765625,
+            "mtalk.google.com:5228": 2.150390625
+          }
+        },
+        "networkSession": {
+          "connections": 0,
+          "hosts": [],
+          "kbUp": 0,
+          "kbDown": 0,
+          "upKbByHost": {}
+        }
+      },
+      {
+        "id": "blocksite",
+        "name": "BlockSite",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "7.1.1",
+        "packedKb": 19245,
+        "unpackedKb": 36453,
+        "openedOnInstall": [
+          "https://user.blocksite.co/options/BLOCK_SITES"
+        ],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 6,
+            "kb": 6867.8330078125,
+            "heapKb": 13152.09765625
+          },
+          {
+            "page": "/videos",
+            "scripts": 6,
+            "kb": 6867.8330078125,
+            "heapKb": 13150.5546875
+          },
+          {
+            "page": "/article",
+            "scripts": 6,
+            "kb": 6867.8330078125,
+            "heapKb": 13150.48046875
+          }
+        ],
+        "memoryMb": 673,
+        "extensionProcessMb": 68,
+        "cpuSecPerMin": 0.675,
+        "wakeupsPerMin": 333,
+        "networkInstall": {
+          "connections": 135,
+          "hosts": [
+            "accounts.google.com:443",
+            "ad.doubleclick.net:443",
+            "analytics-ipv6.tiktokw.us:443",
+            "analytics.blocksite.co:443",
+            "analytics.tiktok.com:443",
+            "android.clients.google.com:443",
+            "api-js.mixpanel.com:443",
+            "api.mixpanel.com:443",
+            "bat.bing.com:443",
+            "bat.bing.net:443",
+            "category.blocksite.co:443",
+            "cdn.popt.in:443",
+            "cdn.taboola.com",
+            "cdn.taboola.com:443",
+            "cdnjs.cloudflare.com:443",
+            "connect.facebook.net:443",
+            "display.popt.in:443",
+            "edge.fullstory.com:443",
+            "embed.typeform.com:443",
+            "f.clarity.ms:443",
+            "feature-flag.blocksite.co:443",
+            "firebase.googleapis.com:443",
+            "firebaseinstallations.googleapis.com:443",
+            "fonts.googleapis.com:443",
+            "fonts.gstatic.com:443",
+            "gtm.blocksite.co:443",
+            "identitytoolkit.googleapis.com:443",
+            "js.stripe.com:443",
+            "m.stripe.com:443",
+            "m.stripe.network:443",
+            "metrics.hotjar.io:443",
+            "mtalk.google.com:5228",
+            "o.clarity.ms:443",
+            "o4504554485645312.ingest.us.sentry.io:443",
+            "px.ads.linkedin.com:443",
+            "region1.analytics.google.com:443",
+            "rs.fullstory.com:443",
+            "scripts.clarity.ms:443",
+            "sdk.iad-07.braze.com:443",
+            "snap.licdn.com:443",
+            "static.hotjar.com:443",
+            "stats.g.doubleclick.net:443",
+            "trc-events.taboola.com:443",
+            "trc.taboola.com:443",
+            "update.googleapis.com:443",
+            "use.fontawesome.com:443",
+            "user-management.blocksite.co:443",
+            "user-state.blocksite.co:443",
+            "user.blocksite.co",
+            "user.blocksite.co:443",
+            "wa.appsflyersdk.com:443",
+            "wa.onelink.me:443",
+            "websdk.appsflyersdk.com:443",
+            "www.clarity.ms:443",
+            "www.google-analytics.com:443",
+            "www.google.com:443",
+            "www.google.nl:443",
+            "www.googleapis.com:443",
+            "www.googletagmanager.com:443"
+          ],
+          "kbUp": 368,
+          "kbDown": 6650,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.5185546875,
+            "feature-flag.blocksite.co:443": 8.15625,
+            "identitytoolkit.googleapis.com:443": 8.1533203125,
+            "user-state.blocksite.co:443": 17.443359375,
+            "api.mixpanel.com:443": 9.4150390625,
+            "android.clients.google.com:443": 4.63671875,
+            "mtalk.google.com:5228": 2.181640625,
+            "user.blocksite.co:443": 6.3896484375,
+            "gtm.blocksite.co:443": 28.0224609375,
+            "analytics.blocksite.co:443": 2.923828125,
+            "user.blocksite.co": 0,
+            "fonts.googleapis.com:443": 7.2099609375,
+            "accounts.google.com:443": 5.51171875,
+            "fonts.gstatic.com:443": 4.5400390625,
+            "www.googletagmanager.com:443": 5.99609375,
+            "static.hotjar.com:443": 4.9677734375,
+            "websdk.appsflyersdk.com:443": 2.48828125,
+            "wa.onelink.me:443": 2.58203125,
+            "snap.licdn.com:443": 5.1201171875,
+            "bat.bing.com:443": 6.6689453125,
+            "edge.fullstory.com:443": 5.30859375,
+            "www.clarity.ms:443": 5.2041015625,
+            "analytics.tiktok.com:443": 16.2353515625,
+            "connect.facebook.net:443": 6.8974609375,
+            "cdn.taboola.com": 0,
+            "www.google.com:443": 8.3134765625,
+            "wa.appsflyersdk.com:443": 4.0556640625,
+            "ad.doubleclick.net:443": 5.380859375,
+            "trc.taboola.com:443": 6.435546875,
+            "region1.analytics.google.com:443": 8.3173828125,
+            "www.google.nl:443": 8.33203125,
+            "stats.g.doubleclick.net:443": 2.8720703125,
+            "firebase.googleapis.com:443": 5.755859375,
+            "category.blocksite.co:443": 3.263671875,
+            "scripts.clarity.ms:443": 4.9990234375,
+            "px.ads.linkedin.com:443": 12.986328125,
+            "rs.fullstory.com:443": 6.2998046875,
+            "firebaseinstallations.googleapis.com:443": 6.3720703125,
+            "f.clarity.ms:443": 15.791015625,
+            "analytics-ipv6.tiktokw.us:443": 8.2880859375,
+            "bat.bing.net:443": 13.15625,
+            "api-js.mixpanel.com:443": 5.76953125,
+            "use.fontawesome.com:443": 5.1357421875,
+            "sdk.iad-07.braze.com:443": 4.595703125,
+            "metrics.hotjar.io:443": 2.6650390625,
+            "trc-events.taboola.com:443": 2.8056640625,
+            "js.stripe.com:443": 7.7216796875,
+            "o4504554485645312.ingest.us.sentry.io:443": 2.8662109375,
+            "www.google-analytics.com:443": 2.4892578125,
+            "embed.typeform.com:443": 2.525390625,
+            "cdn.taboola.com:443": 2.466796875,
+            "cdn.popt.in:443": 2.4599609375,
+            "cdnjs.cloudflare.com:443": 2.4833984375,
+            "display.popt.in:443": 5.7275390625,
+            "o.clarity.ms:443": 12.4423828125,
+            "user-management.blocksite.co:443": 3.3369140625,
+            "m.stripe.network:443": 2.7734375,
+            "m.stripe.com:443": 6.1123046875,
+            "www.googleapis.com:443": 2.6123046875
+          }
+        },
+        "networkSession": {
+          "connections": 1,
+          "hosts": [
+            "category.blocksite.co:443"
+          ],
+          "kbUp": 4,
+          "kbDown": 184,
+          "upKbByHost": {
+            "category.blocksite.co:443": 4.3525390625
+          }
+        }
+      },
+      {
+        "id": "leechblock",
+        "name": "LeechBlock NG",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "1.7.3",
+        "packedKb": 425,
+        "unpackedKb": 938,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 1,
+            "kb": 5.181640625,
+            "heapKb": 802.49609375
+          },
+          {
+            "page": "/videos",
+            "scripts": 1,
+            "kb": 5.181640625,
+            "heapKb": 802.49609375
+          },
+          {
+            "page": "/article",
+            "scripts": 1,
+            "kb": 5.181640625,
+            "heapKb": 802.49609375
+          }
+        ],
+        "memoryMb": 614,
+        "extensionProcessMb": 54,
+        "cpuSecPerMin": 0.58,
+        "wakeupsPerMin": 251,
+        "networkInstall": {
+          "connections": 2,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228"
+          ],
+          "kbUp": 6,
+          "kbDown": 17,
+          "upKbByHost": {
+            "android.clients.google.com:443": 4.001953125,
+            "mtalk.google.com:5228": 2.150390625
+          }
+        },
+        "networkSession": {
+          "connections": 2,
+          "hosts": [
+            "chromewebstore.googleapis.com:443",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 7,
+          "kbDown": 10,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.001953125,
+            "chromewebstore.googleapis.com:443": 2.6005859375
+          }
+        }
+      },
+      {
+        "id": "study-duo-timer",
+        "name": "Study Duo, timer running",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "0.2.3",
+        "packedKb": 332,
+        "unpackedKb": 774,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 1,
+            "kb": 58.94140625,
+            "heapKb": 1089.296875
+          },
+          {
+            "page": "/videos",
+            "scripts": 1,
+            "kb": 58.94140625,
+            "heapKb": 1088.984375
+          },
+          {
+            "page": "/article",
+            "scripts": 1,
+            "kb": 58.94140625,
+            "heapKb": 1088.984375
+          }
+        ],
+        "memoryMb": 528,
+        "extensionProcessMb": 66,
+        "cpuSecPerMin": 0.335,
+        "wakeupsPerMin": 204,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 12,
+          "kbDown": 27,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.5498046875,
+            "android.clients.google.com:443": 5.0029296875,
+            "mtalk.google.com:5228": 2.087890625
+          }
+        },
+        "networkSession": {
+          "connections": 0,
+          "hosts": [],
+          "kbUp": 0,
+          "kbDown": 0,
+          "upKbByHost": {}
+        }
+      },
+      {
+        "id": "study-duo",
+        "name": "Study Duo",
+        "browser": "Chrome/155.0.8059.39",
+        "version": "0.2.3",
+        "packedKb": 332,
+        "unpackedKb": 774,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 1,
+            "kb": 58.94140625,
+            "heapKb": 1081.11328125
+          },
+          {
+            "page": "/videos",
+            "scripts": 1,
+            "kb": 58.94140625,
+            "heapKb": 1081.11328125
+          },
+          {
+            "page": "/article",
+            "scripts": 1,
+            "kb": 58.94140625,
+            "heapKb": 1081.11328125
+          }
+        ],
+        "memoryMb": 492,
+        "extensionProcessMb": 38,
+        "cpuSecPerMin": 0.15,
+        "wakeupsPerMin": 49,
+        "networkInstall": {
+          "connections": 3,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443"
+          ],
+          "kbUp": 11,
+          "kbDown": 26,
+          "upKbByHost": {
+            "update.googleapis.com:443": 4.5498046875,
+            "android.clients.google.com:443": 4.361328125,
+            "mtalk.google.com:5228": 2.150390625
+          }
+        },
+        "networkSession": {
+          "connections": 0,
+          "hosts": [],
+          "kbUp": 0,
+          "kbDown": 0,
+          "upKbByHost": {}
+        }
+      },
+      {
+        "id": "baseline",
+        "name": "No extension",
+        "browser": "Chrome/155.0.8059.39",
+        "version": null,
+        "packedKb": 0,
+        "unpackedKb": 0,
+        "openedOnInstall": [],
+        "injected": [
+          {
+            "page": "/notes",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          },
+          {
+            "page": "/videos",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          },
+          {
+            "page": "/article",
+            "scripts": 0,
+            "kb": 0,
+            "heapKb": 595.453125
+          }
+        ],
+        "memoryMb": 505,
+        "extensionProcessMb": 0,
+        "cpuSecPerMin": 0.17,
+        "wakeupsPerMin": 152,
+        "networkInstall": {
+          "connections": 5,
+          "hosts": [
+            "android.clients.google.com:443",
+            "mtalk.google.com:5228",
+            "update.googleapis.com:443",
+            "www.google.com:443"
+          ],
+          "kbUp": 16,
+          "kbDown": 40,
+          "upKbByHost": {
+            "update.googleapis.com:443": 6.4326171875,
+            "www.google.com:443": 2.5078125,
+            "android.clients.google.com:443": 4.6962890625,
+            "mtalk.google.com:5228": 2.119140625
+          }
+        },
+        "networkSession": {
+          "connections": 0,
+          "hosts": [],
+          "kbUp": 0,
+          "kbDown": 0,
+          "upKbByHost": {}
+        }
+      }
+    ]
+  ]
+}
