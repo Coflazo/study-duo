@@ -99,7 +99,7 @@ export type PlayerCommand =
   | { op: 'seek'; ms: number }
   | { op: 'shuffle' }
   | { op: 'repeat'; repeat: Repeat }
-  | { op: 'stream'; source: StreamSource; url: string }
+  | { op: 'stream'; source: StreamSource; url: string; at?: number }
   // From the side panel:
   | { op: 'stream-report'; url: string; title: string | null; artist: string | null; position: number; duration: number | null; playing: boolean; problem: 'embed' | 'gone' | null }
   | { op: 'panel'; open: boolean }
@@ -178,7 +178,9 @@ export function parsePlayer(raw: unknown): PlayerCommand | null {
     }
     case 'stream': {
       const url = text(r.url, 2_000);
-      return isStream(r.source) && url && /^https:\/\/[^\s]+$/.test(url) ? { op: 'stream', source: r.source, url } : null;
+      if (!isStream(r.source) || !url || !/^https:\/\/[^\s]+$/.test(url)) return null;
+      const at = num(r.at);
+      return at !== null && at > 0 ? { op: 'stream', source: r.source, url, at } : { op: 'stream', source: r.source, url };
     }
     case 'stream-report': {
       const url = text(r.url, 2_000);
@@ -281,7 +283,9 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
     case 'source': {
       const h = handoff({ active: s.active, playing: s.playing }, cmd.source);
       const leaving = freeze(s, now);
-      const state: PlayerState = { ...leaving, active: h.active, at: now, ...(h.start ? { startedAt: now } : {}) };
+      // The link coming back runs on from where it stopped, counted from now.
+      const back = leaving.stream && h.active === leaving.stream.source ? { stream: { ...leaving.stream, at: now } } : {};
+      const state: PlayerState = { ...leaving, ...back, active: h.active, at: now, ...(h.start ? { startedAt: now } : {}) };
       if (!h.start) return { state, effects: [] };
       const go = start(state);
       if (go) return { state, effects: [stop(h.fadeOut!), go] };
@@ -299,6 +303,8 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
     }
     case 'volume': {
       const state = { ...s, volume: cmd.volume };
+      // The panel's player keeps its own volume even while paused, so it is told either way.
+      if (streamOn(s) && s.panel) return { state, effects: [{ type: 'panel-volume', volume: cmd.volume }] };
       if (!s.playing) return { state, effects: [] };
       if (s.active === 'noise') return { state, effects: [{ type: 'noise-volume', volume: cmd.volume }] };
       if (s.active === 'folder') return { state, effects: [{ type: 'file-volume', volume: cmd.volume }] };
@@ -316,9 +322,10 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
     }
     case 'stream': {
       const before = s.playing && s.active && s.active !== cmd.source ? [stop(s.active)] : [];
-      const stream: StreamState = { source: cmd.source, url: cmd.url, title: null, artist: null, position: 0, at: now, duration: null, problem: null };
+      const from = cmd.at ?? 0;
+      const stream: StreamState = { source: cmd.source, url: cmd.url, title: null, artist: null, position: from, at: now, duration: null, problem: null };
       const state: PlayerState = { ...freeze(s, now), active: cmd.source, playing: true, startedAt: now, at: now, stream };
-      return { state, effects: [...before, { type: 'panel-load', source: cmd.source, url: cmd.url, at: 0, play: true, volume: s.volume }] };
+      return { state, effects: [...before, { type: 'panel-load', source: cmd.source, url: cmd.url, at: from, play: true, volume: s.volume }] };
     }
     case 'stream-report': {
       const st = s.stream;
@@ -366,7 +373,8 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
     case 'seek': {
       if (streamOn(s)) {
         const at = s.stream!.duration ? Math.min(cmd.ms, s.stream!.duration) : cmd.ms;
-        return { state: { ...s, stream: { ...s.stream!, position: at, at: now } }, effects: s.playing ? [{ type: 'panel-seek', at }] : [] };
+        // YouTube's seek keeps a paused video paused, so the panel moves even while paused.
+        return { state: { ...s, stream: { ...s.stream!, position: at, at: now } }, effects: s.panel ? [{ type: 'panel-seek', at }] : [] };
       }
       if (s.active !== 'folder' || !nowTrack(s)) return { state: s, effects: [] };
       const ms = s.duration ? Math.min(cmd.ms, s.duration) : cmd.ms;

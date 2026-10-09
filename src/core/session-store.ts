@@ -25,3 +25,6 @@ export const playerTracksItem = storage.defineItem<Record<string, PlayerTrack>>(
 
 /** The side panel section the popup opened it on (Streaming, to paste a link); read and cleared when it opens. */
 export const panelSectionItem = storage.defineItem<'now' | 'library' | 'streaming' | null>('session:panelSection', { fallback: null });
+
+/** Which open side panel plays links: with panels open in two windows, only the newest plays, so nothing doubles. */
+export const panelOwnerItem = storage.defineItem<string | null>('session:panelOwner', { fallback: null });

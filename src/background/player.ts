@@ -98,11 +98,21 @@ async function carryOut(e: PlayerEffect): Promise<void> {
 
 /** The side panel holds a port open while it is there: when it closes, a link it played has stopped. */
 export function trackPanel(): void {
+  let open = 0; // side panels in several windows each hold a port
   browser.runtime.onConnect.addListener((port) => {
-    if (port.name !== 'player-panel' || port.sender?.id !== browser.runtime.id) return;
-    void playerCommands([{ op: 'panel', open: true }]).catch(console.error);
-    port.onDisconnect.addListener(() => void playerCommands([{ op: 'panel', open: false }]).catch(console.error));
+    // Study Duo's own pages only: a web page's script could connect under the same name.
+    if (port.name !== 'player-panel' || port.sender?.id !== browser.runtime.id || !port.sender.url?.startsWith(browser.runtime.getURL('/'))) return;
+    if (++open === 1) void playerCommands([{ op: 'panel', open: true }]).catch(console.error);
+    port.onDisconnect.addListener(() => {
+      if (--open === 0) void playerCommands([{ op: 'panel', open: false }]).catch(console.error);
+    });
   });
+  // The worker slept while a panel closed: ask the browser whether any panel is still open.
+  const contexts = (browser.runtime as unknown as { getContexts?: (f: { contextTypes: string[] }) => Promise<unknown[]> }).getContexts;
+  if (contexts)
+    void Promise.all([contexts({ contextTypes: ['SIDE_PANEL'] }), playerItem.getValue()])
+      .then(([panels, state]) => (panels.length === 0 && state?.panel ? playerCommands([{ op: 'panel', open: false }]) : undefined))
+      .catch(console.error);
 }
 
 const REFERER_RULE = 7_701;
@@ -119,7 +129,8 @@ export async function embedReferer(): Promise<void> {
         id: REFERER_RULE,
         priority: 1,
         action: { type: 'modifyHeaders', requestHeaders: [{ header: 'referer', operation: 'set', value: 'https://coflazo.github.io/' }] },
-        condition: { requestDomains: ['youtube-nocookie.com', 'youtube.com'], resourceTypes: ['sub_frame'], initiatorDomains: [browser.runtime.id] },
+        // The extension's own origin: its id in Chrome, a random per-install host in Firefox.
+        condition: { requestDomains: ['youtube-nocookie.com', 'youtube.com'], resourceTypes: ['sub_frame'], initiatorDomains: [new URL(browser.runtime.getURL('/')).host] },
       },
     ] as Parameters<typeof dnr.updateDynamicRules>[0]['addRules'],
   });

@@ -168,7 +168,7 @@
     const url = canonicalYouTube(parsed.link);
     linkProblem = '';
     void streamLinksItem.getValue().then((list) => streamLinksItem.setValue(rememberLink(list, { source: 'youtube', url }, Date.now())));
-    void send({ op: 'stream', source: 'youtube', url });
+    void send({ op: 'stream', source: 'youtube', url, ...(parsed.link.start ? { at: parsed.link.start * 1000 } : {}) });
     if (!player.panel) openPanel();
   }
 
@@ -234,7 +234,7 @@
           <p class="sub" title={stream.artist ?? ''}>{player.panel ? [stream.artist, ytLink?.list ? 'playlist' : stream.duration ? null : 'live'].filter(Boolean).join(' · ') || 'YouTube' : 'Plays in the full player'}</p>
           <div class="keys">
             {@render key('Previous', ICONS.skip, () => send({ op: 'prev' }), false, true, !player.panel)}
-            {@render key(playing ? 'Pause' : 'Play', playing ? ICONS.pause : ICONS.play, () => (player.panel ? send({ op: 'toggle' }) : openPanel(undefined, 'youtube')), true)}
+            {@render key(playing ? 'Pause' : 'Play', playing ? ICONS.pause : ICONS.play, () => (player.panel ? send({ op: 'toggle' }) : (send({ op: 'play' }), openPanel())), true)}
             {@render key('Next', ICONS.skip, () => send({ op: 'next' }), false, false, !player.panel)}
           </div>
         {:else}

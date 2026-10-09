@@ -122,3 +122,24 @@ test('a link pasted into the popup card plays, and a wrong one is named plainly'
   expect(await watcher.evaluate(async () => (await chrome.storage.local.get('streamLinks')).streamLinks.map((l: { url: string }) => l.url))).toEqual(['https://www.youtube.com/playlist?list=PL6NdkXsPL07LBOz-XhgCJJGlI4jarMKzp']);
   await ctx.close();
 });
+
+test('with side panels open in two windows, one plays; closing the other does not stop it', async () => {
+  const { ctx } = await launch(tempProfile());
+  await ctx.route('https://www.youtube-nocookie.com/embed/**', (r) => r.fulfill({ contentType: 'text/html', body: FAKE_PLAYER }));
+  const first = await ctx.newPage();
+  await first.goto(`chrome-extension://${EXT_ID}/sidepanel.html`);
+  await first.getByRole('radiogroup', { name: 'Sections' }).getByRole('radio', { name: 'Streaming' }).click();
+  await first.getByLabel('YouTube link').fill('https://www.youtube.com/watch?v=X0Cv0l-j86Y');
+  await first.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(first.locator('iframe[title="YouTube player"]')).toHaveCount(1);
+  const second = await ctx.newPage();
+  await second.goto(`chrome-extension://${EXT_ID}/sidepanel.html`);
+  // The newest panel plays; the first lets go of its player and offers to take it back.
+  await expect(second.locator('iframe[title="YouTube player"]')).toHaveCount(1);
+  await expect(first.locator('iframe[title="YouTube player"]')).toHaveCount(0);
+  await expect(first.getByText('YouTube plays in the side panel of another window.')).toBeVisible();
+  await first.close();
+  await second.waitForTimeout(500);
+  expect(await second.evaluate(async () => (await chrome.storage.session.get('player')).player)).toMatchObject({ panel: true, active: 'youtube' });
+  await ctx.close();
+});

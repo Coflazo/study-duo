@@ -8,7 +8,7 @@
   import type { NoiseKind } from '@/core/noise';
   import { INITIAL_PLAYER, positionAt, streamAt, type PlayerCommand, type PlayerState, type PlayerTrack } from '@/core/player';
   import type { Repeat } from '@/core/queue';
-  import { panelSectionItem, playerItem, playerTracksItem } from '@/core/session-store';
+  import { panelOwnerItem, panelSectionItem, playerItem, playerTracksItem } from '@/core/session-store';
   import { forgetLink, nameLink, rememberLink, streamLinksItem, type SavedLink } from '@/core/stream-links';
   import { canonicalYouTube, parseYouTubeLink } from '@/core/youtube';
   import { normalizeSettings } from '@/core/settings';
@@ -90,7 +90,9 @@
   }
   function playSaved(url: string) {
     void streamLinksItem.setValue(rememberLink($state.snapshot(links), { source: 'youtube', url }, Date.now()));
-    void send({ op: 'stream', source: 'youtube', url });
+    void panelOwnerItem.setValue(me);
+    const p = parseYouTubeLink(url);
+    void send({ op: 'stream', source: 'youtube', url, ...(p.ok && p.link.start ? { at: p.link.start * 1000 } : {}) });
     section = 'now';
   }
 
@@ -123,25 +125,33 @@
     body.style.backgroundColor = playing ? `color-mix(in oklab, var(--color-bg-canvas) 88%, ${view === 'folder' ? (track?.color ?? NO_COVER) : view === 'youtube' ? YT_RED : noise.tint})` : '';
   });
 
-  // A saved link takes the title its player reports.
+  // A saved link takes the title its player reports; unchanged names write nothing.
   $effect(() => {
     if (!stream?.title) return;
-    const named = nameLink($state.snapshot(links), stream.url, stream.title, stream.artist);
-    if (named !== links && named.some((l, i) => l !== links[i])) void streamLinksItem.setValue(named);
+    const now = $state.snapshot(links);
+    const named = nameLink(now, stream.url, stream.title, stream.artist);
+    if (named !== now) void streamLinksItem.setValue(named);
   });
 
-  // While the panel is open the background knows it, so a link it plays stops when it closes.
+  // While the panel is open the background knows it, so a link it plays stops when it closes. The background may
+  // sleep in between (an open port does not keep it awake): the next state it writes shows it is back, and the panel
+  // connects again then, rather than waking it every 30 s.
   let port: ReturnType<typeof browser.runtime.connect> | null = null;
   let closing = false;
   function connect() {
     port = browser.runtime.connect({ name: 'player-panel' });
-    port.onDisconnect.addListener(() => !closing && setTimeout(connect, 500)); // the background restarted
+    port.onDisconnect.addListener(() => (port = null));
   }
+  const me = crypto.randomUUID();
+  let owner = $state<string | null>(null);
 
   const unwatch: Array<() => void> = [];
   onMount(async () => {
     connect();
+    void panelOwnerItem.setValue(me);
     unwatch.push(
+      panelOwnerItem.watch((v) => (owner = v)),
+      playerItem.watch(() => !port && !closing && connect()),
       streamLinksItem.watch((v) => (links = v ?? [])),
       playerItem.watch((v) => (player = v ?? INITIAL_PLAYER)),
       playerTracksItem.watch((v) => (tracks = v ?? {})),
@@ -180,7 +190,14 @@
     <span class="brand">Study Duo</span>
   </header>
   <Segmented options={SECTIONS} value={section} label="Sections" onchange={(v) => (section = v)} />
-  {#if stream}<StreamFrame {player} {stream} shown={view === 'youtube'} />{/if}
+  <!-- Only while YouTube is the source: nothing loads from YouTube while the folder or noise plays. -->
+  {#if stream && view === 'youtube'}
+    {#if owner === me}
+      <StreamFrame {player} {stream} />
+    {:else}
+      <p class="elsewhere">YouTube plays in the side panel of another window. <button class="link" onclick={() => panelOwnerItem.setValue(me)}>Play it here</button></p>
+    {/if}
+  {/if}
 
   {#if section === 'now'}
     <div class="now">
@@ -336,6 +353,8 @@
   .name { font: 600 13px/18px var(--font-family-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .meta { font: 400 11px/14px var(--font-family-ui); color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .streaming { display: grid; gap: 8px; }
+  .elsewhere { margin: 0; font: 400 13px/18px var(--font-family-ui); color: var(--color-text-secondary); }
+  .link { padding: 0; border: 0; background: none; color: var(--color-text-primary); font: 600 13px/18px var(--font-family-ui); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
   .streaming h2:first-child { margin: 0; font: 700 16px/20px var(--font-family-ui); }
   form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
   form input { min-inline-size: 0; padding: 10px 12px; border: 1px solid var(--color-border-control); border-radius: 6px; background: var(--color-bg-panel); color: var(--color-text-primary); font: 400 14px/18px var(--font-family-ui); }

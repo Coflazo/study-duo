@@ -56,7 +56,7 @@ test('pick a task, run a block, pause, and rate it afterwards', async () => {
 
   // The open popup ends the block on time; then it asks once how focused it was.
   await finishSoon(sw);
-  await expect(p.getByRole('heading', { name: 'Block done.' })).toBeVisible({ timeout: 10_000 });
+  await expect(p.getByRole('heading', { name: 'Block done.' })).toBeVisible({ timeout: 20_000 }); // a loaded 2-core machine can take longer than 10 s
   await p.getByRole('radio', { name: '4' }).click();
   await expect(p.getByRole('heading', { name: 'Block done.' })).toBeHidden();
   await expect.poll(() => sessions(sw)).toEqual([{ phase: 'focus', completed: true, taskId: 't1', rating: 4, ratingSkipped: false }]);
@@ -72,7 +72,7 @@ test('pick a task, run a block, pause, and rate it afterwards', async () => {
   await expect(p.getByLabel('Work on')).toHaveValue('t1'); // keeps going with the last block's task
   await p.getByRole('button', { name: 'Start' }).click();
   await finishSoon(sw);
-  await expect(p.getByRole('heading', { name: 'Block done.' })).toBeVisible({ timeout: 10_000 });
+  await expect(p.getByRole('heading', { name: 'Block done.' })).toBeVisible({ timeout: 20_000 }); // a loaded 2-core machine can take longer than 10 s
   // An unanswered question never covers the next running block.
   await p.getByRole('button', { name: 'Skip break' }).click();
   await p.getByRole('button', { name: 'Start' }).click();

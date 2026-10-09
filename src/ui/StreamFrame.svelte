@@ -8,7 +8,7 @@
   import { canonicalYouTube, parseYouTubeLink, type YouTubeLink } from '@/core/youtube';
   import { embedSrc, readYouTube, ytCommand, YT_ORIGIN, type YouTubeNews } from '@/core/youtube-embed';
 
-  let { player, stream, shown }: { player: PlayerState; stream: StreamState; shown: boolean } = $props();
+  let { player, stream }: { player: PlayerState; stream: StreamState } = $props();
 
   let frame: HTMLIFrameElement | undefined = $state();
   let src = $state('');
@@ -36,13 +36,16 @@
       const from = Math.floor(streamAt(player, Date.now()) / 1000);
       src = embedSrc({ ...l, start: l.video ? from || l.start : 0 }, location.origin, player.playing && player.active === 'youtube');
     });
-    news = {};
-    heard = false;
     problem = null;
     sent = { state: '', title: '', position: 0, at: 0, problem: '' };
+    clearTimeout(skipping);
   });
 
   function loaded() {
+    // A new page in the frame: whatever the last one said no longer counts.
+    heard = false;
+    news = {};
+    clearTimeout(skipping);
     clearInterval(listening);
     // The player answers once it hears that someone listens; ask until it does.
     let tries = 0;
@@ -76,12 +79,13 @@
       heard = true;
       post('setVolume', [Math.round(player.volume * 100)]);
       post('unMute');
-      // The state may have said "play" before this player could hear it.
-      if (player.playing && player.active === stream.source) post('playVideo');
+      // The state may have changed before this player could hear it: play or pause to match.
+      post(player.playing && player.active === stream.source ? 'playVideo' : 'pauseVideo');
     }
     if (n.problem) {
       problem = n.problem;
       // In a playlist, one video that will not play here is skipped after a moment.
+      clearTimeout(skipping);
       if (link?.list) skipping = setTimeout(() => post('nextVideo'), 5_000);
     } else if (n.video && news.video && n.video !== news.video) problem = null; // the playlist moved on
     news = { ...news, ...n };
@@ -89,7 +93,8 @@
   }
 
   /** The background's commands: play, pause, next, previous, seek, volume, or the same link again. */
-  function command(raw: unknown) {
+  function command(raw: unknown, sender: { tab?: unknown; url?: string }) {
+    if (sender.tab && !sender.url?.startsWith(location.origin)) return; // never from a web page's script
     const m = raw as { target?: unknown; type?: unknown; op?: unknown; at?: unknown; volume?: unknown; url?: unknown };
     if (!m || m.target !== 'panel') return;
     const at = typeof m.at === 'number' ? m.at / 1000 : 0;
@@ -121,7 +126,7 @@
   });
 </script>
 
-<div class="stream" class:shown>
+<div class="stream">
   {#if src}
     <iframe bind:this={frame} {src} title="YouTube player" allow="autoplay; encrypted-media; picture-in-picture" onload={loaded}></iframe>
   {/if}
@@ -134,8 +139,7 @@
 </div>
 
 <style>
-  .stream { display: none; }
-  .stream.shown { display: grid; gap: 8px; }
+  .stream { display: grid; gap: 8px; }
   /* YouTube asks for a visible player of at least 200 by 200 px; the panel is at least 300 px wide. */
   iframe { inline-size: 100%; aspect-ratio: 16 / 9; min-block-size: 200px; border: 0; border-radius: 6px; background: #000; }
   .problem { margin: 0; font: 400 13px/18px var(--font-family-ui); color: var(--color-text-secondary); }

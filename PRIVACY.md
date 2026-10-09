@@ -42,7 +42,7 @@ Google Calendar uses one permission, "Make secondary Google calendars, and see, 
 
 ## YouTube links (optional)
 
-Nothing reaches YouTube until you paste a link and press Play. Then the side panel loads YouTube's own player from www.youtube-nocookie.com, which sees what any embedded YouTube video sees: your IP address, the video, and that it plays on Study Duo's site (Study Duo sends coflazo.github.io as the page it plays on, because YouTube refuses to play without one). YouTube sets its cookies only once the video plays. Study Duo keeps the links you played, with their titles, on this computer, never the parts of a shared link that say who shared it, and never keeps YouTube plays as listens. Forget a link in Streaming, or Delete everything, to remove them.
+Nothing reaches YouTube until you paste a link and press Play. Then, and whenever YouTube is the source while the side panel is open, the panel loads YouTube's own player from www.youtube-nocookie.com, which sees what any embedded YouTube video sees: your IP address, the video, and that it plays on Study Duo's site (Study Duo sends coflazo.github.io as the page it plays on, because YouTube refuses to play without one). YouTube sets its cookies only once the video plays. Study Duo keeps the links you played, with their titles, on this computer, never the parts of a shared link that say who shared it, and never keeps YouTube plays as listens. Forget a link in Streaming, or Delete everything, to remove them.
 
 ## The desktop helper (optional)
 
