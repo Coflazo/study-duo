@@ -6,6 +6,7 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ### Added
 
+- Your music folder, played like a music app (Chrome and other Chromium browsers): pick a folder on the Music page, search it, browse by song, artist or album, play all or shuffle. Songs keep playing with every Study Duo page closed, fade in and out softly, and keep their place while you switch to noise. Study Duo keeps the songs' names and small covers, never the music. After Chrome restarts, one click reconnects the folder.
 - A player card in the popup, under the clock: focus noise half out of its sleeve, with White, Pink and Brown, play and pause, and volume. The disc turns while it plays, starting softly and coasting to a stop, and the popup takes a light tint of the noise. It stays still when your computer asks for less motion, unless Settings, Spinning disc is set to Always. Your music folder, YouTube links and streaming join it in 0.3.0.
 
 ### Changed
