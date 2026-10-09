@@ -3,7 +3,9 @@
   import { sortTracks } from '@/core/library';
   import { loadFolder, loadThumb, loadTracks, type FolderRecord } from '@/core/library-db';
   import type { NoiseKind } from '@/core/noise';
-  import { INITIAL_PLAYER, positionAt, streamAt, type PlayerCommand, type PlayerSource, type PlayerState } from '@/core/player';
+  import { CAPS } from '@/core/embed-protocols';
+  import { INITIAL_PLAYER, isStream, positionAt, streamAt, type PlayerCommand, type PlayerSource, type PlayerState, type StreamSource } from '@/core/player';
+  import { parseStreamLink } from '@/core/stream-links-parse';
   import { panelSectionItem, playerItem } from '@/core/session-store';
   import { rememberLink, streamLinksItem } from '@/core/stream-links';
   import { canonicalYouTube, parseYouTubeLink } from '@/core/youtube';
@@ -39,12 +41,17 @@
   let loaded = $state(false);
   let cover = $state<string | null>(null);
 
-  const view = $derived<'noise' | 'folder' | 'youtube' | 'tab'>(player.active === 'folder' || player.active === 'youtube' || player.active === 'tab' ? player.active : 'noise');
+  const view = $derived<'noise' | 'folder' | 'tab' | StreamSource>(player.active === 'folder' || player.active === 'tab' || isStream(player.active) ? player.active : 'noise');
+  const streamView = $derived(isStream(view) ? view : null);
+  const STREAM_NAMES: Record<StreamSource, string> = { youtube: 'YouTube', spotify: 'Spotify', soundcloud: 'SoundCloud', apple: 'Apple Music', tidal: 'Tidal' };
+  const STREAM_LOGOS: Record<StreamSource, { color: string; path: string }> = { youtube: LOGOS.youtube, spotify: LOGOS.spotify, soundcloud: LOGOS.soundcloud, apple: LOGOS.apple, tidal: LOGOS.tidal };
+  const name = $derived(streamView ? STREAM_NAMES[streamView] : '');
+  const caps = $derived(streamView ? CAPS[streamView] : CAPS.apple);
   const tabMusic = $derived(view === 'tab' ? (player.tabs.find((t) => t.tabId === player.tab) ?? null) : null);
   const service = $derived(tabMusic ? serviceOf(tabMusic.host) : null);
-  const stream = $derived(view === 'youtube' && player.stream?.source === 'youtube' ? player.stream : null);
+  const stream = $derived(streamView && player.stream?.source === streamView ? player.stream : null);
   const ytLink = $derived.by(() => {
-    const p = stream ? parseYouTubeLink(stream.url) : null;
+    const p = stream?.source === 'youtube' ? parseYouTubeLink(stream.url) : null;
     return p?.ok ? p.link : null;
   });
   let pasted = $state('');
@@ -58,8 +65,8 @@
   const duration = $derived(player.duration ?? 0);
   const position = $derived(positionAt(player, now));
   const upNext = $derived(view === 'folder' ? player.upNext : null);
-  const tint = $derived(view === 'folder' ? (track?.color ?? NO_COVER) : view === 'youtube' ? LOGOS.youtube.color : view === 'tab' ? (service?.color ?? NO_COVER) : noise.tint);
-  const label = $derived(view === 'folder' ? 'FOLDER' : view === 'youtube' ? 'YOUTUBE' : view === 'tab' ? 'TAB' : 'SOUNDS');
+  const tint = $derived(view === 'folder' ? (track?.color ?? NO_COVER) : streamView ? STREAM_LOGOS[streamView].color : view === 'tab' ? (service?.color ?? NO_COVER) : noise.tint);
+  const label = $derived(view === 'folder' ? 'FOLDER' : streamView ? name.toUpperCase() : view === 'tab' ? 'TAB' : 'SOUNDS');
   const sleeveText = $derived(track ? [track.artist, track.album].filter(Boolean).join('\n').toUpperCase() || 'YOUR\nFOLDER' : 'YOUR\nFOLDER');
   const send = (cmd: PlayerCommand) => browser.runtime.sendMessage({ kind: 'player', ...cmd }).catch(() => undefined);
 
@@ -72,10 +79,12 @@
         ? service
           ? { kind: 'cd' as const, color: service.color, cover: null, sleeve: service.name.toUpperCase(), logo: { path: service.path, grid: service.grid } }
           : { kind: 'empty' as const, sleeve: 'MUSIC IN\nA TAB' }
-      : view === 'youtube'
-        ? stream
-          ? { kind: 'cd' as const, color: sleeveColor(stream.title ?? stream.url), cover: null, sleeve: (stream.title ?? 'YouTube').toUpperCase() }
-          : { kind: 'empty' as const, sleeve: 'PASTE A\nLINK' }
+      : streamView
+        ? !stream
+          ? { kind: 'empty' as const, sleeve: 'PASTE A\nLINK' }
+          : streamView === 'youtube'
+            ? { kind: 'cd' as const, color: sleeveColor(stream.title ?? stream.url), cover: null, sleeve: (stream.title ?? 'YouTube').toUpperCase() }
+            : { kind: 'cd' as const, color: STREAM_LOGOS[streamView].color, cover: null, sleeve: name.toUpperCase(), logo: { path: STREAM_LOGOS[streamView].path, grid: 24 } }
         : track
           ? { kind: 'cd' as const, color: track.color ?? NO_COVER, cover, sleeve: sleeveText }
           : { kind: 'empty' as const, sleeve: folder ? 'YOUR\nFOLDER' : 'CHOOSE A\nFOLDER' },
@@ -114,8 +123,8 @@
     const source = p.source;
     // Links play in the full player: open it (straight from the click, as Chrome requires), on Streaming if none is set.
     // Without a link, nothing playing stops: the panel opens to paste one.
-    const link = player.stream?.source === 'youtube';
-    if (source === 'youtube' && !(link && player.panel)) return link ? openPanel(undefined, source) : openPanel('streaming');
+    const link = player.stream?.source === source;
+    if (isStream(source) && !(link && player.panel)) return link ? openPanel(undefined, source) : openPanel('streaming');
     if (source !== player.active) void send({ op: 'source', source });
   }
   const openMusicPage = () => void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html#music') });
@@ -129,15 +138,28 @@
     else void b.sidebarAction?.open().catch(() => undefined);
   }
 
+  const FOOT = $derived<Record<StreamSource, string>>({
+    youtube: ytLink?.list ? 'Next and previous move through the playlist.' : stream?.duration ? 'One long video: drag to any minute. Next and previous jump 30 s.' : 'A live stream: it plays from now, without seeking.',
+    spotify: "Play, pause and seek work here. Skipping happens in Spotify's player in the side panel.",
+    soundcloud: 'Drag to any minute. Next and previous move through a set.',
+    apple: "Play and pause with Apple Music's own buttons in the side panel.",
+    tidal: "Play and pause with Tidal's own buttons in the side panel.",
+  });
+  const LINK_PROBLEMS = {
+    unknown: 'Study Duo plays links from YouTube, Spotify, SoundCloud, Apple Music and Tidal.',
+    'short-link': 'Open the short link once, then copy the full address from the address bar.',
+    'no-video': 'That link has no video or playlist in it.',
+    'private-list': 'Watch later and Liked videos are private: only YouTube can play them.',
+  } as const;
   /** Pasted in the card: it plays in the side panel, which opens straight from this click. */
   function playLink(e: SubmitEvent) {
     e.preventDefault();
-    const parsed = parseYouTubeLink(pasted);
-    if (!parsed.ok) return void (linkProblem = 'That is not a YouTube link. Use one from youtube.com, youtu.be or music.youtube.com.');
-    const url = canonicalYouTube(parsed.link);
+    const parsed = parseStreamLink(pasted);
+    if (!parsed.ok) return void (linkProblem = LINK_PROBLEMS[parsed.reason]);
+    const { source, url, start } = parsed.link;
     linkProblem = '';
-    void streamLinksItem.getValue().then((list) => streamLinksItem.setValue(rememberLink(list, { source: 'youtube', url }, Date.now())));
-    void send({ op: 'stream', source: 'youtube', url, ...(parsed.link.start ? { at: parsed.link.start * 1000 } : {}) });
+    void streamLinksItem.getValue().then((list) => streamLinksItem.setValue(rememberLink(list, { source, url }, Date.now())));
+    void send({ op: 'stream', source, url, ...(start ? { at: start * 1000 } : {}) });
     if (!player.panel) openPanel();
   }
 
@@ -206,22 +228,32 @@
           <p class="title">No music in your tabs</p>
           <p class="sub wrap">Play something on a music site; it shows up here.</p>
         {/if}
-      {:else if view === 'youtube'}
-        {#if stream?.problem}
-          <p class="title">This video only plays on YouTube</p>
+      {:else if streamView}
+        {#if stream?.problem === 'embed' || stream?.problem === 'gone'}
+          <p class="title">{streamView === 'youtube' ? 'This video only plays on YouTube' : `This only plays on ${name}`}</p>
           <p class="sub wrap problem">{stream.problem === 'embed' ? 'Its owner turned off playing elsewhere.' : 'It is gone or private.'}{ytLink?.list ? ' Skipping to the next one in 5 s.' : ''}</p>
-          <button class="action" onclick={() => browser.tabs.create({ url: ytLink ? canonicalYouTube(ytLink) : stream.url })}>Open on YouTube</button>
+          <button class="action" onclick={() => browser.tabs.create({ url: ytLink ? canonicalYouTube(ytLink) : stream.url })}>Open on {name}</button>
+        {:else if stream?.problem === 'preview'}
+          <p class="title">Only 30 s previews</p>
+          <p class="sub wrap problem">Sign in to Spotify in the side panel to hear full songs.</p>
+          <button class="action" onclick={() => openPanel('streaming')}>Open side panel</button>
         {:else if stream}
-          <p class="title" title={stream.title ?? ''}>{clip(stream.title ?? 'YouTube')}</p>
-          <p class="sub" title={stream.artist ?? ''}>{player.panel ? [stream.artist, ytLink?.list ? 'playlist' : stream.duration ? null : 'live'].filter(Boolean).join(' · ') || 'YouTube' : 'Plays in the full player'}</p>
-          <div class="keys">
-            {@render key('Previous', ICONS.skip, () => send({ op: 'prev' }), false, true, !player.panel)}
-            {@render key(playing ? 'Pause' : 'Play', playing ? ICONS.pause : ICONS.play, () => (player.panel ? send({ op: 'toggle' }) : (send({ op: 'play' }), openPanel())), true)}
-            {@render key('Next', ICONS.skip, () => send({ op: 'next' }), false, false, !player.panel)}
-          </div>
+          <p class="title" title={stream.title ?? ''}>{caps.title ? clip(stream.title ?? name) : 'Playing in the side panel'}</p>
+          <p class="sub" class:wrap={!caps.title} title={stream.artist ?? ''}>
+            {!player.panel ? 'Plays in the full player' : caps.title ? [stream.artist, ytLink?.list ? 'playlist' : stream.duration ? null : 'live'].filter(Boolean).join(' · ') || name : caps.play ? `${name} plays and seeks inside its own player there.` : `Use ${name}'s own buttons there.`}
+          </p>
+          {#if caps.play}
+            <div class="keys">
+              {@render key('Previous', ICONS.skip, () => send({ op: 'prev' }), false, true, !player.panel || !caps.skip)}
+              {@render key(playing ? 'Pause' : 'Play', playing ? ICONS.pause : ICONS.play, () => (player.panel ? send({ op: 'toggle' }) : (send({ op: 'play' }), openPanel())), true)}
+              {@render key('Next', ICONS.skip, () => send({ op: 'next' }), false, false, !player.panel || !caps.skip)}
+            </div>
+          {:else if !player.panel}
+            <button class="action" onclick={() => openPanel()}>Open side panel</button>
+          {/if}
         {:else}
-          <p class="title">Play a YouTube link</p>
-          <p class="sub wrap">A public playlist, video or live stream.</p>
+          <p class="title">Play a {name} link</p>
+          <p class="sub wrap">{streamView === 'youtube' ? 'A public playlist, video or live stream.' : streamView === 'soundcloud' ? 'A public track or set.' : 'A playlist, album or song, with your account.'}</p>
         {/if}
       {:else if player.problem === 'reconnect'}
         <p class="title">Chrome asks again for your folder</p>
@@ -258,16 +290,16 @@
     </div>
   {:else if tabMusic}
     <p class="foot wrap">{tabMusic.playing ? 'Playing' : 'Paused'} in another tab. Study Duo can pause it or skip.</p>
-  {:else if view === 'youtube' && !stream}
+  {:else if streamView && !stream}
     <form class="paste" class:bad={linkProblem} onsubmit={playLink}>
       <svg viewBox="0 0 256 256" aria-hidden="true"><path d={LINK} /></svg>
-      <input aria-label="YouTube link" aria-describedby="paste-note" placeholder="Paste a playlist or video link" autocomplete="off" spellcheck="false" bind:value={pasted} oninput={() => (linkProblem = '')} />
+      <input aria-label="{name} link" aria-describedby="paste-note" placeholder={streamView === 'youtube' ? 'Paste a playlist or video link' : `Paste a ${name} link`} autocomplete="off" spellcheck="false" bind:value={pasted} oninput={() => (linkProblem = '')} />
       <button type="submit">Play</button>
     </form>
     <p class="foot wrap" class:problem={linkProblem} id="paste-note" role={linkProblem ? 'alert' : undefined}>{linkProblem || 'Plays in the side panel. Links are kept on this computer.'}</p>
   {:else if stream && !stream.problem}
-    <SeekLine position={streamAt(player, now)} duration={stream.duration ?? 0} stamp={stream.at} onseek={(ms) => send({ op: 'seek', ms })} />
-    <p class="foot wrap">{!player.panel ? 'Open the full player to play it.' : ytLink?.list ? 'Next and previous move through the playlist.' : stream.duration ? 'One long video: drag to any minute. Next and previous jump 30 s.' : 'A live stream: it plays from now, without seeking.'}</p>
+    {#if caps.seek}<SeekLine position={streamAt(player, now)} duration={stream.duration ?? 0} stamp={stream.at} onseek={(ms) => send({ op: 'seek', ms })} />{/if}
+    <p class="foot wrap">{!player.panel ? 'Open the full player to play it.' : FOOT[stream.source]}</p>
   {:else if track}
     <SeekLine {position} {duration} stamp={player.at} onseek={(ms) => send({ op: 'seek', ms })} />
     {#if player.queue}

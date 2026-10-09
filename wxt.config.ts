@@ -84,7 +84,7 @@ export default defineConfig({
       // Course calendars live on any school's host, so https: is open here; src/core/net.ts is the allowlist (only the
       // connections the user switched on) and nothing else in the extension fetches.
       // Frames: only the streaming services' own players, in the side panel.
-      extension_pages: "script-src 'self'; object-src 'self'; connect-src 'self' https:; frame-src https://www.youtube-nocookie.com;",
+      extension_pages: "script-src 'self'; object-src 'self'; connect-src 'self' https:; frame-src https://www.youtube-nocookie.com https://open.spotify.com https://w.soundcloud.com https://embed.music.apple.com https://embed.tidal.com;",
     },
     commands: {
       'toggle-timer': {

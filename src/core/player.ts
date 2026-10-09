@@ -29,8 +29,8 @@ export interface StreamState {
   position: number;
   at: number;
   duration: number | null;
-  /** The service will not play it here: embedding is off, or it is gone. */
-  problem: 'embed' | 'gone' | null;
+  /** The service will not play it here (embedding is off, or it is gone), or plays only previews until you sign in. */
+  problem: 'embed' | 'gone' | 'preview' | null;
 }
 
 /** A song from the music folder, as the player needs it: what to show, and where to find the file. */
@@ -116,7 +116,7 @@ export type PlayerCommand =
   | { op: 'repeat'; repeat: Repeat }
   | { op: 'stream'; source: StreamSource; url: string; at?: number }
   // From the side panel:
-  | { op: 'stream-report'; url: string; title: string | null; artist: string | null; position: number; duration: number | null; playing: boolean; problem: 'embed' | 'gone' | null }
+  | { op: 'stream-report'; url: string; title: string | null; artist: string | null; position: number; duration: number | null; playing: boolean; problem: 'embed' | 'gone' | 'preview' | null }
   | { op: 'panel'; open: boolean }
   // A tab listed in the panel, from the extension's pages:
   | { op: 'tab'; tabId: number; action: 'pick' | 'play' | 'pause' | 'next' | 'prev' }
@@ -206,7 +206,7 @@ export function parsePlayer(raw: unknown): PlayerCommand | null {
       const position = num(r.position);
       if (!url || position === null || typeof r.playing !== 'boolean') return null;
       const d = num(r.duration);
-      const problem = r.problem === 'embed' || r.problem === 'gone' ? r.problem : null;
+      const problem = r.problem === 'embed' || r.problem === 'gone' || r.problem === 'preview' ? r.problem : null;
       return { op: 'stream-report', url, title: text(r.title, 300), artist: text(r.artist, 300), position: Math.max(0, position), duration: d && d > 0 ? d : null, playing: r.playing, problem };
     }
     case 'panel':

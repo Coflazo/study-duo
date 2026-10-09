@@ -6,11 +6,13 @@
   import { onDestroy, onMount, tick } from 'svelte';
   import { loadFolder, loadThumb, type FolderRecord } from '@/core/library-db';
   import type { NoiseKind } from '@/core/noise';
-  import { INITIAL_PLAYER, positionAt, streamAt, type PlayerCommand, type PlayerState, type PlayerTrack } from '@/core/player';
+  import { INITIAL_PLAYER, isStream, positionAt, streamAt, type PlayerCommand, type PlayerState, type PlayerTrack, type StreamSource } from '@/core/player';
   import type { Repeat } from '@/core/queue';
   import { panelOwnerItem, panelSectionItem, playerItem, playerTracksItem } from '@/core/session-store';
   import { forgetLink, nameLink, rememberLink, streamLinksItem, type SavedLink } from '@/core/stream-links';
-  import { canonicalYouTube, parseYouTubeLink } from '@/core/youtube';
+  import { CAPS } from '@/core/embed-protocols';
+  import { parseStreamLink } from '@/core/stream-links-parse';
+  import { parseYouTubeLink } from '@/core/youtube';
   import { normalizeSettings } from '@/core/settings';
   import { settingsItem } from '@/core/store';
   import { clip } from '@/core/text';
@@ -21,7 +23,7 @@
   import SleeveArt from '@/ui/SleeveArt.svelte';
   import SourceMenu, { type SourcePick } from '@/ui/SourceMenu.svelte';
   import StreamFrame from '@/ui/StreamFrame.svelte';
-  import { serviceOf } from '@/ui/logos';
+  import { LOGOS, serviceOf } from '@/ui/logos';
 
   const NOISE: Record<NoiseKind, { name: string; title: string; sleeve: string; c: [string, string]; ink: string; ring: string; mark: string; tint: string; chip: string; chipInk: string }> = {
     white: { name: 'White', title: 'White noise', sleeve: 'WHITE\nNOISE', c: ['#FFFFFF', '#CDD1D5'], ink: '#17191C', ring: 'rgb(23 25 28 / 0.3)', mark: 'rgb(23 25 28 / 0.55)', tint: '#9AA3AD', chip: '#FFFFFF', chipInk: '#17191C' },
@@ -32,8 +34,30 @@
   const NO_COVER = '#5876C2';
   type Section = 'now' | 'library' | 'streaming' | 'tabs';
   const SECTIONS: Array<[Section, string]> = [['now', 'Now playing'], ['library', 'Library'], ['streaming', 'Streaming'], ['tabs', 'Tabs']];
-  const YT_RED = '#FF0033';
-  const LINK_PROBLEM = { 'not-youtube': 'That is not a YouTube link.', 'no-video': 'That link has no video or playlist in it.', 'private-list': 'Watch later and Liked videos are private: only YouTube can play them.' } as const;
+  const LINK_PROBLEM = {
+    unknown: 'Study Duo plays links from YouTube, Spotify, SoundCloud, Apple Music and Tidal.',
+    'short-link': 'Open the short link once, then copy the full address from the address bar.',
+    'no-video': 'That link has no video or playlist in it.',
+    'private-list': 'Watch later and Liked videos are private: only YouTube can play them.',
+  } as const;
+  const SERVICES: Record<StreamSource, { name: string; logo: { color: string; path: string }; account: string; signIn: string | null }> = {
+    youtube: { name: 'YouTube', logo: LOGOS.youtube, account: 'Any public link, no account', signIn: null },
+    spotify: { name: 'Spotify', logo: LOGOS.spotify, account: 'Premium: full songs once you sign in', signIn: 'https://accounts.spotify.com/login?continue=https%3A%2F%2Fopen.spotify.com%2F' },
+    apple: { name: 'Apple Music', logo: LOGOS.apple, account: 'Signs in in its own small window', signIn: 'https://music.apple.com/' },
+    soundcloud: { name: 'SoundCloud', logo: LOGOS.soundcloud, account: 'Public tracks need no account', signIn: null },
+    tidal: { name: 'Tidal', logo: LOGOS.tidal, account: 'Signs in in its own small window', signIn: 'https://listen.tidal.com/login' },
+  };
+  const ACCOUNTS: StreamSource[] = ['spotify', 'apple', 'tidal', 'soundcloud', 'youtube'];
+  /** A link whose service sends no title: "Spotify playlist", "Apple Music album". */
+  function linkName(url: string): string {
+    const p = parseStreamLink(url);
+    return p.ok ? `${SERVICES[p.link.source].name} ${p.link.kind}` : url;
+  }
+  /** Signs in on the service's own site, in a small window: the panel's player then plays full songs. */
+  function signIn(s: StreamSource) {
+    const url = SERVICES[s].signIn;
+    if (url) void browser.windows.create({ url, type: 'popup', width: 480, height: 720 }).catch(() => undefined);
+  }
   /** Phosphor Bold on a 256 grid: shuffle, repeat, speaker-high. */
   const SHUFFLE = 'M240.49,175.51a12,12,0,0,1,0,17l-24,24a12,12,0,0,1-17-17L203,196h-2.09a76.17,76.17,0,0,1-61.85-31.83L97.38,105.78A52.1,52.1,0,0,0,55.06,84H32a12,12,0,0,1,0-24H55.06a76.17,76.17,0,0,1,61.85,31.83l41.71,58.39A52.1,52.1,0,0,0,200.94,172H203l-3.52-3.51a12,12,0,0,1,17-17Zm-95.62-72.62a12,12,0,0,0,16.93-1.13A52,52,0,0,1,200.94,84H203l-3.52,3.51a12,12,0,0,0,17,17l24-24a12,12,0,0,0,0-17l-24-24a12,12,0,0,0-17,17L203,60h-2.09a76,76,0,0,0-57.2,26A12,12,0,0,0,144.87,102.89Zm-33.74,50.22a12,12,0,0,0-16.93,1.13A52,52,0,0,1,55.06,172H32a12,12,0,0,0,0,24H55.06a76,76,0,0,0,57.2-26A12,12,0,0,0,111.13,153.11Z';
   const REPEAT = 'M20,128A76.08,76.08,0,0,1,96,52h99l-3.52-3.51a12,12,0,1,1,17-17l24,24a12,12,0,0,1,0,17l-24,24a12,12,0,0,1-17-17L195,76H96a52.06,52.06,0,0,0-52,52,12,12,0,0,1-24,0Zm204-12a12,12,0,0,0-12,12,52.06,52.06,0,0,1-52,52H61l3.52-3.51a12,12,0,1,0-17-17l-24,24a12,12,0,0,0,0,17l24,24a12,12,0,1,0,17-17L61,204h99a76.08,76.08,0,0,0,76-76A12,12,0,0,0,224,116Z';
@@ -53,10 +77,16 @@
   let loaded = $state(false);
   let cover = $state<string | null>(null);
 
-  const view = $derived<'noise' | 'folder' | 'youtube' | 'tab'>(player.active === 'folder' || player.active === 'youtube' || player.active === 'tab' ? player.active : 'noise');
+  const view = $derived<'noise' | 'folder' | 'tab' | StreamSource>(player.active === 'folder' || player.active === 'tab' || isStream(player.active) ? player.active : 'noise');
+  const streamView = $derived(isStream(view) ? view : null);
+  const caps = $derived(streamView ? CAPS[streamView] : CAPS.apple);
   const tabMusic = $derived(view === 'tab' ? (player.tabs.find((t) => t.tabId === player.tab) ?? null) : null);
-  const label = $derived(view === 'folder' ? 'FOLDER' : view === 'youtube' ? 'YOUTUBE' : view === 'tab' ? 'TAB' : 'SOUNDS');
-  const stream = $derived(player.stream?.source === 'youtube' ? player.stream : null);
+  const label = $derived(view === 'folder' ? 'FOLDER' : streamView ? SERVICES[streamView].name.toUpperCase() : view === 'tab' ? 'TAB' : 'SOUNDS');
+  const stream = $derived(streamView && player.stream?.source === streamView ? player.stream : null);
+  const ytList = $derived.by(() => {
+    const p = stream?.source === 'youtube' ? parseYouTubeLink(stream.url) : null;
+    return !!(p?.ok && p.link.list);
+  });
   const noise = $derived(NOISE[player.noise]);
   const track = $derived(view === 'folder' ? player.now : null);
   const playing = $derived(player.playing && (view === 'noise' ? player.active === 'noise' || player.active === null : player.active === view));
@@ -84,14 +114,14 @@
           })()
       : track
         ? { kind: 'cd' as const, color: track.color ?? NO_COVER, cover, sleeve: [track.artist, track.album].filter(Boolean).join('\n').toUpperCase() || 'YOUR\nFOLDER' }
-        : { kind: 'empty' as const, sleeve: view === 'youtube' ? 'PASTE A\nLINK' : view === 'tab' ? 'MUSIC IN\nA TAB' : folder ? 'YOUR\nFOLDER' : 'CHOOSE A\nFOLDER' },
+        : { kind: 'empty' as const, sleeve: streamView ? 'PASTE A\nLINK' : view === 'tab' ? 'MUSIC IN\nA TAB' : folder ? 'YOUR\nFOLDER' : 'CHOOSE A\nFOLDER' },
   );
   const streamPosition = $derived(stream ? streamAt(player, now) : 0);
 
   function pick(p: SourcePick) {
     if ('tab' in p) return void send({ op: 'tab', tabId: p.tab, action: 'pick' });
     // No link yet: show where to paste one, and let what plays keep playing.
-    if (p.source === 'youtube' && player.stream?.source !== 'youtube') {
+    if (isStream(p.source) && player.stream?.source !== p.source) {
       section = 'streaming';
       // The source button is gone with Now playing: keep the keyboard in the place to paste.
       void tick().then(() => document.getElementById('stream-link')?.focus());
@@ -102,17 +132,19 @@
 
   function playLink(e: SubmitEvent) {
     e.preventDefault();
-    const parsed = parseYouTubeLink(pasted);
+    const parsed = parseStreamLink(pasted);
     if (!parsed.ok) return void (linkProblem = LINK_PROBLEM[parsed.reason]);
     linkProblem = '';
     pasted = '';
-    playSaved(canonicalYouTube(parsed.link));
+    playSaved(parsed.link.url);
   }
   function playSaved(url: string) {
-    void streamLinksItem.setValue(rememberLink($state.snapshot(links), { source: 'youtube', url }, Date.now()));
+    const p = parseStreamLink(url);
+    if (!p.ok) return;
+    const { source, start } = p.link;
+    void streamLinksItem.setValue(rememberLink($state.snapshot(links), { source, url }, Date.now()));
     void panelOwnerItem.setValue(me);
-    const p = parseYouTubeLink(url);
-    void send({ op: 'stream', source: 'youtube', url, ...(p.ok && p.link.start ? { at: p.link.start * 1000 } : {}) });
+    void send({ op: 'stream', source, url, ...(start ? { at: start * 1000 } : {}) });
     section = 'now';
   }
 
@@ -142,7 +174,7 @@
   $effect(() => {
     const body = document.body;
     body.style.transition = 'background-color 600ms ease';
-    body.style.backgroundColor = playing ? `color-mix(in oklab, var(--color-bg-canvas) 88%, ${view === 'folder' ? (track?.color ?? NO_COVER) : view === 'youtube' ? YT_RED : view === 'tab' && tabMusic ? serviceOf(tabMusic.host).color : noise.tint})` : '';
+    body.style.backgroundColor = playing ? `color-mix(in oklab, var(--color-bg-canvas) 88%, ${view === 'folder' ? (track?.color ?? NO_COVER) : streamView ? SERVICES[streamView].logo.color : view === 'tab' && tabMusic ? serviceOf(tabMusic.host).color : noise.tint})` : '';
   });
 
   // A saved link takes the title its player reports; unchanged names write nothing.
@@ -218,9 +250,9 @@
   </header>
   <Segmented options={SECTIONS} value={section} label="Sections" onchange={(v) => (section = v)} />
   <!-- Only while YouTube is the source: nothing loads from YouTube while the folder or noise plays. -->
-  {#if stream && view === 'youtube'}
+  {#if stream && streamView}
     {#if owner === me}
-      <StreamFrame {player} {stream} />
+      <StreamFrame {player} {stream} onsignin={() => signIn(stream.source)} />
     {:else}
       <p class="elsewhere">YouTube plays in the side panel of another window. <button class="link" onclick={() => panelOwnerItem.setValue(me)}>Play it here</button></p>
     {/if}
@@ -228,7 +260,7 @@
 
   {#if section === 'now'}
     <div class="now">
-      {#if !(view === 'youtube' && stream)}<div class="art"><SleeveArt {art} {playing} {always} live={loaded} size="large" /></div>{/if}
+      {#if !(streamView && stream)}<div class="art"><SleeveArt {art} {playing} {always} live={loaded} size="large" /></div>{/if}
       <SourceMenu {player} {folder} {label} anchor="self" onpick={pick} />
 
       {#if view === 'noise'}
@@ -261,22 +293,24 @@
             <p class="sub">Play something on a music site; it shows up here and in Tabs.</p>
           </div>
         {/if}
-      {:else if view === 'youtube'}
+      {:else if streamView}
         {#if stream}
           <div class="song">
-            <p class="title" title={stream.title ?? ''}>{clip(stream.title ?? 'YouTube')}</p>
-            <p class="sub">{stream.artist ?? 'Plays in YouTube\'s player, above'}</p>
+            <p class="title" title={stream.title ?? ''}>{caps.title ? clip(stream.title ?? SERVICES[streamView].name) : SERVICES[streamView].name}</p>
+            <p class="sub">{caps.title ? [stream.artist, ytList ? 'playlist' : null].filter(Boolean).join(' · ') || `In ${SERVICES[streamView].name}'s player, above` : caps.play ? `Play, pause and seek here; skip in ${SERVICES[streamView].name}'s player, above.` : `Use ${SERVICES[streamView].name}'s own buttons, above.`}</p>
           </div>
-          <SeekLine position={streamPosition} duration={stream.duration ?? 0} stamp={stream.at} size="large" onseek={(ms) => send({ op: 'seek', ms })} />
-          <div class="transport">
-            {@render key('Previous', ICONS.skip, () => send({ op: 'prev' }), { flip: true })}
-            {@render key(playing ? 'Pause' : 'Play', playing ? ICONS.pause : ICONS.play, () => send({ op: 'toggle' }), { main: true })}
-            {@render key('Next', ICONS.skip, () => send({ op: 'next' }))}
-          </div>
+          {#if caps.seek}<SeekLine position={streamPosition} duration={stream.duration ?? 0} stamp={stream.at} size="large" onseek={(ms) => send({ op: 'seek', ms })} />{/if}
+          {#if caps.play}
+            <div class="transport">
+              {#if caps.skip}{@render key('Previous', ICONS.skip, () => send({ op: 'prev' }), { flip: true })}{/if}
+              {@render key(playing ? 'Pause' : 'Play', playing ? ICONS.pause : ICONS.play, () => send({ op: 'toggle' }), { main: true })}
+              {#if caps.skip}{@render key('Next', ICONS.skip, () => send({ op: 'next' }))}{/if}
+            </div>
+          {/if}
         {:else}
           <div class="song">
-            <p class="title">No link yet</p>
-            <p class="sub">Paste a YouTube video or playlist link; it plays here, in YouTube's player.</p>
+            <p class="title">No {SERVICES[streamView].name} link yet</p>
+            <p class="sub">Paste a link; it plays here, in {SERVICES[streamView].name}'s own player.</p>
             <button class="action" onclick={() => (section = 'streaming')}>Paste a link</button>
           </div>
         {/if}
@@ -358,20 +392,23 @@
       <p class="note">Only music sites are listed, and only while they play or are paused. The page itself is never read.</p>
     </section>
   {:else}
-    <section class="streaming" aria-labelledby="yt-title">
-      <h2 id="yt-title">YouTube</h2>
-      <p class="sub">Any public video or playlist. It plays here, in YouTube's own player, and stops when this panel closes.</p>
+    <section class="streaming" aria-labelledby="stream-title">
+      <h2 id="stream-title">Links</h2>
+      <p class="sub">A YouTube, Spotify, SoundCloud, Apple Music or Tidal link plays here, in that service's own player, and stops when this panel closes.</p>
       <form onsubmit={playLink}>
-        <input id="stream-link" aria-label="YouTube link" aria-describedby="yt-problem" placeholder="Paste a YouTube link" autocomplete="off" spellcheck="false" bind:value={pasted} />
+        <input id="stream-link" aria-label="Link to play" aria-describedby="stream-problem" placeholder="Paste a YouTube, Spotify or SoundCloud link" autocomplete="off" spellcheck="false" bind:value={pasted} />
         <button class="action" type="submit">Play</button>
       </form>
-      <p class="error" id="yt-problem" role="alert">{linkProblem}</p>
+      <p class="error" id="stream-problem" role="alert">{linkProblem}</p>
       {#if links.length}
         <h2 class="eyebrow">Saved links</h2>
         <ul class="links">
           {#each links as l (l.url)}
             <li>
-              <button class="open" onclick={() => playSaved(l.url)}><span class="name">{clip(l.title ?? l.url)}</span>{#if l.artist}<span class="meta">{l.artist}</span>{/if}</button>
+              <button class="open" onclick={() => playSaved(l.url)}>
+                <svg class="svc" viewBox="0 0 24 24" aria-hidden="true" style:fill={SERVICES[l.source].logo.color}><path d={SERVICES[l.source].logo.path} /></svg>
+                <span class="text"><span class="name" title={l.url}>{clip(l.title ?? linkName(l.url))}</span><span class="meta">{l.artist ?? SERVICES[l.source].name}</span></span>
+              </button>
               <button class="forget" aria-label="Forget {l.title ?? 'this link'}" onclick={() => streamLinksItem.setValue(forgetLink($state.snapshot(links), l.url))}>
                 <svg viewBox="0 0 20 20" aria-hidden="true"><path d={ICONS.x} /></svg>
               </button>
@@ -379,6 +416,16 @@
           {/each}
         </ul>
       {/if}
+      <h2 class="eyebrow">Your accounts</h2>
+      <ul class="accounts">
+        {#each ACCOUNTS as s (s)}
+          <li>
+            <svg class="svc" viewBox="0 0 24 24" aria-hidden="true" style:fill={SERVICES[s].logo.color}><path d={SERVICES[s].logo.path} /></svg>
+            <span class="text"><span class="name">{SERVICES[s].name}</span><span class="meta">{SERVICES[s].account}</span></span>
+            {#if SERVICES[s].signIn}<button class="ghost" onclick={() => signIn(s)}>Sign in</button>{/if}
+          </li>
+        {/each}
+      </ul>
     </section>
   {/if}
 </main>
@@ -447,7 +494,12 @@
   .error { margin: 0; min-block-size: 18px; font: 400 13px/18px var(--font-family-ui); color: var(--color-text-focus); }
   .links { margin: 0; padding: 0; list-style: none; }
   .links li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
-  .links .open { display: grid; gap: 1px; padding: 8px 10px; border: 0; border-radius: 4px; background: none; color: var(--color-text-primary); text-align: start; cursor: pointer; min-inline-size: 0; }
+  .text { display: grid; gap: 1px; min-inline-size: 0; }
+  .accounts { margin: 0; padding: 4px 0; list-style: none; border: 1px solid var(--color-border-subtle); border-radius: 6px; background: var(--color-bg-panel); }
+  .accounts li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 12px; }
+  .accounts .svc, .links .svc { inline-size: 18px; block-size: 18px; }
+  .ghost { padding: 6px 10px; border: 1px solid var(--color-border-strong); border-radius: 6px; background: none; color: var(--color-text-primary); font: 600 12px/16px var(--font-family-ui); cursor: pointer; }
+  .links .open { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 10px; border: 0; border-radius: 4px; background: none; color: var(--color-text-primary); text-align: start; cursor: pointer; min-inline-size: 0; }
   .links .open:hover, .forget:hover { background: var(--color-bg-sunken); }
   .forget { display: grid; place-items: center; inline-size: 32px; block-size: 32px; border: 0; border-radius: 4px; background: none; color: var(--color-text-secondary); cursor: pointer; }
   .forget svg { inline-size: 14px; block-size: 14px; fill: currentColor; }

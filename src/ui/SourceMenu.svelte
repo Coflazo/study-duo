@@ -27,6 +27,14 @@
   const CARET = 'M216.49,104.49l-80,80a12,12,0,0,1-17,0l-80-80a12,12,0,0,1,17-17L128,159l71.51-71.52a12,12,0,0,1,17,17Z';
   const WAVE = 'M60,96v64a12,12,0,0,1-24,0V96a12,12,0,0,1,24,0ZM88,20A12,12,0,0,0,76,32V224a12,12,0,0,0,24,0V32A12,12,0,0,0,88,20Zm40,32a12,12,0,0,0-12,12V192a12,12,0,0,0,24,0V64A12,12,0,0,0,128,52Zm40,32a12,12,0,0,0-12,12v64a12,12,0,0,0,24,0V96A12,12,0,0,0,168,84Zm40-16a12,12,0,0,0-12,12v96a12,12,0,0,0,24,0V80A12,12,0,0,0,208,68Z';
   const FOLDER = 'M216,68H132L105.33,48a20.12,20.12,0,0,0-12-4H40A20,20,0,0,0,20,64V200a20,20,0,0,0,20,20H216.89A19.13,19.13,0,0,0,236,200.89V88A20,20,0,0,0,216,68Zm-4,128H44V68H92l28.8,21.6A12,12,0,0,0,128,92h84Z';
+  /** The approved order and wording (Figma, Source button and its list). */
+  const STREAMS = [
+    { source: 'youtube', name: 'YouTube link', sub: 'A public playlist, video or live stream', logo: LOGOS.youtube },
+    { source: 'spotify', name: 'Spotify', sub: 'Your account', logo: LOGOS.spotify },
+    { source: 'apple', name: 'Apple Music', sub: 'Your account', logo: LOGOS.apple },
+    { source: 'soundcloud', name: 'SoundCloud', sub: 'Public tracks, no account', logo: LOGOS.soundcloud },
+    { source: 'tidal', name: 'Tidal', sub: 'Your account', logo: LOGOS.tidal },
+  ] as const;
   const CHECK = 'M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z';
 
   let open = $state(false);
@@ -96,7 +104,9 @@
       <div class="sep" role="separator"></div>
       <div role="group" aria-labelledby="{id}-streaming">
         <p class="group" id="{id}-streaming">STREAMING</p>
-        {@render item({ source: 'youtube' }, LOGOS.youtube.path, 'YouTube link', player.stream?.source === 'youtube' && player.stream.title ? clip(player.stream.title, 34) : 'A public playlist, video or live stream', LOGOS.youtube.color, 24)}
+        {#each STREAMS as s (s.source)}
+          {@render item({ source: s.source }, s.logo.path, s.name, player.stream?.source === s.source && player.stream.title ? clip(player.stream.title, 34) : s.sub, s.logo.color, 24)}
+        {/each}
       </div>
       {#if player.tabs.length}
         <div class="sep" role="separator"></div>
