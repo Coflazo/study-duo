@@ -3,7 +3,7 @@
    * Chrome's side panel: the full player (Figma "Screens: Player (approved)", Side panel). Now playing with what comes
    * next, and the music folder's library. It drives the same player as the popup card.
    */
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import { loadFolder, loadThumb, type FolderRecord } from '@/core/library-db';
   import type { NoiseKind } from '@/core/noise';
   import { INITIAL_PLAYER, positionAt, streamAt, type PlayerCommand, type PlayerState, type PlayerTrack } from '@/core/player';
@@ -91,7 +91,12 @@
   function pick(p: SourcePick) {
     if ('tab' in p) return void send({ op: 'tab', tabId: p.tab, action: 'pick' });
     // No link yet: show where to paste one, and let what plays keep playing.
-    if (p.source === 'youtube' && player.stream?.source !== 'youtube') return void (section = 'streaming');
+    if (p.source === 'youtube' && player.stream?.source !== 'youtube') {
+      section = 'streaming';
+      // The source button is gone with Now playing: keep the keyboard in the place to paste.
+      void tick().then(() => document.getElementById('stream-link')?.focus());
+      return;
+    }
     if (p.source !== player.active) void send({ op: 'source', source: p.source });
   }
 
@@ -357,7 +362,7 @@
       <h2 id="yt-title">YouTube</h2>
       <p class="sub">Any public video or playlist. It plays here, in YouTube's own player, and stops when this panel closes.</p>
       <form onsubmit={playLink}>
-        <input aria-label="YouTube link" aria-describedby="yt-problem" placeholder="Paste a YouTube link" autocomplete="off" spellcheck="false" bind:value={pasted} />
+        <input id="stream-link" aria-label="YouTube link" aria-describedby="yt-problem" placeholder="Paste a YouTube link" autocomplete="off" spellcheck="false" bind:value={pasted} />
         <button class="action" type="submit">Play</button>
       </form>
       <p class="error" id="yt-problem" role="alert">{linkProblem}</p>

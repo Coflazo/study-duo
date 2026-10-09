@@ -72,15 +72,27 @@ test('music in a tab shows on the card and in Tabs, and Study Duo can pause it, 
   await ctx.close();
 });
 
-test('a web page cannot press a music tab\'s buttons through Study Duo, and sites that are not music sites are never listed', async () => {
+test('a site that is not a music site is never listed, even when the clock script itself reports a song', async () => {
   const { ctx } = await launch(tempProfile());
-  await ctx.route('https://music.youtube.com/**', (r) => r.fulfill({ contentType: 'text/html', body: SITE }));
   await ctx.route('https://fake-music.example/**', (r) => r.fulfill({ contentType: 'text/html', body: SITE }));
   const pretender = await ctx.newPage();
+  const cdp = await ctx.newCDPSession(pretender);
+  const worlds: number[] = [];
+  cdp.on('Runtime.executionContextCreated', (e: any) => e.context.auxData?.type === 'isolated' && worlds.push(e.context.id));
+  await cdp.send('Runtime.enable');
   await pretender.goto('https://fake-music.example/');
+  // The most a hostile page could do: send a song report from inside Study Duo's own clock script.
+  const sent = async () => {
+    for (const contextId of worlds) {
+      const { result } = await cdp.send('Runtime.evaluate', { expression: `(async () => { if (globalThis.chrome?.runtime?.id !== '${EXT_ID}') return null; await chrome.runtime.sendMessage({ kind: 'music', op: 'now', title: 'Fake', artist: 'Nobody', album: '', playing: true }); return 'sent'; })()`, contextId, awaitPromise: true, returnByValue: true }).catch(() => ({ result: { value: null } }));
+      if (result.value) return result.value as string;
+    }
+    return null;
+  };
+  await expect.poll(sent).toBe('sent');
   const panel = await ctx.newPage();
   await panel.goto(`chrome-extension://${EXT_ID}/sidepanel.html`);
-  await panel.waitForTimeout(3_000);
+  await panel.waitForTimeout(1_500);
   expect((await panel.evaluate(async () => (await chrome.storage.session.get('player')).player))?.tabs ?? []).toEqual([]);
   await ctx.close();
 });

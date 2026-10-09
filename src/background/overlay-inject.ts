@@ -1,8 +1,10 @@
 import { normalizeSettings } from '@/core/settings';
 import type { ClockState } from '@/core/messages';
+import { isMusicHost } from '@/core/music';
 import { loadSettings, loadState, settingsItem, timerItem } from '@/core/store';
 
 const OVERLAY = '/content-scripts/overlay.js';
+const MEDIA_KEYS = '/content-scripts/media-keys.js';
 const asking = new Set<number>();
 
 /**
@@ -20,7 +22,12 @@ export async function ensureOverlay(tabId: number): Promise<void> {
     if (!tab || tab.status !== 'complete' || !tab.url || !/^https?:/.test(tab.url)) return;
     site = new URL(tab.url).host;
     const answered = await browser.tabs.sendMessage(tabId, { kind: 'overlay', op: 'ping' }).catch(() => false);
-    if (answered !== true) await browser.scripting.executeScript({ target: { tabId }, files: [OVERLAY] });
+    if (answered !== true) {
+      await browser.scripting.executeScript({ target: { tabId }, files: [OVERLAY] });
+      // A music site loaded before Study Duo also gets the media keys, in the page's world. Handlers the site set
+      // earlier are not seen, so there play and pause go to its media element.
+      if (isMusicHost(site)) await browser.scripting.executeScript({ target: { tabId }, files: [MEDIA_KEYS], world: 'MAIN' } as Parameters<typeof browser.scripting.executeScript>[0]).catch(() => undefined);
+    }
   } catch (e) {
     // Shown on the extension's Errors page: a missing permission (an old copy still running) or a site the user blocked.
     console.warn(`Study Duo could not add the corner clock to ${site}:`, e);

@@ -295,6 +295,23 @@ describe('music in your tabs', () => {
     expect(s.tabs.map((t) => t.tabId)).toEqual([7]);
   });
 
+  it('music started in a tab keeps the folder in its place', () => {
+    let s = applyPlayer(INITIAL_PLAYER, { op: 'folder', tracks: songs, start: 0, shuffle: false }, NOW).state;
+    s = applyPlayer(s, report(yt), NOW + 60_000).state;
+    expect(s.position).toBe(60_000);
+    const back = applyPlayer(s, { op: 'source', source: 'folder' }, NOW + 90_000);
+    expect(back.effects).toContainEqual({ type: 'file-play', track: songs[0], at: 60_000, volume: 0.6 });
+  });
+
+  it('never drops the tab the card controls from a long list, and lets it go when it closes', () => {
+    let s = applyPlayer(INITIAL_PLAYER, report(yt), NOW).state;
+    for (let id = 100; id < 110; id++) s = applyPlayer(s, report({ ...sp, tabId: id }), NOW + id).state;
+    expect(s.tabs).toHaveLength(8);
+    expect(s.tabs.some((t) => t.tabId === 7)).toBe(true);
+    s = applyPlayer(s, { op: 'tab-gone', tabId: 7 }, NOW + 200).state;
+    expect(s).toMatchObject({ tab: null, active: null, playing: false });
+  });
+
   it("closing the card's tab hands the card back, so Play plays noise again", () => {
     let s = applyPlayer(INITIAL_PLAYER, report(yt), NOW).state;
     s = applyPlayer(s, { op: 'tab-gone', tabId: 7 }, NOW + 1).state;

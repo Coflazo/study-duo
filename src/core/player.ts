@@ -376,14 +376,18 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
     }
     case 'tab-report': {
       const t: TabMusic = { tabId: cmd.tabId, host: cmd.host, title: cmd.title, artist: cmd.artist, playing: cmd.playing };
-      const tabs = [t, ...s.tabs.filter((x) => x.tabId !== t.tabId)].slice(0, MAX_TABS);
+      // Newest first, at most 8, and never without the tab the card controls.
+      const rest = s.tabs.filter((x) => x.tabId !== t.tabId);
+      const kept = rest.slice(0, MAX_TABS - 1);
+      const mine = rest.find((x) => x.tabId === s.tab);
+      const tabs = [t, ...(mine && !kept.includes(mine) ? [...kept.slice(0, MAX_TABS - 2), mine] : kept)];
       if (s.active === 'tab' && s.tab === t.tabId) return { state: { ...s, tabs, playing: t.playing, startedAt: t.playing ? (s.playing ? s.startedAt : now) : null }, effects: [] };
       // Music started in a tab takes over: only one source plays.
-      if (t.playing) return { state: { ...s, tabs, active: 'tab', tab: t.tabId, playing: true, startedAt: now, at: now }, effects: s.playing && s.active ? stop(s.active, s) : [] };
+      if (t.playing) return { state: { ...freeze(s, now), tabs, active: 'tab', tab: t.tabId, playing: true, startedAt: now, at: now }, effects: s.playing && s.active ? stop(s.active, s) : [] };
       return { state: { ...s, tabs }, effects: [] };
     }
     case 'tab-gone': {
-      if (!s.tabs.some((t) => t.tabId === cmd.tabId)) return { state: s, effects: [] };
+      if (!s.tabs.some((t) => t.tabId === cmd.tabId) && s.tab !== cmd.tabId) return { state: s, effects: [] };
       const tabs = s.tabs.filter((t) => t.tabId !== cmd.tabId);
       if (s.tab !== cmd.tabId) return { state: { ...s, tabs }, effects: [] };
       // The card's own tab closed: the card goes back to its default, so Play plays noise rather than nothing.
