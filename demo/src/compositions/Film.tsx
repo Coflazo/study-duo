@@ -10,7 +10,7 @@ import { DUR, EASE, countTo, enter, mix, ramp } from "../motion";
 import { Dial } from "./Demo";
 
 /**
- * The launch film: about 100 seconds, narrated and subtitled, laid out from public/narration/timing.json.
+ * The launch film: about two minutes, narrated and subtitled, laid out from public/narration/timing.json.
  *
  * scripts/narrate.py speaks every line and writes that file: when each beat starts, when each line is spoken, when
  * each sound plays and the caption phrases. Nothing here hardcodes a second; every frame below is counted from it,

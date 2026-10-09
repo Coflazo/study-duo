@@ -320,9 +320,20 @@ test('shoot the player footage', async () => {
   await start.getByRole('button', { name: 'Start' }).click();
   await expect.poll(() => sw.evaluate(async () => (await (globalThis as any).chrome.storage.local.get('timer')).timer?.status)).toBe('running');
   await start.close();
+  // The film shows these scenes in another order than they are shot (the record player last), so before each shot
+  // with a clock in it the block is set to what is left at that point in the film, and the clock only ever counts down.
+  const setLeft = (ms: number) =>
+    sw.evaluate(async (ms) => {
+      const c = (globalThis as any).chrome;
+      const { timer } = await c.storage.local.get('timer');
+      const end = Date.now() + ms;
+      await c.storage.local.set({ timer: { ...timer, startedAt: end - 25 * 60_000, endsAt: end } });
+    }, ms);
+  const MIN24 = 24 * 60_000;
 
   // The side panel next to the notes: the page narrows by the panel's width.
   const PANEL = { width: 380, height: VIEW.height };
+  await setLeft(MIN24 + 15_000); // the side panel scenes, beside the notes and their corner clock
   const notes = await page(ctx, { width: VIEW.width - PANEL.width, height: VIEW.height });
   await notes.goto('https://lecture-notes.example/linear-algebra/week-6');
   await notes.waitForTimeout(800);
@@ -402,6 +413,7 @@ test('shoot the player footage', async () => {
   await expect.poll(async () => sw.evaluate(async () => (await (globalThis as any).chrome.storage.session.get('player')).player?.stream?.title), { timeout: 30_000 }).toBe('The Earth: 4K Extended Edition');
   await panel.waitForTimeout(8000); // past YouTube's own title overlay
   await shot(panel, 'player/panel-youtube');
+  await setLeft(MIN24 + 8_000);
   const yt = await page(ctx, POPUP);
   await yt.goto(`chrome-extension://${EXT_ID}/popup.html`);
   await yt.getByRole('region', { name: 'Player' }).scrollIntoViewIfNeeded();
@@ -414,6 +426,7 @@ test('shoot the player footage', async () => {
   const site = await ctx.newPage();
   await site.goto('https://music.youtube.com/watch?v=demo');
   await expect.poll(async () => sw.evaluate(async () => (await (globalThis as any).chrome.storage.session.get('player')).player?.tabs?.[0]?.title), { timeout: 15_000 }).toBe('Gymnopédie No. 1');
+  await setLeft(MIN24 + 3_000);
   const tabPop = await page(ctx, POPUP);
   await tabPop.goto(`chrome-extension://${EXT_ID}/popup.html`);
   const tabCard = tabPop.getByRole('region', { name: 'Player' });
@@ -446,6 +459,7 @@ test('shoot the player footage', async () => {
   await mark('connections.google', google);
   // Last, because the page clock it holds still is shared by every page in the browser: the popup's record player,
   // Sounds at rest on white noise, then frame by frame.
+  await setLeft(MIN24 + 31_000); // the record player comes first in the film, right after the site lock
   const pop = await page(ctx, POPUP);
   await pop.clock.install();
   await pop.goto(`chrome-extension://${EXT_ID}/popup.html`);
