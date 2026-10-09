@@ -1,6 +1,6 @@
 # Study Duo launch film
 
-The narrated film (`docs/media/study-duo.mp4`) and the silent loop at the top of the README (`docs/media/demo.gif`). Everything inside the browser window and the popup panels is a screenshot of the real extension, shot at 2x by `tests/e2e/demo-capture.e2e.ts`. The bell and the noise are made by Study Duo's own code, the songs are two public-domain Chopin recordings (`public/audio/LICENSE.md`), and the voice is Kokoro, run locally. The insights come from one simulated student (`src/ml/synthetic.ts`), and the film says so on screen.
+The narrated film (`docs/media/study-duo.mp4`) and the silent loop at the top of the README (`docs/media/demo.gif`). Everything inside the browser window, the side panel and the popup is a screenshot of the real extension, shot at 2x by `tests/e2e/demo-capture.e2e.ts`; the record player's turning disc is one screenshot per film frame. The bell and the noise are made by Study Duo's own code, the songs are two public-domain Chopin recordings (`public/audio/LICENSE.md`), the YouTube link plays NASA's public-domain "The Earth: 4K Extended Edition" (`public/footage-credits.md`), and the voice is Kokoro, run locally. The insights come from one simulated student (`src/ml/synthetic.ts`), and the film says so on screen.
 
 ## Rebuild it
 
@@ -16,7 +16,7 @@ mkdir -p .cache && (cd .cache && \
   curl -fLO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx && \
   curl -fLO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin)
 python3 scripts/narrate.py        # one WAV per line, and public/narration/timing.json
-node scripts/sounds.mjs           # the bell and the noise, from src/core
+node scripts/sounds.mjs           # the bell and the noise, from src/core (CHROME_PATH=<a Chrome> if Playwright's own is not installed)
 DELIVER=1920:1080 STANDALONE=1 sh scripts/render.sh film 760   # the picture, then the frame gate
 node scripts/mix.mjs              # the sound, muxed: out/study-duo.mp4
 node scripts/subtitles.mjs        # docs/media/study-duo.srt and .vtt

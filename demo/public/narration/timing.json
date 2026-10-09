@@ -3,7 +3,7 @@
  "rate": 24000,
  "voice": "bm_lewis",
  "lang": "en-gb",
- "length": 99.665,
+ "length": 123.192,
  "beats": [
   {
    "id": "hook",
@@ -38,59 +38,74 @@
   {
    "id": "noise",
    "start": 39.283,
-   "end": 48.393,
+   "end": 50.189,
    "hold": [
-    43.893,
-    48.093
+    45.689,
+    49.889
    ]
   },
   {
    "id": "songs",
-   "start": 48.393,
-   "end": 54.727,
+   "start": 50.189,
+   "end": 57.006,
    "hold": [
-    51.727,
-    54.527
+    54.006,
+    56.806
    ]
   },
   {
+   "id": "streaming",
+   "start": 57.006,
+   "end": 64.446
+  },
+  {
+   "id": "tabs",
+   "start": 64.446,
+   "end": 69.555
+  },
+  {
    "id": "bell",
-   "start": 54.727,
-   "end": 62.779,
+   "start": 69.555,
+   "end": 77.607,
    "hold": [
-    54.727,
-    57.927
+    69.555,
+    72.755
    ]
   },
   {
    "id": "rate",
-   "start": 62.779,
-   "end": 65.981
+   "start": 77.607,
+   "end": 80.809
   },
   {
    "id": "insights",
-   "start": 65.981,
-   "end": 73.184
+   "start": 80.809,
+   "end": 88.012
   },
   {
    "id": "calendar",
-   "start": 73.184,
-   "end": 77.993
+   "start": 88.012,
+   "end": 92.577
   },
   {
    "id": "move",
-   "start": 77.993,
-   "end": 83.338
+   "start": 92.577,
+   "end": 97.923
   },
   {
    "id": "proof",
-   "start": 83.338,
-   "end": 93.975
+   "start": 97.923,
+   "end": 110.371
+  },
+  {
+   "id": "price",
+   "start": 110.371,
+   "end": 117.502
   },
   {
    "id": "end",
-   "start": 93.975,
-   "end": 99.665
+   "start": 117.502,
+   "end": 123.192
   }
  ],
  "lines": [
@@ -165,124 +180,166 @@
    "end": 38.483
   },
   {
+   "id": "player",
+   "beat": "noise",
+   "text": "Under the timer sits a record player.",
+   "start": 39.783,
+   "end": 42.286
+  },
+  {
    "id": "noise",
    "beat": "noise",
-   "text": "Need some sound? White, pink or brown noise, made right here.",
-   "start": 39.783,
-   "end": 43.893
+   "text": "White, pink or brown noise, made right here.",
+   "start": 42.786,
+   "end": 45.689
   },
   {
    "id": "songs",
    "beat": "songs",
-   "text": "Or play your own songs, straight from your computer.",
-   "start": 48.693,
-   "end": 51.727
+   "text": "Point it at your music folder, and it plays like a music app.",
+   "start": 50.489,
+   "end": 54.006
+  },
+  {
+   "id": "streaming-1",
+   "beat": "streaming",
+   "text": "A YouTube or Spotify link plays in the side panel.",
+   "start": 57.406,
+   "end": 60.941
+  },
+  {
+   "id": "streaming-2",
+   "beat": "streaming",
+   "text": "The popup plays, pauses and skips it.",
+   "start": 61.441,
+   "end": 63.846
+  },
+  {
+   "id": "tabs",
+   "beat": "tabs",
+   "text": "Music already playing in another tab? Pause it or skip it from here.",
+   "start": 64.746,
+   "end": 68.855
   },
   {
    "id": "bell",
    "beat": "bell",
    "text": "When time's up, a bell rings and the page tells you to rest.",
-   "start": 57.927,
-   "end": 61.779
+   "start": 72.755,
+   "end": 76.607
   },
   {
    "id": "rate",
    "beat": "rate",
    "text": "One tap says how focused you were.",
-   "start": 63.279,
-   "end": 65.381
+   "start": 78.107,
+   "end": 80.209
   },
   {
    "id": "insights-1",
    "beat": "insights",
    "text": "After a few weeks, it knows your best hours,",
-   "start": 66.581,
-   "end": 69.252
+   "start": 81.409,
+   "end": 84.08
   },
   {
    "id": "insights-2",
    "beat": "insights",
    "text": "and which songs actually help you focus.",
-   "start": 69.502,
-   "end": 71.984
+   "start": 84.33,
+   "end": 86.812
   },
   {
    "id": "calendar",
    "beat": "calendar",
-   "text": "Every block lands on your timeline, ready for any calendar.",
-   "start": 73.584,
-   "end": 77.293
+   "text": "Every block can land in your Google Calendar by itself.",
+   "start": 88.412,
+   "end": 91.877
   },
   {
    "id": "move",
    "beat": "move",
    "text": "New laptop? Move your settings and to-dos over with a QR code.",
-   "start": 78.393,
-   "end": 82.638
+   "start": 92.977,
+   "end": 97.223
   },
   {
    "id": "proof-1",
    "beat": "proof",
-   "text": "No account, no server.",
-   "start": 83.838,
-   "end": 85.541
+   "text": "We measured it next to five other focus extensions.",
+   "start": 98.423,
+   "end": 101.793
   },
   {
    "id": "proof-2",
    "beat": "proof",
-   "text": "When we installed BlockSite, it contacted fifty-six outside servers.",
-   "start": 86.041,
-   "end": 90.505
+   "text": "When we installed BlockSite, it contacted fifty-seven outside servers.",
+   "start": 102.293,
+   "end": 106.901
   },
   {
    "id": "proof-3",
    "beat": "proof",
    "text": "Study Duo contacted none.",
-   "start": 91.005,
-   "end": 92.975
+   "start": 107.401,
+   "end": 109.371
+  },
+  {
+   "id": "price-1",
+   "beat": "price",
+   "text": "The paid focus apps cost up to nineteen ninety-nine a month.",
+   "start": 110.771,
+   "end": 114.829
+  },
+  {
+   "id": "price-2",
+   "beat": "price",
+   "text": "All of this is free.",
+   "start": 115.229,
+   "end": 116.702
   },
   {
    "id": "end",
    "beat": "end",
    "text": "Study Duo. Free and open source.",
-   "start": 94.775,
-   "end": 97.465
+   "start": 118.302,
+   "end": 120.992
   }
  ],
  "cues": {
   "bed": [
    [
     11.593,
-    48.393
+    50.189
    ],
    [
-    62.779,
-    99.665
+    77.607,
+    123.192
    ]
   ],
   "noise": [
    [
     "white",
-    41.183
+    42.436
    ],
    [
     "pink",
-    45.293
+    47.089
    ],
    [
     "brown",
-    46.693
+    48.489
    ],
    [
     "stop",
-    48.093
+    49.889
    ]
   ],
   "song": [
-   49.993,
-   54.727
+   51.789,
+   57.006
   ],
-  "bell": 55.527
+  "bell": 70.355
  },
  "captions": [
   {
@@ -376,142 +433,196 @@
    "end": 38.483
   },
   {
-   "line": "noise",
-   "text": "Need some sound?",
+   "line": "player",
+   "text": "Under the timer sits a record player",
    "start": 39.783,
-   "end": 40.898
+   "end": 42.286
   },
   {
    "line": "noise",
    "text": "White, pink or brown noise",
-   "start": 40.898,
-   "end": 42.778
+   "start": 42.786,
+   "end": 44.609
   },
   {
    "line": "noise",
    "text": "made right here",
-   "start": 42.778,
-   "end": 43.893
+   "start": 44.609,
+   "end": 45.689
   },
   {
    "line": "songs",
-   "text": "Or play your own songs",
-   "start": 48.693,
-   "end": 50.061
+   "text": "Point it at your music folder",
+   "start": 50.489,
+   "end": 52.248
   },
   {
    "line": "songs",
-   "text": "straight from your computer",
-   "start": 50.061,
-   "end": 51.727
+   "text": "and it plays like a music app",
+   "start": 52.248,
+   "end": 54.006
+  },
+  {
+   "line": "streaming-1",
+   "text": "A YouTube or Spotify link plays",
+   "start": 57.406,
+   "end": 59.642
+  },
+  {
+   "line": "streaming-1",
+   "text": "in the side panel",
+   "start": 59.642,
+   "end": 60.941
+  },
+  {
+   "line": "streaming-2",
+   "text": "The popup plays",
+   "start": 61.441,
+   "end": 62.51
+  },
+  {
+   "line": "streaming-2",
+   "text": "pauses and skips it",
+   "start": 62.51,
+   "end": 63.846
+  },
+  {
+   "line": "tabs",
+   "text": "Music already playing in another tab?",
+   "start": 64.746,
+   "end": 67.015
+  },
+  {
+   "line": "tabs",
+   "text": "Pause it or skip it from here",
+   "start": 67.015,
+   "end": 68.855
   },
   {
    "line": "bell",
    "text": "When time's up",
-   "start": 57.927,
-   "end": 58.923
+   "start": 72.755,
+   "end": 73.751
   },
   {
    "line": "bell",
    "text": "a bell rings",
-   "start": 58.923,
-   "end": 59.72
+   "start": 73.751,
+   "end": 74.548
   },
   {
    "line": "bell",
    "text": "and the page tells you to rest",
-   "start": 59.72,
-   "end": 61.779
+   "start": 74.548,
+   "end": 76.607
   },
   {
    "line": "rate",
    "text": "One tap says how focused you were",
-   "start": 63.279,
-   "end": 65.381
+   "start": 78.107,
+   "end": 80.209
   },
   {
    "line": "insights-1",
    "text": "After a few weeks",
-   "start": 66.581,
-   "end": 67.699
+   "start": 81.409,
+   "end": 82.527
   },
   {
    "line": "insights-1",
    "text": "it knows your best hours",
-   "start": 67.699,
-   "end": 69.252
+   "start": 82.527,
+   "end": 84.08
   },
   {
    "line": "insights-2",
    "text": "and which songs actually help you focus",
-   "start": 69.502,
-   "end": 71.984
+   "start": 84.33,
+   "end": 86.812
   },
   {
    "line": "calendar",
-   "text": "Every block lands on your timeline",
-   "start": 73.584,
-   "end": 75.822
+   "text": "Every block can land",
+   "start": 88.412,
+   "end": 89.695
   },
   {
    "line": "calendar",
-   "text": "ready for any calendar",
-   "start": 75.822,
-   "end": 77.293
+   "text": "in your Google Calendar by itself",
+   "start": 89.695,
+   "end": 91.877
   },
   {
    "line": "move",
    "text": "New laptop?",
-   "start": 78.393,
-   "end": 79.171
+   "start": 92.977,
+   "end": 93.755
   },
   {
    "line": "move",
    "text": "Move your settings and to-dos",
-   "start": 79.171,
-   "end": 81.223
+   "start": 93.755,
+   "end": 95.808
   },
   {
    "line": "move",
    "text": "over with a QR code",
-   "start": 81.223,
-   "end": 82.638
+   "start": 95.808,
+   "end": 97.223
   },
   {
    "line": "proof-1",
-   "text": "No account, no server",
-   "start": 83.838,
-   "end": 85.541
+   "text": "We measured it next to five other focus extensions",
+   "start": 98.423,
+   "end": 101.793
   },
   {
    "line": "proof-2",
    "text": "When we installed BlockSite",
-   "start": 86.041,
-   "end": 87.907
+   "start": 102.293,
+   "end": 104.163
   },
   {
    "line": "proof-2",
-   "text": "it contacted fifty-six outside servers",
-   "start": 87.907,
-   "end": 90.505
+   "text": "it contacted fifty-seven outside servers",
+   "start": 104.163,
+   "end": 106.901
   },
   {
    "line": "proof-3",
    "text": "Study Duo contacted none",
-   "start": 91.005,
-   "end": 92.975
+   "start": 107.401,
+   "end": 109.371
+  },
+  {
+   "line": "price-1",
+   "text": "The paid focus apps cost",
+   "start": 110.771,
+   "end": 112.422
+  },
+  {
+   "line": "price-1",
+   "text": "up to nineteen ninety-nine a month",
+   "start": 112.422,
+   "end": 114.829
+  },
+  {
+   "line": "price-2",
+   "text": "All of this is free",
+   "start": 115.229,
+   "end": 116.702
   },
   {
    "line": "end",
    "text": "Study Duo",
-   "start": 94.775,
-   "end": 95.643
+   "start": 118.302,
+   "end": 119.17
   },
   {
    "line": "end",
    "text": "Free and open source",
-   "start": 95.643,
-   "end": 97.465
+   "start": 119.17,
+   "end": 120.992
   }
  ]
 }

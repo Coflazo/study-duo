@@ -50,13 +50,22 @@ BEATS = [
         ("lock-1", "Distracting sites stay closed until the block ends."),
         ("lock-2", "Opening one anyway takes ten seconds and a reason."),
     ]),
-    # White, pink and brown each get about 1.5 s on their own after the line.
-    dict(id="noise", lead=0.5, tail=0.3, hold=4.2, hold_at="after", lines=[
-        ("noise", "Need some sound? White, pink or brown noise, made right here."),
+    # The popup's record player: the disc slides out of its sleeve and turns; white, pink and brown each get about
+    # 1.5 s on their own after the line.
+    dict(id="noise", lead=0.5, gap=0.5, tail=0.3, hold=4.2, hold_at="after", lines=[
+        ("player", "Under the timer sits a record player."),
+        ("noise", "White, pink or brown noise, made right here."),
     ]),
-    # The song plays on its own after the line, clearly audible.
+    # Your music folder in the side panel; the song plays on its own after the line, clearly audible.
     dict(id="songs", lead=0.3, tail=0.2, hold=2.8, hold_at="after", lines=[
-        ("songs", "Or play your own songs, straight from your computer."),
+        ("songs", "Point it at your music folder, and it plays like a music app."),
+    ]),
+    dict(id="streaming", lead=0.4, gap=0.5, tail=0.6, lines=[
+        ("streaming-1", "A YouTube or Spotify link plays in the side panel."),
+        ("streaming-2", "The popup plays, pauses and skips it."),
+    ]),
+    dict(id="tabs", lead=0.3, tail=0.7, lines=[
+        ("tabs", "Music already playing in another tab? Pause it or skip it from here."),
     ]),
     # The clock reaches 00:00, the bell rings, and nothing is spoken until both strikes have landed.
     dict(id="bell", lead=0.0, tail=1.0, hold=3.2, hold_at="before", lines=[
@@ -70,15 +79,19 @@ BEATS = [
         ("insights-2", "and which songs actually help you focus."),
     ]),
     dict(id="calendar", lead=0.4, tail=0.7, lines=[
-        ("calendar", "Every block lands on your timeline, ready for any calendar."),
+        ("calendar", "Every block can land in your Google Calendar by itself."),
     ]),
     dict(id="move", lead=0.4, tail=0.7, lines=[
         ("move", "New laptop? Move your settings and to-dos over with a QR code."),
     ]),
     dict(id="proof", lead=0.5, gap=0.5, tail=1.0, lines=[
-        ("proof-1", "No account, no server."),
-        ("proof-2", "When we installed BlockSite, it contacted fifty-six outside servers."),
+        ("proof-1", "We measured it next to five other focus extensions."),
+        ("proof-2", "When we installed BlockSite, it contacted fifty-seven outside servers."),
         ("proof-3", "Study Duo contacted none."),
+    ]),
+    dict(id="price", lead=0.4, gap=0.4, tail=0.8, lines=[
+        ("price-1", "The paid focus apps cost up to nineteen ninety-nine a month."),
+        ("price-2", "All of this is free."),
     ]),
     dict(id="end", lead=0.8, tail=2.2, lines=[
         ("end", "Study Duo. Free and open source."),
@@ -106,7 +119,8 @@ def cues(beats: list, lines: list) -> dict:
     return dict(
         bed=[[round(beat["reveal"]["start"] + 0.6, 3), beat["songs"]["start"]], [beat["rate"]["start"], beat["end"]["end"]]],
         noise=[
-            ["white", round(line["noise"]["start"] + 1.4, 3)],
+            # Play is pressed as "a record player" lands: white noise under the line that names the three.
+            ["white", round(line["player"]["end"] + 0.15, 3)],
             ["pink", round(hold[0] + 1.4, 3)],
             ["brown", round(hold[0] + 2.8, 3)],
             ["stop", round(hold[1], 3)],

@@ -1,5 +1,7 @@
 import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { simulate, TYPICAL } from '../../src/ml/synthetic';
 import { EXT_ID, launch, readStore, tempProfile } from './extension';
@@ -16,6 +18,21 @@ const OUT = path.resolve('demo/public/footage');
 const VIEW = { width: 1408, height: 720 }; // the browser content area in the film, 1:1
 const POPUP = { width: 360, height: 560 };
 const DASH = `chrome-extension://${EXT_ID}/dashboard.html`;
+const YOUTUBE_FILM = 'https://www.youtube.com/watch?v=7fYKMCCPh28';
+/** The hosts YouTube's embedded player needs; everything else stays blocked in the capture. */
+const YOUTUBE_HOSTS = /(^|\.)(youtube-nocookie\.com|youtube\.com|ytimg\.com|googlevideo\.com|ggpht\.com|gstatic\.com|google\.com|googleapis\.com)$/;
+/** A music site in a tab, as the browser sees it: what plays, in navigator.mediaSession, with its own play and pause. */
+const MUSIC_SITE = `<!doctype html><title>Gymnopédie No. 1 - YouTube Music</title><script>
+  const show = (state) => {
+    navigator.mediaSession.metadata = new MediaMetadata({ title: 'Gymnopédie No. 1', artist: 'Erik Satie', album: 'Trois Gymnopédies' });
+    navigator.mediaSession.playbackState = state;
+    document.dispatchEvent(new Event(state === 'playing' ? 'play' : 'pause'));
+  };
+  navigator.mediaSession.setActionHandler('play', () => show('playing'));
+  navigator.mediaSession.setActionHandler('pause', () => show('paused'));
+  navigator.mediaSession.setActionHandler('nexttrack', () => show('playing'));
+  show('playing');
+</script>`;
 const MIN = 60_000;
 
 const NOTES = `<!doctype html><html><head><meta charset="utf-8"><title>Week 6 · Eigenvalues</title><style>
@@ -75,7 +92,7 @@ const shot = (p: Page, name: string, opts: Parameters<Page['screenshot']>[0] = {
 /** Where things sit in the shots (CSS px in the page or popup), so the film's pointer lands on the real buttons. */
 const boxes: Record<string, { x: number; y: number; width: number; height: number }> = {};
 async function mark(name: string, loc: Locator) {
-  const b = await loc.boundingBox();
+  const b = await loc.boundingBox({ timeout: 10_000 });
   if (!b) throw new Error(`no box for ${name}`);
   boxes[name] = b;
 }
@@ -165,42 +182,6 @@ test('shoot the demo footage', async () => {
   await notes.bringToFront();
   await notes.waitForTimeout(300);
   await shot(notes, 'clock-back'); // the clock a few seconds on, after "Back to work"
-
-  // 4b. Music, while the block runs: white, pink and brown noise, then two songs from this computer.
-  const music = await page(ctx);
-  await music.goto(`${DASH}#music`);
-  await expect(music.getByRole('heading', { name: 'Music', level: 1 })).toBeVisible();
-  const sounds = music.getByRole('heading', { name: 'Focus sounds' });
-  await sounds.evaluate((h) => window.scrollTo(0, h.getBoundingClientRect().top + window.scrollY - 40));
-  await music.waitForTimeout(300);
-  await shot(music, 'music-silence');
-  for (const name of ['White', 'Pink', 'Brown']) await mark(`music.${name.toLowerCase()}`, music.getByRole('radio', { name }));
-  await mark('music.play', music.getByRole('button', { name: 'Play' }).first());
-  await mark('music.sounds', music.getByRole('region', { name: 'Focus sounds' }));
-  await mark('music.choose', music.getByRole('button', { name: 'Choose files' }));
-  await music.getByRole('radio', { name: 'White' }).click();
-  await music.getByRole('button', { name: 'Play' }).first().click();
-  for (const [kind, name] of [['white', 'White'], ['pink', 'Pink'], ['brown', 'Brown']] as const) {
-    await music.getByRole('radio', { name }).click();
-    await expect(music.getByText(`${name} noise is playing`)).toBeVisible();
-    await music.waitForTimeout(5_600); // over 5 seconds, so it counts as a listen
-    await shot(music, `music-${kind}`);
-  }
-  await music.getByRole('button', { name: 'Stop' }).click();
-  await expect(music.getByText('Silence')).toBeVisible();
-  await music.locator('input[type=file]').setInputFiles([
-    path.resolve('demo/public/audio/chopin-nocturne-op15-1.mp3'),
-    path.resolve('demo/public/audio/chopin-waltz-op69-1.mp3'),
-  ]);
-  await expect(music.getByText('2 songs')).toBeVisible();
-  await expect(music.getByRole('button', { name: 'Pause' })).toBeVisible({ timeout: 8_000 });
-  const files = music.getByRole('heading', { name: 'Your files' });
-  await files.evaluate((h) => window.scrollTo(0, h.getBoundingClientRect().top + window.scrollY - 40));
-  await music.waitForTimeout(800);
-  await shot(music, 'music-files');
-  await mark('music.files', music.getByRole('region', { name: 'Your files' }));
-  await mark('music.listens', music.getByRole('region', { name: "Today's listens" }));
-  await music.close(); // closing mid-song still saves the listen
 
   // 5. The block ends three seconds from now. Stills as fast as the page allows from just before the end until the
   //    phase words have faded, each named by its time from the end in ms, so the film plays the overlay's real fade.
@@ -298,4 +279,239 @@ test('shoot the demo footage', async () => {
   fs.writeFileSync(`${OUT}/boxes.json`, JSON.stringify(boxes, null, 1));
   await ctx.close();
   console.log('footage', fs.readdirSync(OUT).length, 'items');
+});
+
+/**
+ * The player, for the film's player, folder, link and tab scenes. A block runs, as in the main footage. The popup's
+ * disc is shot frame by frame: the page's clock is held, and each film frame (1/30 s) moves it on and sets every
+ * animation on the page to the same moment, so the slide out of the sleeve and the turning come out as the browser
+ * draws them. Footage lands in demo/public/footage/player/, positions in player/boxes.json.
+ */
+test('shoot the player footage', async () => {
+  test.setTimeout(900_000);
+  const P = `${OUT}/player`;
+  fs.rmSync(P, { recursive: true, force: true });
+  fs.mkdirSync(P, { recursive: true });
+  const { ctx, sw } = await launch(tempProfile(), ['--autoplay-policy=no-user-gesture-required'], 2);
+  const now = Date.now();
+  await ctx.route('**/*', (r) => {
+    const u = new URL(r.request().url());
+    if (u.protocol === 'chrome-extension:') return r.continue();
+    if (u.host === 'lecture-notes.example') return r.fulfill({ contentType: 'text/html; charset=utf-8', body: NOTES });
+    if (u.host === 'canvas.example.edu') return r.fulfill({ contentType: 'text/calendar', body: feed(now) });
+    if (u.host === 'music.youtube.com') return r.fulfill({ contentType: 'text/html; charset=utf-8', body: MUSIC_SITE });
+    if (u.host === 'www.googleapis.com') return r.fulfill({ json: u.pathname === '/calendar/v3/calendars' ? { id: 'demo-calendar' } : {} });
+    if (YOUTUBE_HOSTS.test(u.host)) return r.continue();
+    return r.abort();
+  });
+  // As in the main footage: the notes filed as Study, so the page carries no "File this site" prompt.
+  await sw.evaluate(async () => {
+    const c = (globalThis as any).chrome;
+    const { sites } = await c.storage.local.get('sites');
+    await c.storage.local.set({ sites: { ...(sites ?? {}), 'reddit.com': 'blocked', 'lecture-notes.example': 'study' } });
+  });
+  const dash = await page(ctx);
+  await dash.goto(`${DASH}#connections`);
+  await dash.getByLabel('Calendar link').fill('https://canvas.example.edu/feeds/calendars/user_demo.ics');
+  await dash.getByRole('button', { name: 'Import' }).click();
+  await expect(dash.getByText('2 deadlines in your to-do list')).toBeVisible({ timeout: 15_000 });
+  const start = await page(ctx, POPUP);
+  await start.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  await start.getByRole('button', { name: 'Start' }).click();
+  await expect.poll(() => sw.evaluate(async () => (await (globalThis as any).chrome.storage.local.get('timer')).timer?.status)).toBe('running');
+  await start.close();
+  // The film shows these scenes in another order than they are shot (the record player last), so before each shot
+  // with a clock in it the block is set to what is left at that point in the film, and the clock only ever counts down.
+  const setLeft = (ms: number) =>
+    sw.evaluate(async (ms) => {
+      const c = (globalThis as any).chrome;
+      const { timer } = await c.storage.local.get('timer');
+      const end = Date.now() + ms;
+      await c.storage.local.set({ timer: { ...timer, startedAt: end - 25 * 60_000, endsAt: end } });
+    }, ms);
+  const MIN24 = 24 * 60_000;
+
+  // The side panel next to the notes: the page narrows by the panel's width.
+  const PANEL = { width: 380, height: VIEW.height };
+  await setLeft(MIN24 + 15_000); // the side panel scenes, beside the notes and their corner clock
+  const notes = await page(ctx, { width: VIEW.width - PANEL.width, height: VIEW.height });
+  await notes.goto('https://lecture-notes.example/linear-algebra/week-6');
+  await notes.waitForTimeout(800);
+  await shot(notes, 'player/notes-beside-panel');
+  const panel = await page(ctx, PANEL);
+  await panel.goto(`chrome-extension://${EXT_ID}/sidepanel.html`);
+  await expect(panel.getByRole('heading', { name: 'Player', level: 1 })).toBeVisible();
+
+  // Your music folder: the two Chopin recordings (public domain, demo/public/audio) tagged with composer and album, and
+  // four more public-domain pieces as silent MP3s of their real length. ffmpeg writes the tags; the folder sits in the
+  // browser's own file storage, the way the folder test hands one over.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sd-songs-'));
+  const ff = (...args: string[]) => execFileSync('ffmpeg', ['-y', '-loglevel', 'error', ...args]);
+  const tags = (title: string, artist: string, album: string) => ['-map_metadata', '-1', '-id3v2_version', '3', '-metadata', `title=${title}`, '-metadata', `artist=${artist}`, '-metadata', `album=${album}`];
+  const songs: [string, string, string][] = [];
+  const real = (src: string, file: string, title: string, album: string) => {
+    ff('-i', src, '-c', 'copy', ...tags(title, 'Frédéric Chopin', album), path.join(tmp, file));
+    songs.push(['Frédéric Chopin', file, fs.readFileSync(path.join(tmp, file)).toString('base64')]);
+  };
+  const silent = (artist: string, file: string, title: string, album: string, seconds: number) => {
+    ff('-f', 'lavfi', '-i', 'anullsrc=r=22050:cl=mono', '-t', String(seconds), '-c:a', 'libmp3lame', '-b:a', '32k', ...tags(title, artist, album), path.join(tmp, file));
+    songs.push([artist, file, fs.readFileSync(path.join(tmp, file)).toString('base64')]);
+  };
+  real('demo/public/audio/chopin-nocturne-op15-1.mp3', 'Nocturne Op 15 No 1.mp3', 'Nocturne in F major, Op. 15 No. 1', 'Nocturnes');
+  real('demo/public/audio/chopin-waltz-op69-1.mp3', 'Waltz Op 69 No 1.mp3', 'Waltz in A-flat major, Op. 69 No. 1', 'Waltzes');
+  silent('Erik Satie', 'Gymnopedie No 1.mp3', 'Gymnopédie No. 1', 'Trois Gymnopédies', 185);
+  silent('Claude Debussy', 'Clair de lune.mp3', 'Clair de lune', 'Suite bergamasque', 302);
+  silent('J. S. Bach', 'Prelude BWV 846.mp3', 'Prelude in C major, BWV 846', 'The Well-Tempered Clavier', 140);
+  silent('Robert Schumann', 'Traumerei.mp3', 'Träumerei', 'Kinderszenen', 165);
+  fs.rmSync(tmp, { recursive: true, force: true });
+  await panel.evaluate(async (songs) => {
+    const root = await navigator.storage.getDirectory();
+    const music = await root.getDirectoryHandle('Music', { create: true });
+    for (const [artist, name, data] of songs) {
+      const dir = await music.getDirectoryHandle(artist, { create: true });
+      const w = await (await dir.getFileHandle(name, { create: true })).createWritable();
+      await w.write(Uint8Array.from(atob(data), (c) => c.charCodeAt(0)));
+      await w.close();
+    }
+    (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker = async () => music;
+  }, songs);
+  await panel.getByRole('radio', { name: 'Library' }).click();
+  await panel.getByRole('button', { name: 'Choose a folder' }).click();
+  await expect(panel.getByText(/6 songs/).first()).toBeVisible({ timeout: 20_000 });
+  await panel.waitForTimeout(600);
+  await shot(panel, 'player/panel-library');
+  await mark('panel.playAll', panel.getByRole('button', { name: 'Play all' }));
+  const nocturne = panel.getByRole('listitem').filter({ hasText: 'Nocturne in F major' });
+  await mark('panel.nocturne', nocturne);
+  await nocturne.getByRole('button').first().click();
+  await expect.poll(async () => sw.evaluate(async () => (await (globalThis as any).chrome.storage.session.get('player')).player?.now?.title)).toMatch(/Nocturne/);
+  await panel.getByRole('radio', { name: 'Now playing' }).click().catch(() => undefined);
+  const seek = panel.getByRole('slider', { name: 'Position' });
+  await expect(seek).toBeVisible();
+  await seek.focus();
+  await seek.press('Home');
+  for (let i = 0; i < 11; i++) await seek.press('ArrowRight'); // 5 s a press: 0:55, then on to 0:57 by the time it shows
+  await panel.waitForTimeout(2200);
+  await shot(panel, 'player/panel-now');
+  await mark('panel.seek', seek);
+
+  // Where it can play from, in the panel, tall enough for the whole list and its service logos.
+  await panel.getByRole('button', { name: /FOLDER/ }).click();
+  await expect(panel.getByRole('menu', { name: 'Play from' })).toBeVisible();
+  await panel.waitForTimeout(500);
+  await shot(panel, 'player/panel-sources');
+  await mark('panel.menu', panel.getByRole('menu', { name: 'Play from' }));
+  await panel.keyboard.press('Escape');
+
+  // A YouTube link plays in the panel: NASA's "The Earth: 4K Extended Edition", public domain (NASA Johnson, see
+  // demo/public/footage-credits.md). YouTube is the one outside service this capture lets through.
+  await panel.getByRole('radio', { name: 'Streaming' }).click();
+  await panel.getByLabel('Link to play').fill(YOUTUBE_FILM);
+  await shot(panel, 'player/panel-link');
+  await mark('panel.link', panel.getByLabel('Link to play')); // before Enter: playing switches the panel to Now playing
+  await panel.getByLabel('Link to play').press('Enter');
+  await expect.poll(async () => sw.evaluate(async () => (await (globalThis as any).chrome.storage.session.get('player')).player?.stream?.title), { timeout: 30_000 }).toBe('The Earth: 4K Extended Edition');
+  await panel.waitForTimeout(8000); // past YouTube's own title overlay
+  await shot(panel, 'player/panel-youtube');
+  await setLeft(MIN24 + 8_000);
+  const yt = await page(ctx, POPUP);
+  await yt.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  await yt.getByRole('region', { name: 'Player' }).scrollIntoViewIfNeeded();
+  await yt.waitForTimeout(1500);
+  await shot(yt, 'player/popup-youtube');
+  await mark('popup.youtube.pause', yt.getByRole('region', { name: 'Player' }).getByRole('button', { name: 'Pause' }));
+  await yt.close();
+
+  // Music already playing in a tab: a music site's page that says what plays through the browser's media session.
+  const site = await ctx.newPage();
+  await site.goto('https://music.youtube.com/watch?v=demo');
+  await expect.poll(async () => sw.evaluate(async () => (await (globalThis as any).chrome.storage.session.get('player')).player?.tabs?.[0]?.title), { timeout: 15_000 }).toBe('Gymnopédie No. 1');
+  await setLeft(MIN24 + 3_000);
+  const tabPop = await page(ctx, POPUP);
+  await tabPop.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  const tabCard = tabPop.getByRole('region', { name: 'Player' });
+  await tabCard.scrollIntoViewIfNeeded();
+  await expect(tabCard.getByText('Gymnopédie No. 1')).toBeVisible();
+  await tabPop.waitForTimeout(1200);
+  await shot(tabPop, 'player/popup-tab');
+  await mark('popup.tab.pause', tabCard.getByRole('button', { name: 'Pause' }));
+  await mark('popup.tab.next', tabCard.getByRole('button', { name: 'Next' }));
+  await tabPop.close();
+  await panel.getByRole('radio', { name: 'Tabs' }).click();
+  await panel.waitForTimeout(800);
+  await shot(panel, 'player/panel-tabs');
+
+  // Google Calendar: one sign-in, and the blocks go to a Study Duo calendar by themselves. Google's sign-in needs a
+  // person and an account, so the browser's answer is stood in for and Google's calendar service is answered here,
+  // as in the calendar test.
+  await sw.evaluate(() => {
+    const c = (globalThis as any).chrome;
+    c.identity.getAuthToken = async () => ({ token: 'demo-token' });
+    c.identity.removeCachedAuthToken = async () => undefined;
+  });
+  await dash.goto(`${DASH}#connections`);
+  expect(await dash.evaluate(() => (globalThis as any).chrome.runtime.sendMessage({ kind: 'calendar', op: 'connect' }))).toBe(true);
+  await dash.reload();
+  const google = dash.getByRole('region', { name: /Google Calendar/ });
+  await google.scrollIntoViewIfNeeded().catch(() => undefined);
+  await dash.waitForTimeout(1000);
+  await shot(dash, 'player/connections-google');
+  await mark('connections.google', google);
+  // Last, because the page clock it holds still is shared by every page in the browser: the popup's record player,
+  // Sounds at rest on white noise, then frame by frame.
+  await setLeft(MIN24 + 31_000); // the record player comes first in the film, right after the site lock
+  const pop = await page(ctx, POPUP);
+  await pop.clock.install();
+  await pop.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  const card = pop.getByRole('region', { name: 'Player' });
+  await expect(card).toBeVisible();
+  await card.scrollIntoViewIfNeeded();
+  await card.getByRole('button', { name: /TAB|YOUTUBE|FOLDER/ }).click();
+  await pop.getByRole('menuitemradio', { name: /Focus noise/ }).click();
+  await card.getByRole('button', { name: 'Pause' }).click();
+  await expect(card.getByRole('button', { name: 'Play' })).toBeVisible();
+  await card.getByRole('radio', { name: 'White' }).click(); // the film names them in order: white, pink, brown
+  await expect(card.getByRole('radio', { name: 'White' })).toHaveAttribute('aria-checked', 'true');
+  await pop.waitForTimeout(1200);
+  await pop.evaluate(() => window.scrollTo(0, 0)); // the source list scrolled the popup; it opens at the top
+  await pop.waitForTimeout(300);
+  await shot(pop, 'player/rest');
+  await mark('player.card', card);
+  for (const name of ['White', 'Pink', 'Brown']) await mark(`player.${name.toLowerCase()}`, card.getByRole('radio', { name }));
+  await mark('player.play', card.getByRole('button', { name: 'Play' }));
+  await mark('player.source', card.getByRole('button', { name: /SOUNDS/ }));
+
+  // Frame by frame from here: the page's clock stands still unless a frame moves it.
+  let k = 0;
+  const FRAME = 1000 / 30;
+  const frames = async (name: string, count: number) => {
+    for (let i = 0; i < count; i++, k++) {
+      await pop.clock.runFor(FRAME);
+      await pop.evaluate((k) => {
+        const w = window as unknown as { __born?: Map<Animation, number> };
+        const born = (w.__born ??= new Map());
+        for (const a of document.getAnimations()) {
+          if (!born.has(a)) born.set(a, k);
+          a.pause();
+          a.currentTime = (k - born.get(a)!) * (1000 / 30);
+        }
+      }, k);
+      await pop.screenshot({ type: 'jpeg', quality: 90, path: `${P}/${name}-${String(i).padStart(3, '0')}.jpg` });
+    }
+  };
+  await pop.clock.pauseAt(Date.now() + 2000);
+  await card.getByRole('button', { name: 'Play' }).click();
+  await expect(card.getByRole('button', { name: 'Pause' })).toBeVisible();
+  await frames('white', 90); // out of the sleeve, up to speed, turning
+  await card.getByRole('radio', { name: 'Pink' }).click();
+  await expect(card.getByRole('radio', { name: 'Pink' })).toHaveAttribute('aria-checked', 'true');
+  await frames('pink', 54); // one turn at 33 1/3 rpm
+  await card.getByRole('radio', { name: 'Brown' }).click();
+  await expect(card.getByRole('radio', { name: 'Brown' })).toHaveAttribute('aria-checked', 'true');
+  await frames('brown', 54);
+
+  await pop.close();
+  fs.writeFileSync(`${P}/boxes.json`, JSON.stringify(boxes, null, 1));
+  await ctx.close();
+  console.log('player footage', fs.readdirSync(P).length, 'items');
 });

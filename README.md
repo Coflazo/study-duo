@@ -10,7 +10,7 @@
   <a href="https://github.com/Coflazo/study-duo/releases">Releases</a>
 </p>
 
-<a href="docs/media/study-duo.mp4"><img alt="Study Duo in use: browser tabs pile up during a study session; a block starts on Problem set 5 from the course calendar; a small clock sits in the corner of the page; reddit.com stays closed; white, pink and brown noise play from the Music page; a bell rings in a break; a heat map shows the best hours of one simulated student." src="docs/media/demo.gif" width="100%"></a>
+<a href="docs/media/study-duo.mp4"><img alt="Study Duo in use: browser tabs pile up during a study session; a block starts on Problem set 5 from the course calendar; a small clock sits in the corner of the page; reddit.com stays closed; the popup's record player turns through white, pink and brown noise; a YouTube link plays in the side panel; a bell rings in a break; a heat map shows the best hours of one simulated student." src="docs/media/demo.gif" width="100%"></a>
 
 A free study timer that lives in your browser. It keeps a small clock in the corner of every page, keeps distracting sites closed while you study, rings a bell when it's time for a break, and over a few weeks learns which hours and which music help you focus. No account. Works offline. Everything stays on your computer.
 
@@ -21,9 +21,10 @@ A free study timer that lives in your browser. It keeps a small clock in the cor
 | <img src="docs/media/features/timer.jpg" width="320" alt="The popup: Study, block 1 of 4, 25:00 on a digital clock."> | **Timer.** 25 minutes of study, 5 of break, a longer break every fourth round. Deadlines from your course calendar show up as to-dos. |
 | <img src="docs/media/features/clock.jpg" width="320" alt="A small digital clock reading 25:00 in the top right corner of a page of lecture notes."> | **Corner clock.** A small clock on every page that fades while you read and comes back when your mouse gets close. |
 | <img src="docs/media/features/lock.jpg" width="320" alt="Study Duo's blocked page asking: Why open reddit.com now?"> | **Site lock.** Chosen sites stay closed until the block ends. Opening one anyway takes ten seconds and a reason. |
-| <img src="docs/media/features/music.jpg" width="320" alt="The Music page playing two songs from this computer."> | **Music.** White, pink or brown noise made in the browser, your own song files, and the songs playing in your tabs. |
+| <img src="docs/media/features/player.jpg" width="320" alt="The popup's player card: brown noise playing, its disc half out of the sleeve, with White, Pink and Brown below."> | **Player.** A record player under the timer: white, pink or brown noise made in the browser, your music folder, a YouTube, Spotify, SoundCloud, Apple Music or Tidal link, or the music already playing in a tab. One plays at a time, and switching fades one out and the next in. |
+| <img src="docs/media/features/panel.jpg" width="320" alt="The side panel: a music folder's library beside a Chopin nocturne playing, with its seek line."> | **Side panel.** The full player beside the page: your folder's library by song, artist or album, the queue, shuffle and repeat, and streaming links in each service's own player. |
 | <img src="docs/media/features/insights.jpg" width="320" alt="A heat map of focus by hour and day."> | **Your best hours.** Rate each block with one tap. After a few weeks it shows your best hours and which music helps. |
-| <img src="docs/media/features/timeline.jpg" width="320" alt="The Timeline page with study blocks across a week and an Export to calendar button."> | **Timeline.** Every block and break on a week view, exported as one file for any calendar app. |
+| <img src="docs/media/features/timeline.jpg" width="320" alt="The Timeline page with study blocks across a week and an Export to calendar button."> | **Timeline and calendar.** Every block and break on a week view. Connect Google Calendar and each one goes into a Study Duo calendar by itself, or export one file for any calendar app. |
 
 Also: the minutes left on the toolbar icon, a bell and a short line in the middle of the page when a block starts or ends, songs from your phone through ListenBrainz or Last.fm, and moving your settings and to-dos to another computer with a file or QR codes.
 

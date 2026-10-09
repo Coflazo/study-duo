@@ -1,8 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
 import { AbsoluteFill, Img, staticFile, useCurrentFrame } from "remotion";
 import boxesJson from "../../public/footage/boxes.json";
+import playerBoxesJson from "../../public/footage/player/boxes.json";
 import breakTimes from "../../public/footage/break/times.json";
-import icsLines from "../../public/footage/ics.json";
 import timing from "../../public/narration/timing.json";
 import { Cursor, downAt, trackPos } from "../chrome";
 import { MONO, TYPE } from "../fonts";
@@ -10,7 +10,7 @@ import { DUR, EASE, countTo, enter, mix, ramp } from "../motion";
 import { Dial } from "./Demo";
 
 /**
- * The launch film: about 100 seconds, narrated and subtitled, laid out from public/narration/timing.json.
+ * The launch film: about two minutes, narrated and subtitled, laid out from public/narration/timing.json.
  *
  * scripts/narrate.py speaks every line and writes that file: when each beat starts, when each line is spoken, when
  * each sound plays and the caption phrases. Nothing here hardcodes a second; every frame below is counted from it,
@@ -57,7 +57,10 @@ const POPUP = { right: ICON.x + 18, top: VIEW.y + 2, w: 360 * S, h: 560 * S };
 const PILL_Y = 912;
 
 type Box = { x: number; y: number; width: number; height: number };
-const BOX = boxesJson as Record<string, Box>;
+const BOX = { ...(boxesJson as Record<string, Box>), ...(playerBoxesJson as Record<string, Box>) };
+/** The side panel beside the notes, in page footage px: the notes were shot 1028 px wide, the panel 380. */
+const PANEL = { x: 1028, w: 380 };
+const inPanel = (p: { x: number; y: number }) => ({ x: PANEL.x + p.x, y: p.y });
 const mid = (b: Box) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
 
 /* ----------------------------------------------------- the camera (page) -- */
@@ -79,8 +82,7 @@ const CLOCK_AT = { x: 1408 - 150, y: 60 };
 const QR = mid(BOX["move.qr"]);
 const MAP = mid(BOX["insights.map"]);
 const MUSIC_INS = { x: (BOX["insights.next"].x + BOX["insights.music"].x + BOX["insights.music"].width) / 2, y: 420 };
-const SOUNDS = mid(BOX["music.sounds"]);
-const FILES = { x: mid(BOX["music.files"]).x, y: (BOX["music.files"].y + BOX["music.listens"].y + BOX["music.listens"].height) / 2 };
+const GOOGLE = mid(BOX["connections.google"]);
 
 function camAt(t: number): Cam {
   const push = (from: Cam, to: Cam, at: number, dur: number) => blend(from, to, ramp(t, at, dur, EASE.inOut));
@@ -89,8 +91,12 @@ function camAt(t: number): Cam {
   else if (t >= BEAT.clock.s && t < BEAT.lock.s) {
     c = push(REST, on(CLOCK_AT, 2.6), BEAT.clock.s + 30, 50);
   } else if (t >= BEAT.lock.s && t < BEAT.noise.s) c = push(REST, on({ x: 704, y: 420 }, 1.18), BEAT.lock.s + 10, 60);
-  else if (t >= BEAT.noise.s && t < BEAT.songs.s) c = push(REST, on(SOUNDS, 1.7), BEAT.noise.s + 12, 36);
-  else if (t >= BEAT.songs.s && t < BEAT.bell.s) c = push(on(SOUNDS, 1.7), on(FILES, 1.25), BEAT.songs.s, 30);
+  else if (t >= BEAT.songs.s && t < BEAT.bell.s) {
+    // The side panel, with the notes beside it; back to the whole window before the popup opens over it, so the page and
+    // the popup stay the same size, as they are on a screen.
+    c = push(REST, on({ x: PANEL.x + PANEL.w / 2, y: 300 }, 1.4), BEAT.songs.s + 4, 36);
+    c = push(c, REST, YT_POP_OPEN - 20, 18);
+  } else if (t >= BEAT.calendar.s && t < BEAT.move.s) c = push(REST, on(GOOGLE, 1.35), BEAT.calendar.s + 10, 44);
   else if (t >= BEAT.bell.s && t < BEAT.rate.s) c = push(REST, on({ x: 768, y: 0 }, 1.1), BEAT.bell.s, 90); // the corner clock and the phase words both stay in
   else if (t >= BEAT.insights.s && t < BEAT.calendar.s) {
     c = push(REST, on(MAP, 1.3), BEAT.insights.s + 10, 50);
@@ -114,25 +120,35 @@ const START_CLICK = LINE["start-2"].e - 6;
 const POP_CLOSE = BEAT.start.e - 14;
 const OPEN_ANYWAY = LINE["lock-2"].s + 26;
 const BACK = BEAT.lock.e - 22;
-const WHITE_RADIO = CUE.white - 22;
 const PLAY = CUE.white - 2;
-const CHOOSE = CUE.song - 8;
+const CHOOSE = CUE.song - 8; // the Nocturne in the panel's library
+const within = (id: string, k: number) => LINE[id].s + Math.round((LINE[id].e - LINE[id].s) * k); // a moment inside a line
+const LINK_IN = within("streaming-1", 0.45); // the link, pasted, after the list of services has been seen
+const LINK_PLAY = within("streaming-1", 0.85);
+const YT_POP_OPEN = LINE["streaming-2"].s - 8;
+const YT_PAUSE = within("streaming-2", 0.45);
+const YT_POP_CLOSE = BEAT.streaming.e - 10;
+const TAB_POP_OPEN = within("tabs", 0.38);
+const TAB_PAUSE = within("tabs", 0.62);
+const TAB_NEXT = within("tabs", 0.8);
+const TAB_POP_CLOSE = BEAT.tabs.e - 6;
 const RATE_TAP = LINE.rate.s + 40;
-const EXPORT = LINE.calendar.s + 40;
 
 /** The window is up for these stretches; it rises out of the dark ground and sinks back into it. */
 const WINDOW_SPANS: Span[] = [
   { s: 0, e: SQUARES_AT + 16 },
-  { s: BEAT.start.s, e: BEAT.rate.s + 8 },
+  { s: BEAT.start.s, e: BEAT.noise.s + 8 }, // the record player has the screen to itself
+  { s: BEAT.songs.s - 8, e: BEAT.rate.s + 8 },
   { s: BEAT.insights.s, e: BEAT.proof.s + 8 },
 ];
 
 /* ------------------------------------------------------------- footage -- */
 
-type Shot = { from: number; full: number; src: string };
+/** w: the shot's width in footage px when it is narrower than the page (the notes beside the side panel). */
+type Shot = { from: number; full: number; src: string; w?: number };
 const SHOTS: Shot[] = (() => {
   const s: Shot[] = [];
-  const add = (at: number, src: string, fade = 0) => s.push({ from: at, full: at + fade, src });
+  const add = (at: number, src: string, fade = 0, w?: number) => s.push({ from: at, full: at + fade, src, w });
   add(-1, "notes.png");
   add(BEAT.start.s - 1, "todo.png");
   add(BEAT.clock.s, "clock-0.png", 9);
@@ -142,11 +158,8 @@ const SHOTS: Shot[] = (() => {
   add(LINE["lock-2"].s - 8, "blocked-open.png", 6);
   add(OPEN_ANYWAY + 2, "blocked-why.png", 4);
   add(OPEN_ANYWAY + 30, "blocked-reason.png", 4);
-  add(BEAT.noise.s, "music-silence.png", 9);
-  add(PLAY + 2, "music-white.png", 4);
-  add(CUE.pink, "music-pink.png", 3);
-  add(CUE.brown, "music-brown.png", 3);
-  add(CHOOSE + 6, "music-files.png", 6);
+  add(BEAT.noise.s, "clock-back.png", 9);
+  add(BEAT.songs.s - 9, "player/notes-beside-panel.png", 0, PANEL.x);
   // The break, as shot: one still per capture, timed by its distance from the end of the block.
   const times = breakTimes as number[];
   const at = (ms: number) => CUE.bell + Math.round((ms * FPS) / 1000);
@@ -159,13 +172,40 @@ const SHOTS: Shot[] = (() => {
   }
   add(BEAT.insights.s - 1, "insights.png");
   add(LINE["insights-2"].s - 10, "insights-music.png", 12);
-  add(BEAT.calendar.s, "timeline.png", 9);
+  add(BEAT.calendar.s, "player/connections-google.png", 9);
   add(BEAT.move.s, "move.png", 9);
   return s.sort((a, b) => a.from - b.from);
 })();
 
-function Layer({ src, opacity }: { src: string; opacity: number }) {
-  return <Img src={staticFile(`footage/${src}`)} style={{ position: "absolute", inset: 0, width: VIEW.w, height: VIEW.h, opacity }} />;
+function Layer({ src, opacity, w }: { src: string; opacity: number; w?: number }) {
+  return <Img src={staticFile(`footage/${src}`)} style={{ position: "absolute", left: 0, top: 0, width: w ? w * S : VIEW.w, height: VIEW.h, opacity }} />;
+}
+
+/** What the side panel shows, as shot: the library, the song playing, where it can play from, a link, YouTube, tabs. */
+const PANEL_SHOTS: Shot[] = [
+  { from: -1, full: -1, src: "player/panel-library.png" },
+  { from: CHOOSE + 4, full: CHOOSE + 10, src: "player/panel-now.png" },
+  { from: BEAT.streaming.s, full: BEAT.streaming.s + 8, src: "player/panel-sources.png" },
+  { from: LINK_IN, full: LINK_IN + 6, src: "player/panel-link.png" },
+  { from: LINK_PLAY + 4, full: LINK_PLAY + 12, src: "player/panel-youtube.png" },
+  { from: BEAT.tabs.s, full: BEAT.tabs.s + 8, src: "player/panel-tabs.png" },
+];
+
+/** The side panel, part of the page under the camera: Chrome draws it beside the page, a thin line between them. */
+function Panel({ t }: { t: number }) {
+  if (t < BEAT.songs.s - 9 || t >= BEAT.bell.s) return null;
+  let i = 0;
+  while (i < PANEL_SHOTS.length - 1 && PANEL_SHOTS[i + 1].from <= t) i++;
+  const cur = PANEL_SHOTS[i];
+  const prev = PANEL_SHOTS[Math.max(0, i - 1)];
+  const k = cur.full > cur.from ? Math.min(1, (t - cur.from) / (cur.full - cur.from)) : 1;
+  const img = (src: string, opacity: number) => <Img src={staticFile(`footage/${src}`)} style={{ position: "absolute", inset: 0, width: PANEL.w * S, height: VIEW.h, opacity }} />;
+  return (
+    <div style={{ position: "absolute", left: PANEL.x * S, top: 0, width: PANEL.w * S, height: VIEW.h, borderLeft: "1px solid var(--line)", background: "white" }}>
+      {k < 1 && img(prev.src, 1)}
+      {img(cur.src, k)}
+    </div>
+  );
 }
 
 function Page({ t }: { t: number }) {
@@ -185,8 +225,9 @@ function Page({ t }: { t: number }) {
           transform: `translate(${(VIEW.w / 2 - c.cx * c.z).toFixed(2)}px, ${(VIEW.h / 2 - c.cy * c.z).toFixed(2)}px) scale(${c.z.toFixed(4)})`,
         }}
       >
-        {k < 1 && <Layer key={`p${i}`} src={prev.src} opacity={1} />}
-        <Layer key={`c${i}`} src={cur.src} opacity={k} />
+        {k < 1 && <Layer key={`p${i}`} src={prev.src} opacity={1} w={prev.w} />}
+        <Layer key={`c${i}`} src={cur.src} opacity={k} w={cur.w} />
+        <Panel t={t} />
       </div>
     </div>
   );
@@ -202,10 +243,9 @@ function whereAt(t: number): Where {
   if (t < BEAT.clock.s) return duo("To-do · Study Duo", "dashboard.html#todo");
   if (t < BEAT.lock.s) return notes;
   if (t < BEAT.noise.s) return duo("Closed for now", "blocked.html");
-  if (t < BEAT.bell.s) return duo("Music · Study Duo", "dashboard.html#music");
   if (t < BEAT.insights.s) return notes;
   if (t < BEAT.calendar.s) return duo("Insights · Study Duo", "dashboard.html#insights");
-  if (t < BEAT.move.s) return duo("Timeline · Study Duo", "dashboard.html#timeline");
+  if (t < BEAT.move.s) return duo("Connections · Study Duo", "dashboard.html#connections");
   return duo("Your data · Study Duo", "dashboard.html#data");
 }
 
@@ -268,6 +308,18 @@ function Tabs({ t }: { t: number }) {
           {i === 0 ? where.title : STRAY_TABS[i - 1]}
         </span>
         {!active && <span style={{ position: "absolute", right: 0, top: 9, bottom: 9, width: 1, background: "var(--line)" }} />}
+      </div>,
+    );
+    x += w;
+  }
+  // Music in another tab: the tab the popup and the panel control.
+  if (t >= BEAT.tabs.s - 8 && t < BEAT.bell.s) {
+    const w = 236 * ramp(t, BEAT.tabs.s - 8, 8, EASE.out);
+    out.push(
+      <div key="music" style={{ position: "absolute", left: x, top: WIN.y + 6, width: w, height: TAB_H - 6, display: "flex", alignItems: "center", gap: 9, padding: "0 12px", overflow: "hidden" }}>
+        <div style={{ width: 16, height: 16, borderRadius: 99, background: "#e5484d", flexShrink: 0 }} />
+        <span style={{ font: `500 14px/1 ${TYPE}`, color: "var(--ink-2)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Gymnopédie No. 1</span>
+        <svg viewBox="0 0 256 256" width="15" height="15" style={{ flexShrink: 0, fill: "var(--ink-2)" }} aria-hidden="true"><path d="M157.27,21.22a12,12,0,0,0-12.64,1.31L75.88,76H32A20,20,0,0,0,12,96v64a20,20,0,0,0,20,20H75.88l68.75,53.47A12,12,0,0,0,164,224V32A12,12,0,0,0,157.27,21.22ZM36,100H68v56H36Zm104,99.46L92,162.13V93.87l48-37.33ZM212,128a44,44,0,0,1-11,29.11,12,12,0,1,1-18-15.88,20,20,0,0,0,0-26.43,12,12,0,0,1,18-15.86A43.94,43.94,0,0,1,212,128Zm40,0a83.87,83.87,0,0,1-21.39,56,12,12,0,0,1-17.89-16,60,60,0,0,0,0-80,12,12,0,1,1,17.88-16A83.87,83.87,0,0,1,252,128Z"/></svg>
       </div>,
     );
     x += w;
@@ -356,11 +408,18 @@ function ToolbarButton({ t }: { t: number }) {
   );
 }
 
+/** The popup each time it opens: Start, then the YouTube card, then the music in a tab. Shots cross-fade inside it. */
+const POPS: { open: number; close: number; shots: { at: number; src: string }[] }[] = [
+  { open: POP_OPEN, close: POP_CLOSE, shots: [{ at: -1, src: "popup-ready.png" }, { at: START_CLICK + 2, src: "popup-running.png" }] },
+  { open: YT_POP_OPEN, close: YT_POP_CLOSE, shots: [{ at: -1, src: "player/popup-youtube.png" }] },
+  { open: TAB_POP_OPEN, close: TAB_POP_CLOSE, shots: [{ at: -1, src: "player/popup-tab.png" }] },
+];
+
 function Popup({ t }: { t: number }) {
-  if (t < POP_OPEN || t >= POP_CLOSE + 6) return null;
-  const inT = ramp(t, POP_OPEN, DUR.chip, EASE.out);
-  const outT = ramp(t, POP_CLOSE, DUR.chip, EASE.out);
-  const k = ramp(t, START_CLICK + 2, 4, EASE.out);
+  const pop = POPS.find((p) => t >= p.open && t < p.close + 6);
+  if (!pop) return null;
+  const inT = ramp(t, pop.open, DUR.chip, EASE.out);
+  const outT = ramp(t, pop.close, DUR.chip, EASE.out);
   const img: CSSProperties = { position: "absolute", inset: 0, width: POPUP.w, height: POPUP.h };
   return (
     <div
@@ -377,37 +436,8 @@ function Popup({ t }: { t: number }) {
         transform: `translateY(${mix(inT, -6, 0).toFixed(2)}px)`,
       }}
     >
-      <Img src={staticFile("footage/popup-ready.png")} style={img} />
-      {k > 0 && <Img src={staticFile("footage/popup-running.png")} style={{ ...img, opacity: k }} />}
-    </div>
-  );
-}
-
-/** The calendar file the Timeline exports, as it was written, on a panel beside the window. */
-function IcsPanel({ t }: { t: number }) {
-  const at = EXPORT + 6;
-  if (t < at || t >= BEAT.move.s) return null;
-  const lines = (icsLines as string[]).filter(Boolean).slice(0, 16);
-  return (
-    <div
-      style={{
-        position: "absolute",
-        left: 1150,
-        top: 300,
-        width: 560,
-        padding: "22px 26px",
-        borderRadius: 14,
-        background: "#16191c",
-        boxShadow: "0 30px 80px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(255 255 255 / 0.08)",
-        ...enter(t, at, { y: 16, dur: DUR.sheet }),
-        opacity: ramp(t, at, DUR.sheet) * (1 - ramp(t, BEAT.move.s - 10, 10)),
-      }}
-    >
-      <div style={{ font: `600 20px/1 ${TYPE}`, color: "white", marginBottom: 16 }}>study-duo-2026-10-08.ics</div>
-      {lines.map((l, i) => (
-        <div key={i} style={{ font: `400 16px/24px ${MONO}`, color: l.startsWith("SUMMARY") || l.startsWith("DTSTART") ? "white" : "rgb(255 255 255 / 0.55)", whiteSpace: "nowrap", overflow: "hidden" }}>
-          {l}
-        </div>
+      {pop.shots.map((sh, i) => (
+        <Img key={sh.src} src={staticFile(`footage/${sh.src}`)} style={{ ...img, opacity: i === 0 ? 1 : ramp(t, sh.at, 4, EASE.out) }} />
       ))}
     </div>
   );
@@ -451,7 +481,6 @@ function Window({ t }: { t: number }) {
       <div style={{ position: "absolute", left: WIN.x + WIN.w - 50, top: ICON.y - 12, width: 24, height: 24, borderRadius: 99, background: "var(--sunken)" }} />
       <Page t={t} />
       <Popup t={t} />
-      <IcsPanel t={t} />
     </div>
   );
 }
@@ -579,6 +608,49 @@ function heroPoint(p: { x: number; y: number }) {
   return { x: Math.round(HERO.cx + dx * Math.cos(a) - dy * Math.sin(a)), y: Math.round(HERO.cy + dx * Math.sin(a) + dy * Math.cos(a)) };
 }
 
+/**
+ * The popup's record player, large, on its own: at rest, then Play. The disc slides out and turns, white, then pink, then
+ * brown, each frame as the browser drew it (one capture per film frame). White plays its first 90 frames once, then
+ * turns on the last 54: one revolution at 33 1/3 rpm, so the loop has no seam.
+ */
+function playerFrame(t: number): string {
+  const n = (k: number) => String(k).padStart(3, "0");
+  if (t < PLAY + 2) return "player/rest.png";
+  if (t < CUE.pink) {
+    const k = t - (PLAY + 2);
+    return `player/white-${n(k < 90 ? k : 36 + ((k - 36) % 54))}.jpg`;
+  }
+  if (t < CUE.brown) return `player/pink-${n(Math.min(53, t - CUE.pink))}.jpg`;
+  return `player/brown-${n(Math.min(53, t - CUE.brown))}.jpg`;
+}
+
+function PlayerHero({ t }: { t: number }) {
+  const b = BEAT.noise;
+  if (t < b.s - 2 || t > b.e + 2) return null;
+  const inT = ramp(t, b.s + 2, DUR.hero, EASE.inOut);
+  const outT = ramp(t, b.e - 14, 14, EASE.inOut);
+  const w = 360 * HERO.scale;
+  const h = 560 * HERO.scale;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: HERO.cx - w / 2,
+        top: HERO.cy - h / 2,
+        width: w,
+        height: h,
+        borderRadius: 18,
+        overflow: "hidden",
+        boxShadow: "0 50px 120px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.1)",
+        opacity: inT * (1 - outT),
+        transform: `translateY(${mix(inT, 18, 0).toFixed(2)}px) rotate(${HERO.tilt}deg)`,
+      }}
+    >
+      <Img src={staticFile(`footage/${playerFrame(t)}`)} style={{ position: "absolute", inset: 0, width: w, height: h }} />
+    </div>
+  );
+}
+
 function RateHero({ t }: { t: number }) {
   const b = BEAT.rate;
   if (t < b.s - 2 || t > b.e + 2) return null;
@@ -611,37 +683,93 @@ function RateHero({ t }: { t: number }) {
 
 /* ----------------------------------------------------------- 14. proof -- */
 
+/** bench/results/2026-10-09.md: six extensions, each alone in a fresh browser, free versions, measured 9 Oct 2026. */
+const BENCH = [
+  { name: "Study Duo", script: "59 KB", cpu: "0.13 s", servers: 0 },
+  { name: "LeechBlock NG", script: "5 KB", cpu: "0.33 s", servers: 0 },
+  { name: "Forest", script: "309 KB", cpu: "0.10 s", servers: 0 },
+  { name: "Focus To-Do", script: "0 KB", cpu: "below noise", servers: 0 },
+  { name: "StayFocusd", script: "7.0 MB", cpu: "0.71 s", servers: 9 },
+  { name: "BlockSite", script: "6.7 MB", cpu: "0.50 s", servers: 57 },
+];
+
 function Proof({ t }: { t: number }) {
   const b = BEAT.proof;
   if (t < b.s - 2 || t > b.e + 2) return null;
   const out = 1 - ramp(t, b.e - 14, 14, EASE.out);
-  const countAt = LINE["proof-2"].s + Math.round((LINE["proof-2"].e - LINE["proof-2"].s) * 0.45);
-  const n = countTo(t, countAt, 56, 40);
-  const zeroAt = LINE["proof-3"].s;
-  const col = (name: string, value: number, at: number, accent: boolean, dots: number) => (
-    <div style={{ width: 520, display: "flex", flexDirection: "column", alignItems: "center", ...enter(t, at, { y: 14, dur: DUR.sheet }) }}>
-      <div style={{ font: `600 34px/1 ${TYPE}`, color: "white", opacity: 0.8 }}>{name}</div>
-      <div style={{ font: `700 190px/1 ${TYPE}`, fontVariantNumeric: "tabular-nums", color: accent ? "var(--brand)" : "white", marginTop: 18, letterSpacing: -4 }}>{value}</div>
-      <div style={{ marginTop: 28, width: 8 * 28, height: 7 * 28, display: "flex", flexWrap: "wrap", alignContent: "flex-start" }}>
-        {Array.from({ length: dots }, (_, i) => (
-          <div key={i} style={{ width: 16, height: 16, margin: 6, borderRadius: 99, background: "white", opacity: 0.55 }} />
-        ))}
-      </div>
-    </div>
-  );
+  const blockAt = within("proof-2", 0.3);
+  const countAt = within("proof-2", 0.6);
+  const duoAt = LINE["proof-3"].s;
+  const COLS = "330px 260px 260px 300px";
+  const cell: CSSProperties = { font: `500 30px/1 ${TYPE}`, color: "white", fontVariantNumeric: "tabular-nums" };
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", opacity: out }}>
-      <div style={{ font: `600 36px/1.2 ${TYPE}`, color: "white", marginTop: -40, ...enter(t, b.s + 4, { y: 10, dur: DUR.sheet }) }}>Outside servers contacted on install</div>
-      <div style={{ display: "flex", gap: 80, marginTop: 50 }}>
-        {col("BlockSite", n, b.s + 10, false, n)}
-        {col("Study Duo", 0, b.s + 16, ramp(t, zeroAt, DUR.chip) > 0.5, 0)}
+      <div style={{ font: `600 40px/1.2 ${TYPE}`, color: "white", marginTop: -60, ...enter(t, b.s + 4, { y: 10, dur: DUR.sheet }) }}>Six focus extensions, measured</div>
+      <div style={{ display: "grid", gridTemplateColumns: COLS, marginTop: 44, rowGap: 0, ...enter(t, b.s + 10, { y: 12, dur: DUR.sheet }) }}>
+        {["", "Script in every page", "CPU per idle minute", "Servers on install"].map((h) => (
+          <div key={h} style={{ font: `500 22px/1 ${TYPE}`, color: "white", opacity: 0.6, padding: "0 0 18px", textAlign: h ? "right" : "left" }}>{h}</div>
+        ))}
+        {BENCH.map((r, i) => {
+          const hot = r.name === "BlockSite" ? ramp(t, blockAt, DUR.chip) : r.name === "Study Duo" ? ramp(t, duoAt, DUR.chip) : 0;
+          const n = r.name === "BlockSite" ? countTo(t, countAt, 57, 30) : r.servers;
+          const color = r.name === "Study Duo" && hot > 0.5 ? "var(--brand)" : "white";
+          const row: CSSProperties = { ...cell, padding: "16px 0", borderTop: "1px solid rgb(255 255 255 / 0.12)", opacity: 0.55 + 0.45 * Math.max(hot, ramp(t, b.s + 12 + i * 3, DUR.sheet) * 0.6) };
+          return [
+            <div key={`${r.name}n`} style={{ ...row, fontWeight: 600, color }}>{r.name}</div>,
+            <div key={`${r.name}s`} style={{ ...row, textAlign: "right" }}>{r.script}</div>,
+            <div key={`${r.name}c`} style={{ ...row, textAlign: "right" }}>{r.cpu}</div>,
+            <div key={`${r.name}v`} style={{ ...row, textAlign: "right", fontWeight: 700, fontSize: 34, color }}>{n}</div>,
+          ];
+        })}
       </div>
-      <div style={{ font: `500 24px/1 ${TYPE}`, color: "white", opacity: ramp(t, b.s + 22, DUR.sheet) * 0.6, marginTop: 6 }}>Measured 8 Oct 2026</div>
+      <div style={{ font: `500 22px/1 ${TYPE}`, color: "white", opacity: ramp(t, b.s + 22, DUR.sheet) * 0.55, marginTop: 30 }}>
+        Free versions, each alone in a fresh browser, 9 Oct 2026. CPU while a timer runs, for Study Duo.
+      </div>
     </AbsoluteFill>
   );
 }
 
-/* --------------------------------------------------------- 15. end card -- */
+/* ----------------------------------------------------------- 15. price -- */
+
+/** Monthly prices from each product's own pricing page or App Store listing, bench/results/2026-10-08-competitors.md. */
+const PRICES = [
+  { name: "Opal", price: 19.99 },
+  { name: "Brain.fm", price: 14.99 },
+  { name: "Focusmate", price: 12 },
+  { name: "Freedom", price: 8.99 },
+  { name: "Forest Plus", price: 5.99 },
+  { name: "Session", price: 4.99 },
+  { name: "Pomofocus", price: 3 },
+];
+
+function Price({ t }: { t: number }) {
+  const b = BEAT.price;
+  if (t < b.s - 2 || t > b.e + 2) return null;
+  const out = 1 - ramp(t, b.e - 14, 14, EASE.out);
+  const freeAt = LINE["price-2"].s;
+  const MAX = 760;
+  const bar = (name: string, price: number, i: number, ours = false) => {
+    const k = ramp(t, ours ? freeAt : b.s + 8 + i * 3, DUR.sheet, EASE.out);
+    return (
+      <div key={name} style={{ display: "grid", gridTemplateColumns: "240px 800px 150px", alignItems: "center", height: 58, opacity: ours ? k : 0.35 + 0.65 * k }}>
+        <div style={{ font: `${ours ? 700 : 500} 30px/1 ${TYPE}`, color: ours ? "var(--brand)" : "white" }}>{name}</div>
+        <div style={{ height: 22, width: Math.max(ours ? 6 : 0, (price / 19.99) * MAX * k), borderRadius: 4, background: ours ? "var(--brand)" : "rgb(255 255 255 / 0.75)" }} />
+        <div style={{ font: `600 30px/1 ${TYPE}`, color: ours ? "var(--brand)" : "white", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{ours ? "$0" : `$${price % 1 ? price.toFixed(2) : price}`}</div>
+      </div>
+    );
+  };
+  return (
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", opacity: out }}>
+      <div style={{ font: `600 40px/1.2 ${TYPE}`, color: "white", marginTop: -40, marginBottom: 34, ...enter(t, b.s + 2, { y: 10, dur: DUR.sheet }) }}>A month of focus, at full price</div>
+      {PRICES.map((p, i) => bar(p.name, p.price, i))}
+      <div style={{ height: 14 }} />
+      {bar("Study Duo", 0, 0, true)}
+      <div style={{ font: `500 22px/1 ${TYPE}`, color: "white", opacity: ramp(t, b.s + 20, DUR.sheet) * 0.55, marginTop: 30 }}>Monthly prices on each official page, 8 Oct 2026</div>
+    </AbsoluteFill>
+  );
+}
+
+/* --------------------------------------------------------- 16. end card -- */
 
 function EndCard({ t }: { t: number }) {
   const b = BEAT.end;
@@ -722,13 +850,14 @@ export function Captions({ t }: { t: number }) {
 
 /* ------------------------------------------------------------- pointer -- */
 
-const CLICKS = [POP_OPEN - 2, START_CLICK, OPEN_ANYWAY, BACK, WHITE_RADIO, PLAY, CUE.pink - 2, CUE.brown - 2, CHOOSE, RATE_TAP, EXPORT];
+const LINK_PLAY_AT = { x: BOX["panel.link"].x + BOX["panel.link"].width + 30, y: mid(BOX["panel.link"]).y }; // Play, beside the link
+const CLICKS = [POP_OPEN - 2, START_CLICK, OPEN_ANYWAY, BACK, PLAY, CUE.pink - 2, CUE.brown - 2, CHOOSE, LINK_PLAY, YT_POP_OPEN - 2, YT_PAUSE, TAB_POP_OPEN - 2, TAB_PAUSE, TAB_NEXT, RATE_TAP];
 const POINTER_SPANS: Span[] = [
   { s: POP_OPEN - 40, e: POP_CLOSE + 10 },
   { s: LINE["lock-2"].s - 10, e: BACK + 14 },
-  { s: BEAT.noise.s + 20, e: CHOOSE + 20 },
+  { s: BEAT.noise.s + 20, e: CUE.brown + 20 },
+  { s: CHOOSE - 30, e: TAB_NEXT + 16 },
   { s: BEAT.rate.s + 8, e: BEAT.rate.e - 10 },
-  { s: LINE.calendar.s, e: EXPORT + 24 },
 ];
 
 function pointerKeys() {
@@ -737,6 +866,8 @@ function pointerKeys() {
   const p = (at: number, q: { x: number; y: number }) => ({ at, ...q });
   // Page targets move with the camera, so each key reads the camera at its own frame.
   const pg = (at: number, name: string) => p(at, onPage(at, mid(BOX[name])));
+  const pn = (at: number, q: { x: number; y: number }) => p(at, onPage(at, inPanel(q)));
+  const hero = (name: string) => heroPoint(mid(BOX[name]));
   return [
     p(POP_OPEN - 40, { x: 1240, y: 640 }),
     p(POP_OPEN - 10, icon),
@@ -749,23 +880,31 @@ function pointerKeys() {
     pg(OPEN_ANYWAY + 8, "blocked.openAnyway"),
     pg(BACK - 10, "blocked.back"),
     pg(BACK + 10, "blocked.back"),
-    p(BEAT.noise.s + 20, { x: 1200, y: 760 }),
-    pg(WHITE_RADIO - 8, "music.white"),
-    pg(WHITE_RADIO + 4, "music.white"),
-    pg(PLAY - 8, "music.play"),
-    pg(PLAY + 6, "music.play"),
-    pg(CUE.pink - 12, "music.pink"),
-    pg(CUE.pink + 4, "music.pink"),
-    pg(CUE.brown - 12, "music.brown"),
-    pg(CUE.brown + 6, "music.brown"),
-    pg(CHOOSE - 10, "music.choose"),
-    pg(CHOOSE + 20, "music.choose"),
+    p(BEAT.noise.s + 20, { x: 1300, y: 820 }),
+    p(PLAY - 10, hero("player.play")),
+    p(PLAY + 6, hero("player.play")),
+    p(CUE.pink - 12, hero("player.pink")),
+    p(CUE.pink + 4, hero("player.pink")),
+    p(CUE.brown - 12, hero("player.brown")),
+    p(CUE.brown + 6, hero("player.brown")),
+    p(CHOOSE - 30, { x: 1300, y: 760 }),
+    pn(CHOOSE - 8, mid(BOX["panel.nocturne"])),
+    pn(CHOOSE + 10, mid(BOX["panel.nocturne"])),
+    pn(LINK_PLAY - 10, LINK_PLAY_AT),
+    pn(LINK_PLAY + 8, LINK_PLAY_AT),
+    p(YT_POP_OPEN - 12, icon),
+    p(YT_POP_OPEN + 6, icon),
+    p(YT_PAUSE - 8, onPopup(mid(BOX["popup.youtube.pause"]))),
+    p(YT_PAUSE + 10, onPopup(mid(BOX["popup.youtube.pause"]))),
+    p(TAB_POP_OPEN - 12, icon),
+    p(TAB_POP_OPEN + 6, icon),
+    p(TAB_PAUSE - 8, onPopup(mid(BOX["popup.tab.pause"]))),
+    p(TAB_PAUSE + 4, onPopup(mid(BOX["popup.tab.pause"]))),
+    p(TAB_NEXT - 6, onPopup(mid(BOX["popup.tab.next"]))),
+    p(TAB_NEXT + 14, onPopup(mid(BOX["popup.tab.next"]))),
     p(BEAT.rate.s + 8, { x: 1300, y: 760 }),
     p(RATE_TAP - 8, heroPoint(mid(BOX["popup.rate4"]))),
     p(RATE_TAP + 10, heroPoint(mid(BOX["popup.rate4"]))),
-    p(LINE.calendar.s, { x: 1100, y: 640 }),
-    pg(EXPORT - 8, "timeline.export"),
-    pg(EXPORT + 24, "timeline.export"),
   ];
 }
 
@@ -809,8 +948,10 @@ export function FilmFrame({ t, captions = true }: { t: number; captions?: boolea
       <SignUp t={t} />
       <Reveal t={t} />
       <Window t={t} />
+      <PlayerHero t={t} />
       <RateHero t={t} />
       <Proof t={t} />
+      <Price t={t} />
       <EndCard t={t} />
       <Pointer t={t} />
       {captions && <Captions t={t} />}
