@@ -1,0 +1,86 @@
+/* The install page (Figma: Screens: Web pages and moving data, Website, Install v2). Tokens come from the extension's
+   own tokens.css, so the page and the product share one palette and type. */
+@font-face { font-family: 'Atkinson Hyperlegible Next'; src: url('fonts/atkinson-next-latin.woff2') format('woff2'); font-weight: 200 800; font-display: swap; }
+@font-face { font-family: 'Atkinson Hyperlegible Mono'; src: url('fonts/atkinson-mono-latin.woff2') format('woff2'); font-weight: 200 800; font-display: swap; }
+*, *::before, *::after { box-sizing: border-box; }
+html { color-scheme: light dark; }
+body { margin: 0; background: var(--color-bg-canvas); color: var(--color-text-primary); font: 400 16px/1.5 var(--font-family-ui); }
+main { max-inline-size: 832px; margin: 0 auto; padding: 40px 16px 72px; }
+a { color: inherit; text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, input:focus-visible + .box, summary:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+p { margin: 0; }
+.visually-hidden { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-block-end: 40px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+.brand span { inline-size: 10px; block-size: 10px; background: var(--color-bg-plate-focus); }
+.links { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; color: var(--color-text-secondary); }
+.hero { display: grid; gap: 12px; margin-block-end: 48px; }
+h1 { margin: 0; font-size: clamp(36px, 7vw, 48px); line-height: 1.08; font-weight: 800; }
+.lede { font-size: 19px; line-height: 28px; color: var(--color-text-secondary); }
+
+#desktop { display: grid; gap: 48px; }
+.step { display: grid; gap: 16px; }
+.step h2 { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 22px; line-height: 28px; font-weight: 700; }
+.num { display: grid; place-items: center; inline-size: 28px; block-size: 28px; flex: none; border-radius: var(--radius-md); background: var(--color-bg-action); color: var(--color-text-on-action); font-size: 15px; }
+h3 { margin: 0 0 6px; font-size: 15px; line-height: 20px; font-weight: 600; }
+.secondary, .note, .found { color: var(--color-text-secondary); font-size: 15px; line-height: 22px; }
+.found { font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.found a { color: var(--color-text-primary); font-weight: 600; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; border: 0; }
+.chip { position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px 9px 10px; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-bg-panel); font-weight: 600; font-size: 14px; line-height: 20px; cursor: pointer; }
+.chip:has(input:checked) { border: 2px solid var(--color-border-strong); padding: 8px 11px 8px 9px; }
+.chip input { position: absolute; opacity: 0; inline-size: 1px; block-size: 1px; }
+.chip .box { inline-size: 16px; block-size: 16px; border: 1.5px solid var(--color-border-control); border-radius: 2px; }
+.chip input:checked + .box { border-color: var(--color-bg-action); background: var(--color-bg-action) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path fill="%23FBFBF9" d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg>') center / 12px no-repeat; }
+.chip svg { inline-size: 18px; block-size: 18px; }
+
+.board { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 14px 14px 14px 20px; border-radius: var(--radius-md); background: var(--color-bg-board); }
+.board code { flex: 1 1 320px; min-inline-size: 0; color: var(--color-text-led); font: 500 15px/22px var(--font-family-mono); overflow-wrap: anywhere; }
+.copy { flex: none; min-inline-size: 88px; block-size: 44px; padding: 0 16px; border: 2px solid var(--color-text-led); border-radius: 6px; background: transparent; color: var(--color-text-led); font: 700 16px/20px var(--font-family-ui); cursor: pointer; transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1); }
+.copy:active, .button:active { transform: scale(0.97); }
+
+.pair { display: grid; grid-template-columns: minmax(0, 330px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.clicks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.click { margin: 0; display: grid; gap: 10px; }
+.click figcaption { display: grid; gap: 4px; font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
+.click strong { color: var(--color-text-primary); font-size: 15px; }
+
+/* A real screenshot with a red ring on the place to click and an arrow to it, drawn over the image so both stay sharp. */
+.shot { position: relative; margin: 0; border: 1px solid var(--color-border-subtle); border-radius: 6px; overflow: hidden; background: var(--color-bg-sunken); }
+.shot:empty { display: none; }
+.shot img { display: block; inline-size: 100%; block-size: auto; }
+.shot .ring { position: absolute; border: 3px solid var(--color-bg-plate-focus); border-radius: 50%; pointer-events: none; }
+.shot svg.arrow { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; pointer-events: none; overflow: visible; }
+
+.tabs { display: inline-flex; gap: 4px; padding: 2px; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-bg-panel); justify-self: start; }
+.tabs button { padding: 6px 12px; border: 0; border-radius: 2px; background: none; color: var(--color-text-primary); font: 600 14px/20px var(--font-family-ui); cursor: pointer; }
+.tabs button[aria-selected='true'] { background: var(--color-bg-action); color: var(--color-text-on-action); }
+
+.status { padding: 16px 18px; border: 1px solid var(--color-border-subtle); border-radius: 6px; background: var(--color-bg-panel); }
+.status.done { border: 2px solid var(--color-border-break); }
+.waiting { color: var(--color-text-secondary); font-size: 15px; line-height: 22px; }
+.arrived { display: grid; gap: 14px; }
+.ok { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; line-height: 26px; }
+.ok svg { inline-size: 22px; block-size: 22px; fill: var(--color-text-break); }
+.link { padding: 0; border: 0; background: none; color: var(--color-text-primary); font: 600 15px/22px var(--font-family-ui); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-block-start: 12px; padding: 12px 18px; border: 2px solid var(--color-border-strong); border-radius: 6px; background: none; color: var(--color-text-primary); font: 700 16px/20px var(--font-family-ui); text-decoration: none; cursor: pointer; transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1); }
+.button.primary { border-color: var(--color-bg-action); background: var(--color-bg-action); color: var(--color-text-on-action); }
+.button svg { inline-size: 18px; block-size: 18px; }
+.button[aria-disabled='true'] { opacity: 0.45; pointer-events: none; }
+
+.phone { display: grid; gap: 12px; padding: 18px 16px; border: 1px solid var(--color-border-subtle); border-radius: 6px; background: var(--color-bg-panel); }
+.phone h2 { margin: 0; font-size: 20px; line-height: 26px; }
+.phone .button { margin: 0; inline-size: 100%; }
+
+footer { display: grid; gap: 10px; margin-block-start: 56px; padding-block-start: 24px; border-top: 1px solid var(--color-border-subtle); color: var(--color-text-secondary); font-size: 14px; line-height: 22px; }
+footer summary { color: var(--color-text-primary); font-weight: 600; font-size: 15px; cursor: pointer; }
+footer details p { margin-block-start: 8px; }
+footer .links { margin-block-start: 8px; }
+
+@media (max-width: 720px) {
+  .pair, .clicks { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .copy, .button { transition: none; } }

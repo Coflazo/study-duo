@@ -3,7 +3,9 @@ name: pages
 on:
   push:
     branches: [main]
-    paths: ['site/**', 'PRIVACY.md', 'scripts/privacy-page.py', 'src/ui/tokens.css', 'public/fonts/**', '.github/workflows/pages.yml']
+    paths: ['site/**', 'public/icon/**', 'PRIVACY.md', 'scripts/privacy-page.py', 'src/ui/tokens.css', 'public/fonts/**', '.github/workflows/pages.yml']
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -27,10 +29,24 @@ jobs:
       - name: Assemble the install page with the extension's own tokens and fonts
         run: |
           mkdir -p _site/fonts
-          cp site/*.html _site/
+          cp site/*.html site/*.css site/*.js _site/
+          if [ -d site/shots ]; then cp -R site/shots _site/shots; fi
+          cp public/icon/32.png _site/favicon.png
           python3 scripts/privacy-page.py PRIVACY.md > _site/privacy.html
           cp src/ui/tokens.css _site/tokens.css
           cp public/fonts/atkinson-next-latin.woff2 public/fonts/atkinson-mono-latin.woff2 public/fonts/OFL.txt _site/fonts/
+      - name: The Firefox file Mozilla signed, and the list Firefox checks for updates
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release download --repo "$GITHUB_REPOSITORY" --pattern study-duo-firefox.xpi --dir _site 2>/dev/null; then
+            mv _site/study-duo-firefox.xpi _site/study-duo.xpi
+            version="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName | ltrimstr("v")')"
+            printf '{"addons":{"study-duo@coflazo.github.io":{"updates":[{"version":"%s","update_link":"https://coflazo.github.io/study-duo/study-duo.xpi"}]}}}\n' "$version" > _site/updates.json
+            echo "Firefox $version is on the site."
+          else
+            echo "No signed Firefox file yet."
+          fi
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
