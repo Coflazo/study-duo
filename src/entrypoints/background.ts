@@ -1,7 +1,7 @@
 import { ALARM_PHASE_END, ALARM_REFRESH, applyEffects } from '@/background/effects';
 import { createTimerService } from '@/background/timer-service';
 import { allowedFromSender, isClockHello, isFromWebPage, parseCounts, parseMessage, parseMove, parseSiteMessage, parseSound, resolveSiteRequest } from '@/core/messages';
-import { playerCommands } from '@/background/player';
+import { embedReferer, playerCommands, trackPanel } from '@/background/player';
 import { parsePlayer, soundToPlayer } from '@/core/player';
 import { normalizeSettings } from '@/core/settings';
 import { forgetListens, purgeOlderThan } from '@/core/log';
@@ -94,6 +94,8 @@ export default defineBackground(() => {
   void (browser.storage.local as { setAccessLevel?: (o: { accessLevel: string }) => Promise<void> }).setAccessLevel?.({ accessLevel: 'TRUSTED_CONTEXTS' })?.catch(console.error);
   timerItem.watch(() => void sendClocks().catch(console.error));
   settingsItem.watch(() => void sendClocks().catch(console.error));
+  trackPanel();
+  void embedReferer().catch(console.error);
   trackActivity();
   trackMusic();
   trackConnections();

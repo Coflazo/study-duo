@@ -83,7 +83,8 @@ export default defineConfig({
     content_security_policy: {
       // Course calendars live on any school's host, so https: is open here; src/core/net.ts is the allowlist (only the
       // connections the user switched on) and nothing else in the extension fetches.
-      extension_pages: "script-src 'self'; object-src 'self'; connect-src 'self' https:;",
+      // Frames: only the streaming services' own players, in the side panel.
+      extension_pages: "script-src 'self'; object-src 'self'; connect-src 'self' https:; frame-src https://www.youtube-nocookie.com;",
     },
     commands: {
       'toggle-timer': {

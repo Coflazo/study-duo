@@ -22,3 +22,6 @@ export const trackerItem = storage.defineItem<TrackerState>('session:activityTra
 export const playerItem = storage.defineItem<PlayerState>('session:player', { fallback: INITIAL_PLAYER });
 /** The folder queue's songs by id, written only when a new list starts, so a volume change never rewrites them. */
 export const playerTracksItem = storage.defineItem<Record<string, PlayerTrack>>('session:playerTracks', { fallback: {} });
+
+/** The side panel section the popup opened it on (Streaming, to paste a link); read and cleared when it opens. */
+export const panelSectionItem = storage.defineItem<'now' | 'library' | 'streaming' | null>('session:panelSection', { fallback: null });

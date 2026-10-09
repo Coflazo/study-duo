@@ -3,12 +3,15 @@
   import { sortTracks } from '@/core/library';
   import { loadFolder, loadThumb, loadTracks, type FolderRecord } from '@/core/library-db';
   import type { NoiseKind } from '@/core/noise';
-  import { INITIAL_PLAYER, positionAt, type PlayerCommand, type PlayerSource, type PlayerState } from '@/core/player';
-  import { playerItem } from '@/core/session-store';
+  import { INITIAL_PLAYER, positionAt, streamAt, type PlayerCommand, type PlayerSource, type PlayerState } from '@/core/player';
+  import { panelSectionItem, playerItem } from '@/core/session-store';
+  import { rememberLink, streamLinksItem } from '@/core/stream-links';
+  import { canonicalYouTube, parseYouTubeLink } from '@/core/youtube';
   import { normalizeSettings } from '@/core/settings';
   import { settingsItem } from '@/core/store';
   import { clip } from '@/core/text';
   import { ICONS } from '@/ui/icons';
+  import { LOGOS } from '@/ui/logos';
   import SeekLine from '@/ui/SeekLine.svelte';
   import SleeveArt from '@/ui/SleeveArt.svelte';
 
@@ -29,6 +32,8 @@
   const SPEAKER = 'M157.27,21.22a12,12,0,0,0-12.64,1.31L75.88,76H32A20,20,0,0,0,12,96v64a20,20,0,0,0,20,20H75.88l68.75,53.47A12,12,0,0,0,164,224V32A12,12,0,0,0,157.27,21.22ZM36,100H68v56H36Zm104,99.46L92,162.13V93.87l48-37.33ZM212,128a44,44,0,0,1-11,29.11,12,12,0,1,1-18-15.88,20,20,0,0,0,0-26.43,12,12,0,0,1,18-15.86A43.94,43.94,0,0,1,212,128Zm40,0a83.87,83.87,0,0,1-21.39,56,12,12,0,0,1-17.89-16,60,60,0,0,0,0-80,12,12,0,1,1,17.88-16A83.87,83.87,0,0,1,252,128Z';
   const WAVE = 'M60,96v64a12,12,0,0,1-24,0V96a12,12,0,0,1,24,0ZM88,20A12,12,0,0,0,76,32V224a12,12,0,0,0,24,0V32A12,12,0,0,0,88,20Zm40,32a12,12,0,0,0-12,12V192a12,12,0,0,0,24,0V64A12,12,0,0,0,128,52Zm40,32a12,12,0,0,0-12,12v64a12,12,0,0,0,24,0V96A12,12,0,0,0,168,84Zm40-16a12,12,0,0,0-12,12v96a12,12,0,0,0,24,0V80A12,12,0,0,0,208,68Z';
   const FOLDER = 'M216,68H132L105.33,48a20.12,20.12,0,0,0-12-4H40A20,20,0,0,0,20,64V200a20,20,0,0,0,20,20H216.89A19.13,19.13,0,0,0,236,200.89V88A20,20,0,0,0,216,68Zm-4,128H44V68H92l28.8,21.6A12,12,0,0,0,128,92h84Z';
+  /** Phosphor Bold link. */
+  const LINK = 'M117.18,188.74a12,12,0,0,1,0,17l-5.12,5.12A58.26,58.26,0,0,1,70.6,228h0A58.62,58.62,0,0,1,29.14,127.92L63.89,93.17a58.64,58.64,0,0,1,98.56,28.11,12,12,0,1,1-23.37,5.44,34.65,34.65,0,0,0-58.22-16.58L46.11,144.89A34.62,34.62,0,0,0,70.57,204h0a34.41,34.41,0,0,0,24.49-10.14l5.11-5.12A12,12,0,0,1,117.18,188.74ZM226.83,45.17a58.65,58.65,0,0,0-82.93,0l-5.11,5.11a12,12,0,0,0,17,17l5.12-5.12a34.63,34.63,0,1,1,49,49L175.1,145.86A34.39,34.39,0,0,1,150.61,156h0a34.63,34.63,0,0,1-33.69-26.72,12,12,0,0,0-23.38,5.44A58.64,58.64,0,0,0,150.56,180h.05a58.28,58.28,0,0,0,41.47-17.17l34.75-34.75a58.62,58.62,0,0,0,0-82.91Z';
   const CHECK = 'M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z';
 
   let player = $state<PlayerState>(INITIAL_PLAYER);
@@ -41,15 +46,25 @@
   let srcEl: HTMLButtonElement | undefined = $state();
   let menuEl: HTMLDivElement | undefined = $state();
 
-  const view = $derived<'noise' | 'folder'>(player.active === 'folder' ? 'folder' : 'noise');
+  const view = $derived<'noise' | 'folder' | 'youtube'>(player.active === 'folder' ? 'folder' : player.active === 'youtube' ? 'youtube' : 'noise');
+  const stream = $derived(view === 'youtube' && player.stream?.source === 'youtube' ? player.stream : null);
+  const ytLink = $derived.by(() => {
+    const p = stream ? parseYouTubeLink(stream.url) : null;
+    return p?.ok ? p.link : null;
+  });
+  let pasted = $state('');
+  let linkProblem = $state('');
+  /** A steady sleeve colour per video, from its title: streams have no cover Study Duo keeps. */
+  const SLEEVES = ['#5B4B8A', '#2F6F73', '#3E5C9A', '#7A4E6E', '#2F5D50', '#6A5A2E'];
+  const sleeveColor = (t: string) => SLEEVES[[...t].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % SLEEVES.length]!;
   const noise = $derived(NOISE[player.noise]);
   const track = $derived(view === 'folder' ? player.now : null);
-  const playing = $derived(player.playing && (view === 'folder' ? player.active === 'folder' : player.active === 'noise' || player.active === null));
+  const playing = $derived(player.playing && (view === 'noise' ? player.active === 'noise' || player.active === null : player.active === view));
   const duration = $derived(player.duration ?? 0);
   const position = $derived(positionAt(player, now));
   const upNext = $derived(view === 'folder' ? player.upNext : null);
-  const tint = $derived(view === 'folder' ? (track?.color ?? NO_COVER) : noise.tint);
-  const label = $derived(view === 'folder' ? 'FOLDER' : 'SOUNDS');
+  const tint = $derived(view === 'folder' ? (track?.color ?? NO_COVER) : view === 'youtube' ? LOGOS.youtube.color : noise.tint);
+  const label = $derived(view === 'folder' ? 'FOLDER' : view === 'youtube' ? 'YOUTUBE' : 'SOUNDS');
   const sleeveText = $derived(track ? [track.artist, track.album].filter(Boolean).join('\n').toUpperCase() || 'YOUR\nFOLDER' : 'YOUR\nFOLDER');
   const send = (cmd: PlayerCommand) => browser.runtime.sendMessage({ kind: 'player', ...cmd }).catch(() => undefined);
 
@@ -58,9 +73,13 @@
   const art = $derived(
     view === 'noise'
       ? { kind: 'noise' as const, c: noise.c, ring: noise.ring, mark: noise.mark, sleeve: noise.sleeve, ink: noise.ink }
-      : track
-        ? { kind: 'cd' as const, color: track.color ?? NO_COVER, cover, sleeve: sleeveText }
-        : { kind: 'empty' as const, sleeve: folder ? 'YOUR\nFOLDER' : 'CHOOSE A\nFOLDER' },
+      : view === 'youtube'
+        ? stream
+          ? { kind: 'cd' as const, color: sleeveColor(stream.title ?? stream.url), cover: null, sleeve: (stream.title ?? 'YouTube').toUpperCase() }
+          : { kind: 'empty' as const, sleeve: 'PASTE A\nLINK' }
+        : track
+          ? { kind: 'cd' as const, color: track.color ?? NO_COVER, cover, sleeve: sleeveText }
+          : { kind: 'empty' as const, sleeve: folder ? 'YOUR\nFOLDER' : 'CHOOSE A\nFOLDER' },
   );
 
   // The popup takes a light tint of what plays (the cover's colour for a song); it fades back when it stops.
@@ -72,7 +91,7 @@
 
   // The song's place runs forward on screen only while the popup is open and the folder plays.
   $effect(() => {
-    if (!(playing && view === 'folder')) return;
+    if (!(playing && view !== 'noise')) return;
     const id = setInterval(() => (now = Date.now()), 500);
     return () => clearInterval(id);
   });
@@ -122,17 +141,35 @@
     if (menuOpen && !menuEl?.contains(e.target as Node) && !srcEl?.contains(e.target as Node)) closeMenu(false);
   }
   function pick(source: PlayerSource) {
+    // Links play in the full player: open it (straight from the click, as Chrome requires), on Streaming if none is set.
+    // Without a link, nothing playing stops: the panel opens to paste one.
+    const link = player.stream?.source === 'youtube';
+    if (source === 'youtube' && !(link && player.panel)) return link ? openPanel(undefined, source) : openPanel('streaming');
     closeMenu(true);
     if (source !== player.active) void send({ op: 'source', source });
   }
   const openMusicPage = () => void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html#music') });
   /** Chrome opens a side panel only straight from a click, so the window is known before any click. */
   let windowId: number | undefined;
-  function openPanel() {
+  function openPanel(on?: 'streaming', then?: PlayerSource) {
     closeMenu(false);
+    if (on) void panelSectionItem.setValue(on);
+    if (then && then !== player.active) void send({ op: 'source', source: then });
     const b = browser as unknown as { sidePanel?: { open(o: { windowId: number }): Promise<void> }; sidebarAction?: { open(): Promise<void> } };
     if (b.sidePanel && windowId !== undefined) void b.sidePanel.open({ windowId }).then(() => window.close()).catch(() => undefined);
     else void b.sidebarAction?.open().catch(() => undefined);
+  }
+
+  /** Pasted in the card: it plays in the side panel, which opens straight from this click. */
+  function playLink(e: SubmitEvent) {
+    e.preventDefault();
+    const parsed = parseYouTubeLink(pasted);
+    if (!parsed.ok) return void (linkProblem = 'That is not a YouTube link. Use one from youtube.com, youtu.be or music.youtube.com.');
+    const url = canonicalYouTube(parsed.link);
+    linkProblem = '';
+    void streamLinksItem.getValue().then((list) => streamLinksItem.setValue(rememberLink(list, { source: 'youtube', url }, Date.now())));
+    void send({ op: 'stream', source: 'youtube', url });
+    if (!player.panel) openPanel();
   }
 
   async function playAll() {
@@ -187,6 +224,23 @@
           <svg viewBox="0 0 256 256" aria-hidden="true"><path d={SPEAKER} /></svg>
           <input type="range" min="0" max="100" value={Math.round(player.volume * 100)} aria-label="Volume" style:--v="{Math.round(player.volume * 100)}%" oninput={(e) => send({ op: 'volume', volume: Number(e.currentTarget.value) / 100 })} />
         </label>
+      {:else if view === 'youtube'}
+        {#if stream?.problem}
+          <p class="title">This video only plays on YouTube</p>
+          <p class="sub wrap problem">{stream.problem === 'embed' ? 'Its owner turned off playing elsewhere.' : 'It is gone or private.'}{ytLink?.list ? ' Skipping to the next one in 5 s.' : ''}</p>
+          <button class="action" onclick={() => browser.tabs.create({ url: ytLink ? canonicalYouTube(ytLink) : stream.url })}>Open on YouTube</button>
+        {:else if stream}
+          <p class="title" title={stream.title ?? ''}>{clip(stream.title ?? 'YouTube')}</p>
+          <p class="sub" title={stream.artist ?? ''}>{player.panel ? [stream.artist, ytLink?.list ? 'playlist' : stream.duration ? null : 'live'].filter(Boolean).join(' · ') || 'YouTube' : 'Plays in the full player'}</p>
+          <div class="keys">
+            {@render key('Previous', ICONS.skip, () => send({ op: 'prev' }), false, true, !player.panel)}
+            {@render key(playing ? 'Pause' : 'Play', playing ? ICONS.pause : ICONS.play, () => (player.panel ? send({ op: 'toggle' }) : openPanel(undefined, 'youtube')), true)}
+            {@render key('Next', ICONS.skip, () => send({ op: 'next' }), false, false, !player.panel)}
+          </div>
+        {:else}
+          <p class="title">Play a YouTube link</p>
+          <p class="sub wrap">A public playlist, video or live stream.</p>
+        {/if}
       {:else if player.problem === 'reconnect'}
         <p class="title">Chrome asks again for your folder</p>
         <p class="sub wrap">After a restart, Chrome needs one click to read your music again.</p>
@@ -220,6 +274,16 @@
       </div>
       {@render key(playing ? 'Pause' : 'Play', playing ? ICONS.pause : ICONS.play, () => send({ op: 'toggle' }))}
     </div>
+  {:else if view === 'youtube' && !stream}
+    <form class="paste" class:bad={linkProblem} onsubmit={playLink}>
+      <svg viewBox="0 0 256 256" aria-hidden="true"><path d={LINK} /></svg>
+      <input aria-label="YouTube link" aria-describedby="paste-note" placeholder="Paste a playlist or video link" autocomplete="off" spellcheck="false" bind:value={pasted} oninput={() => (linkProblem = '')} />
+      <button type="submit">Play</button>
+    </form>
+    <p class="foot wrap" class:problem={linkProblem} id="paste-note" role={linkProblem ? 'alert' : undefined}>{linkProblem || 'Plays in the side panel. Links are kept on this computer.'}</p>
+  {:else if stream && !stream.problem}
+    <SeekLine position={streamAt(player, now)} duration={stream.duration ?? 0} stamp={stream.at} onseek={(ms) => send({ op: 'seek', ms })} />
+    <p class="foot wrap">{!player.panel ? 'Open the full player to play it.' : ytLink?.list ? 'Next and previous move through the playlist.' : stream.duration ? 'One long video: drag to any minute. Next and previous jump 30 s.' : 'A live stream: it plays from now, without seeking.'}</p>
   {:else if track}
     <SeekLine {position} {duration} stamp={player.at} onseek={(ms) => send({ op: 'seek', ms })} />
     {#if player.queue}
@@ -236,14 +300,19 @@
         {@render item('noise', WAVE, 'Focus noise', 'White, pink or brown')}
       </div>
       <div class="sep" role="separator"></div>
-      <button class="open" role="menuitem" onclick={openPanel}>Open the full player</button>
+      <div role="group" aria-labelledby="sources-streaming">
+        <p class="group" id="sources-streaming">STREAMING</p>
+        {@render item('youtube', LOGOS.youtube.path, 'YouTube link', player.stream?.source === 'youtube' && player.stream.title ? clip(player.stream.title, 34) : 'Any public video or playlist', LOGOS.youtube.color)}
+      </div>
+      <div class="sep" role="separator"></div>
+      <button class="open" role="menuitem" onclick={() => openPanel()}>Open the full player</button>
     </div>
   {/if}
 </section>
 
-{#snippet item(id: PlayerSource, path: string, title: string, sub: string)}
+{#snippet item(id: PlayerSource, path: string, title: string, sub: string, brand?: string)}
   <button role="menuitemradio" aria-checked={view === id} onclick={() => pick(id)}>
-    <svg viewBox="0 0 256 256" aria-hidden="true"><path d={path} /></svg>
+    <svg viewBox={brand ? '0 0 24 24' : '0 0 256 256'} aria-hidden="true" style:fill={brand}><path d={path} /></svg>
     <span><b>{title}</b><small>{sub}</small></span>
     {#if view === id}<svg class="tick" viewBox="0 0 256 256" aria-hidden="true"><path d={CHECK} /></svg>{:else}<span></span>{/if}
   </button>
@@ -299,6 +368,14 @@
   .key:active:not(:disabled), .src:active, .action:active { transform: scale(0.97); }
   .key svg { inline-size: 16px; block-size: 16px; fill: currentColor; }
   .foot { margin: 0; font: 500 11px/14px var(--font-family-mono); color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .foot.wrap { white-space: normal; }
+  .problem { color: var(--color-text-focus); }
+  .paste { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 4px 4px 10px; border: 1px solid var(--color-border-control); border-radius: 6px; background: var(--color-bg-panel); }
+  .paste.bad { border-color: var(--color-text-focus); box-shadow: 0 0 0 1px var(--color-text-focus); }
+  .paste svg { inline-size: 16px; block-size: 16px; fill: var(--color-text-secondary); }
+  .paste input { min-inline-size: 0; border: 0; background: none; color: var(--color-text-primary); font: 400 13px/18px var(--font-family-ui); outline: none; }
+  .paste button { padding: 6px 12px; border: 0; border-radius: 4px; background: var(--color-bg-action); color: var(--color-text-on-action); font: 700 13px/16px var(--font-family-ui); cursor: pointer; }
+  .paste:focus-within { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
   .menu {
     position: absolute; z-index: 4; inset-inline-end: 12px; inset-block-start: 40px; inline-size: min(264px, calc(100% - 24px)); padding-block: 6px;
     border: 1px solid var(--color-border-subtle); border-radius: 6px; background: var(--color-bg-panel); box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
