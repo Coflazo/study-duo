@@ -162,3 +162,14 @@ describe('reports from the page playing the file', () => {
     expect(nextTitle(on)).toBe('Song b');
   });
 });
+
+describe('jump', () => {
+  it('plays a later song in the queue straight away', () => {
+    const on = applyPlayer(INITIAL_PLAYER, { op: 'folder', tracks: songs, start: 0, shuffle: false }, NOW).state;
+    const { state, effects } = applyPlayer(on, { op: 'jump', at: 2 }, NOW);
+    expect(state.queue?.at).toBe(2);
+    expect(effects).toEqual([{ type: 'file-play', track: songs[2], at: 0, volume: 0.6 }]);
+    expect(parsePlayer({ kind: 'player', op: 'jump', at: 1 })).toEqual({ op: 'jump', at: 1 });
+    expect(applyPlayer(on, { op: 'jump', at: 9 }, NOW).state).toBe(on);
+  });
+});

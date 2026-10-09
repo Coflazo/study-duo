@@ -107,7 +107,7 @@
     if (focusBack) srcEl?.focus();
   }
   function menuKeys(e: KeyboardEvent) {
-    const items = [...(menuEl?.querySelectorAll<HTMLElement>('[role="menuitemradio"]') ?? [])];
+    const items = [...(menuEl?.querySelectorAll<HTMLElement>('[role="menuitemradio"], [role="menuitem"]') ?? [])];
     const i = items.indexOf(document.activeElement as HTMLElement);
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -125,6 +125,14 @@
     if (source !== player.active) void send({ op: 'source', source });
   }
   const openMusicPage = () => void browser.tabs.create({ url: browser.runtime.getURL('/dashboard.html#music') });
+  /** Chrome opens a side panel only straight from a click, so the window is known before any click. */
+  let windowId: number | undefined;
+  function openPanel() {
+    closeMenu(false);
+    const b = browser as unknown as { sidePanel?: { open(o: { windowId: number }): Promise<void> }; sidebarAction?: { open(): Promise<void> } };
+    if (b.sidePanel && windowId !== undefined) void b.sidePanel.open({ windowId }).then(() => window.close()).catch(() => undefined);
+    else void b.sidebarAction?.open().catch(() => undefined);
+  }
 
   async function playAll() {
     const tracks = sortTracks(await loadTracks());
@@ -153,6 +161,7 @@
       loadFolder().catch(() => null),
     ]);
     document.addEventListener('pointerdown', outside);
+    windowId = (await browser.windows.getCurrent().catch(() => undefined))?.id;
   });
   onDestroy(() => {
     unwatch?.();
@@ -243,6 +252,8 @@
       <p class="group">ON THIS COMPUTER</p>
       {@render item('folder', FOLDER, 'Your folder', folder ? `${clip(folder.name, 30)} · ${folder.count} ${folder.count === 1 ? 'song' : 'songs'}` : 'Choose a folder on the Music page')}
       {@render item('noise', WAVE, 'Focus noise', 'White, pink or brown')}
+      <div class="sep"></div>
+      <button class="open" role="menuitem" onclick={openPanel}>Open the full player</button>
     </div>
   {/if}
 </section>
@@ -337,6 +348,8 @@
   .menu button:hover, .menu button:focus-visible, .menu button[aria-checked='true'] { background: var(--color-bg-sunken); }
   .menu svg { inline-size: 18px; block-size: 18px; fill: var(--color-text-primary); }
   .menu .tick { inline-size: 16px; block-size: 16px; }
+  .sep { block-size: 1px; margin-block: 6px; background: var(--color-border-subtle); }
+  .menu .open { display: block; padding: 8px 12px; font: 600 13px/16px var(--font-family-ui); }
   .menu span { min-inline-size: 0; }
   .menu b { display: block; font: 700 13px/16px var(--font-family-ui); }
   .menu b, .menu small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

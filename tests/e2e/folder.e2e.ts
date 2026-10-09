@@ -100,3 +100,38 @@ test('the popup card shows the folder song: cover, seek line, previous and next,
   await expect(card.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
   await ctx.close();
 });
+
+test('the side panel: library, then now playing with shuffle, repeat and up next', async () => {
+  const { ctx } = await launch(tempProfile());
+  const page = await ctx.newPage();
+  await page.setViewportSize({ width: 400, height: 900 });
+  await page.goto(`chrome-extension://${EXT_ID}/sidepanel.html`);
+  await fakeFolder(page);
+  const player = () => page.evaluate(async () => (await chrome.storage.session.get('player')).player);
+
+  // Noise first: the panel plays it and shows its colours.
+  await page.getByRole('radiogroup', { name: 'Noise colour' }).getByRole('radio', { name: 'White' }).click();
+  await expect.poll(async () => (await player())?.noise).toBe('white');
+
+  // The library tab reads the folder; a song plays and Now playing shows it with what comes next.
+  await page.getByRole('radiogroup', { name: 'Sections' }).getByRole('radio', { name: 'Library' }).click();
+  await page.getByRole('button', { name: 'Choose a folder' }).click();
+  await expect(page.getByRole('listitem')).toHaveCount(2);
+  await page.getByRole('listitem').nth(0).getByRole('button').click();
+  await page.getByRole('radiogroup', { name: 'Sections' }).getByRole('radio', { name: 'Now playing' }).click();
+  await expect(page.locator('.title')).toHaveText('Gymnopedie');
+  await expect(page.getByRole('heading', { name: 'Up next' })).toBeVisible();
+
+  // Repeat cycles off, all songs, this song; shuffle is a toggle.
+  await page.getByRole('button', { name: 'Repeat: off' }).click();
+  await expect(page.getByRole('button', { name: 'Repeat: all songs' })).toBeVisible();
+  await page.getByRole('button', { name: 'Shuffle' }).click();
+  await expect(page.getByRole('button', { name: 'Shuffle' })).toHaveAttribute('aria-pressed', 'true');
+
+  // Up next: a click jumps to that song.
+  await page.getByRole('list').getByRole('button', { name: /Nocturne/ }).click();
+  await expect(page.locator('.title')).toHaveText('Nocturne');
+  await page.getByRole('button', { name: 'Pause' }).click();
+  await expect.poll(async () => (await player())?.playing).toBe(false);
+  await ctx.close();
+});
