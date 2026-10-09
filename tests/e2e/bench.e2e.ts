@@ -25,7 +25,7 @@ const SUBJECTS: Subject[] = [
   { id: 'baseline', name: 'No extension' },
   { id: 'study-duo', name: 'Study Duo', dir: path.resolve('.test-build/chrome-mv3') },
   { id: 'study-duo-timer', name: 'Study Duo, timer running', dir: path.resolve('.test-build/chrome-mv3'), timer: true },
-  ...(['leechblock:LeechBlock NG', 'blocksite:BlockSite', 'forest:Forest'] as const).map((s) => {
+  ...(['leechblock:LeechBlock NG', 'blocksite:BlockSite', 'forest:Forest', 'stayfocusd:StayFocusd', 'focustodo:Focus To-Do'] as const).map((s) => {
     const [id, name] = s.split(':') as [string, string];
     return { id, name, dir: `${CACHE}/${id}/unpacked`, crx: `${CACHE}/${id}/ext.crx` };
   }),
