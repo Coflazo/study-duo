@@ -19,13 +19,14 @@ const PAGE: Record<string, string> = { chrome: 'chrome://extensions', edge: 'edg
 const NAMES: Record<string, string> = { chrome: 'Chrome', edge: 'Edge', brave: 'Brave', opera: 'Opera', vivaldi: 'Vivaldi', arc: 'Arc' };
 const OUT = path.resolve('site/shots');
 const VIEW = { width: 1100, height: 640 };
+const CROP = { width: 520, height: 300 };
 
 async function first(page: Page, ...candidates: Locator[]): Promise<Locator> {
   for (const c of candidates) if (await c.first().isVisible().catch(() => false)) return c.first();
   throw new Error(`nothing to click on ${page.url()}`);
 }
 function webp(png: string, out: string) {
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', png, '-c:v', 'libwebp', '-quality', '82', out]);
+  execFileSync('cwebp', ['-quiet', '-q', '82', png, '-o', out]); // cwebp: the webp package (brew install webp, apt install webp)
 }
 
 test(`shoot ${BROWSER}'s extensions page`, async () => {
@@ -44,23 +45,31 @@ test(`shoot ${BROWSER}'s extensions page`, async () => {
     await page.waitForTimeout(1500);
     const toggle = await first(page, page.locator('#devMode'), page.getByRole('switch', { name: /developer mode/i }), page.getByRole('checkbox', { name: /developer mode/i }), page.getByText(/developer mode/i));
     const marks = fs.existsSync(path.join(OUT, 'marks.json')) ? JSON.parse(fs.readFileSync(path.join(OUT, 'marks.json'), 'utf8')) : {};
-    const save = async (name: string, target: Locator, alt: string) => {
-      const box = (await target.boundingBox())!;
+    const save = async (name: string, target: Locator, alt: string, label?: Locator) => {
+      // The ring takes in the target's label too when there is one, so it marks the words people look for.
+      const t = (await target.boundingBox())!;
+      const l = label && (await label.isVisible().catch(() => false)) ? await label.boundingBox() : null;
+      const box = l ? { x: Math.min(t.x, l.x), y: Math.min(t.y, l.y), width: Math.max(t.x + t.width, l.x + l.width) - Math.min(t.x, l.x), height: Math.max(t.y + t.height, l.y + l.height) - Math.min(t.y, l.y) } : t;
+      // A crop around the target, readable at the size the install page shows it, with enough page around it to
+      // recognise where it is. Held inside the window.
+      const clip = { width: CROP.width, height: CROP.height, x: 0, y: 0 };
+      clip.x = Math.round(Math.min(Math.max(box.x + box.width / 2 - CROP.width / 2, 0), VIEW.width - CROP.width));
+      clip.y = Math.round(Math.min(Math.max(box.y + box.height / 2 - CROP.height / 3, 0), VIEW.height - CROP.height));
       const png = path.join(os.tmpdir(), `${BROWSER}-${name}.png`);
-      await page.screenshot({ path: png });
+      await page.screenshot({ path: png, clip });
       fs.mkdirSync(OUT, { recursive: true });
       webp(png, path.join(OUT, `${BROWSER}-${name}.webp`));
-      const pad = 10;
-      const ring = [box.x - pad, box.y - pad, box.width + 2 * pad, box.height + 2 * pad].map((v) => Math.round(v * 2));
-      const [w, h] = [VIEW.width * 2, VIEW.height * 2];
+      const pad = 8;
+      const ring = [box.x - clip.x - pad, box.y - clip.y - pad, box.width + 2 * pad, box.height + 2 * pad].map((v) => Math.round(v * 2));
+      const [w, h] = [CROP.width * 2, CROP.height * 2];
       // The arrow comes in from the open side of the page, toward the ring.
       const cx = ring[0]! + ring[2]! / 2;
       const cy = ring[1]! + ring[3]! / 2;
-      const from = [cx > w / 2 ? cx - 260 : cx + 260, Math.min(h - 60, cy + 200)];
+      const from = [cx > w / 2 ? cx - 220 : cx + 220, Math.min(h - 40, cy + 170)];
       const to = [cx > w / 2 ? ring[0]! - 8 : ring[0]! + ring[2]! + 8, cy + 6];
       marks[`${BROWSER}-${name}`] = { file: `${BROWSER}-${name}.webp`, w, h, ring, arrow: [...from, ...to], alt };
     };
-    await save('devmode', toggle, `${NAMES[BROWSER]}'s extensions page, with Developer mode marked`);
+    await save('devmode', toggle, `${NAMES[BROWSER]}'s extensions page, with Developer mode marked`, page.getByText(/^\s*developer mode\s*$/i).first());
     await toggle.click();
     await page.waitForTimeout(800);
     const load = await first(page, page.locator('#loadUnpacked'), page.getByRole('button', { name: /load unpacked/i }), page.getByText(/load unpacked/i));

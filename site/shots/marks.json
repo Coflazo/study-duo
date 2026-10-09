@@ -1,0 +1,64 @@
+{
+  "chrome-devmode": {
+    "file": "chrome-devmode.webp",
+    "w": 1040,
+    "h": 600,
+    "ring": [
+      718,
+      20,
+      315,
+      72
+    ],
+    "arrow": [
+      655.5,
+      226,
+      710,
+      62
+    ],
+    "alt": "Chrome's extensions page, with Developer mode marked"
+  },
+  "chrome-unpacked": {
+    "file": "chrome-unpacked.webp",
+    "w": 1040,
+    "h": 600,
+    "ring": [
+      32,
+      116,
+      288,
+      104
+    ],
+    "arrow": [
+      396,
+      338,
+      328,
+      174
+    ],
+    "alt": "Chrome's extensions page with Developer mode on, Load unpacked marked"
+  },
+  "mac-folder": {
+    "file": "mac-folder.webp",
+    "w": 1120,
+    "h": 680,
+    "ring": [
+      368,
+      120,
+      656,
+      84
+    ],
+    "box": true,
+    "alt": "Drawing of the Go to Folder box with the Study Duo folder address pasted"
+  },
+  "mac-terminal": {
+    "file": "mac-terminal.webp",
+    "w": 1040,
+    "h": 288,
+    "ring": [
+      44,
+      98,
+      936,
+      88
+    ],
+    "box": true,
+    "alt": "Drawing of the Mac Terminal with the Study Duo line pasted at the prompt"
+  }
+}

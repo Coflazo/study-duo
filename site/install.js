@@ -13,19 +13,19 @@
       label: 'a Mac', terminal: 'Terminal', enter: 'Return', script: 'install.sh',
       line: (b) => `curl -fsSL ${RAW}install.sh | sh -s -- --browsers ${b}`,
       open: 'Press Command and Space together, type Terminal, press Return. Then paste with Command and V.',
-      folder: ['Go to the folder', 'Press Command, Shift and G, paste with Command and V, then press Return. The address is already copied.'],
+      folder: ['Go to the folder', 'Press Command, Shift and G, paste with Command and V, press Return, then click Select. The address is already copied.'],
     },
     windows: {
       label: 'Windows', terminal: 'PowerShell', enter: 'Enter', script: 'install.ps1',
       line: (b) => `powershell -c "& ([scriptblock]::Create((irm ${RAW}install.ps1))) -Browsers ${b}"`,
       open: 'Press the Windows key, type PowerShell, press Enter. Then paste with Ctrl and V.',
-      folder: ['Paste the folder address', 'Click the address bar at the top of that window, paste with Ctrl and V, then press Enter. The address is already copied.'],
+      folder: ['Paste the folder address', 'Click the address bar at the top of that window, paste with Ctrl and V, press Enter, then click Select Folder. The address is already copied.'],
     },
     linux: {
       label: 'Linux', terminal: 'a terminal', enter: 'Enter', script: 'install.sh',
       line: (b) => `curl -fsSL ${RAW}install.sh | sh -s -- --browsers ${b}`,
       open: 'Press Ctrl, Alt and T together on most systems. Then paste with Ctrl, Shift and V.',
-      folder: ['Paste the folder address', 'Press Ctrl and L in that window, paste, then press Enter. The address is already copied.'],
+      folder: ['Paste the folder address', 'Press Ctrl and L in that window, paste, press Enter, then click Select. The address is already copied.'],
     },
   };
   // Where each browser keeps Developer mode on its extensions page.
@@ -83,7 +83,7 @@
     img.addEventListener('error', () => (el.textContent = ''));
     el.append(img);
     const ring = document.createElement('span');
-    ring.className = 'ring';
+    ring.className = m.box ? 'ring box' : 'ring'; // a box for long things like a line of text, a ring otherwise
     Object.assign(ring.style, { left: `${(m.ring[0] / m.w) * 100}%`, top: `${(m.ring[1] / m.h) * 100}%`, width: `${(m.ring[2] / m.w) * 100}%`, height: `${(m.ring[3] / m.h) * 100}%` });
     el.append(ring);
     if (m.arrow) {
@@ -94,8 +94,9 @@
       svg.setAttribute('aria-hidden', 'true');
       const [x1, y1, x2, y2] = m.arrow;
       const a = Math.atan2(y2 - y1, x2 - x1);
-      const head = (t) => `${x2 - 16 * Math.cos(a + t)},${y2 - 16 * Math.sin(a + t)}`;
-      svg.innerHTML = `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#D52B1E" stroke-width="5" stroke-linecap="round"/><polygon points="${x2},${y2} ${head(0.45)} ${head(-0.45)}" fill="#D52B1E"/>`;
+      const len = m.w * 0.035; // the head grows with the picture; the line keeps 2.5 px at any size
+      const head = (t) => `${x2 - len * Math.cos(a + t)},${y2 - len * Math.sin(a + t)}`;
+      svg.innerHTML = `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#D52B1E" stroke-width="2.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/><polygon points="${x2},${y2} ${head(0.45)} ${head(-0.45)}" fill="#D52B1E"/>`;
       el.append(svg);
     }
   }
