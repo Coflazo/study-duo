@@ -4,15 +4,6 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
-### Fixed
-
-- Songs from Last.fm are no longer used for insights: Last.fm does not say which app played a song, and Spotify's songs must never feed them (#46). They still show in your listens.
-- An event you delete in Google Calendar stays deleted: Study Duo now checks before it updates one.
-
-### Security
-
-- In Chrome, scripts on web pages can no longer read or write Study Duo's stored settings, site lists or to-dos, even the corner clock's own script; the clock now gets the timer by message (#30).
-
 ### Added
 
 - A new install page that asks which browsers you want Study Duo in and works out the rest: one line to paste for your computer, a screenshot of each click with a mark on the spot, and a message when Study Duo has arrived. On a phone it offers to send you the link.
@@ -28,6 +19,15 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 ### Changed
 
 - Focus noise loops with no click and fades in and out along an ear-shaped curve: 1 s for white, 1.4 s for pink, 1.8 s for brown. A fade-out that starts mid fade-in starts from what you hear, and brown noise no longer thumps at the loop.
+
+### Fixed
+
+- Songs from Last.fm are no longer used for insights: Last.fm does not say which app played a song, and Spotify's songs must never feed them (#46). They still show in your listens.
+- An event you delete in Google Calendar stays deleted: Study Duo now checks before it updates one.
+
+### Security
+
+- In Chrome, scripts on web pages can no longer read or write Study Duo's stored settings, site lists or to-dos, even the corner clock's own script; the clock now gets the timer by message (#30).
 
 ## [0.2.3] - 2026-10-08
 
