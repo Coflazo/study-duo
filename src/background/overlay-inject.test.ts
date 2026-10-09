@@ -26,6 +26,14 @@ describe('ensureOverlay', () => {
     expect(executeScript).toHaveBeenCalledWith({ target: { tabId: 3 }, files: ['/content-scripts/overlay.js'] });
   });
 
+  it('gives a music site open from before also the media keys, in the page\'s own world', async () => {
+    get.mockResolvedValueOnce({ id: 4, status: 'complete', url: 'https://music.youtube.com/watch?v=1' });
+    await ensureOverlay(4);
+    expect(executeScript).toHaveBeenCalledWith({ target: { tabId: 4 }, files: ['/content-scripts/overlay.js'] });
+    expect(executeScript).toHaveBeenCalledWith({ target: { tabId: 4 }, files: ['/content-scripts/media-keys.js'], world: 'MAIN' });
+    expect(executeScript).toHaveBeenCalledTimes(2);
+  });
+
   it('leaves a page alone when its clock answers', async () => {
     sendMessage.mockResolvedValue(true);
     await ensureOverlay(3);

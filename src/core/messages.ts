@@ -102,6 +102,13 @@ export function parseClockState(raw: unknown): ClockState | null {
   return { timer: raw.timer as unknown as TimerState, settings: normalizeSettings(raw.settings) };
 }
 
+/** The background asking a music page to play, pause or skip, through the page's own media session. */
+export type TabMediaOp = 'play' | 'pause' | 'next' | 'prev';
+export function parseTabMedia(raw: unknown): TabMediaOp | null {
+  if (!isObj(raw) || raw.kind !== 'tab-media') return null;
+  return raw.op === 'play' || raw.op === 'pause' || raw.op === 'next' || raw.op === 'prev' ? raw.op : null;
+}
+
 export function isPing(raw: unknown): boolean {
   return raw !== null && typeof raw === 'object' && (raw as Record<string, unknown>).kind === 'overlay' && (raw as Record<string, unknown>).op === 'ping';
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedFromSender, isClockHello, isFromWebPage, parseAnnounce, parseClockState, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest, isPing, parseMove, parseCounts, parseSound, parseFileCommand } from './messages';
+import { allowedFromSender, isClockHello, parseTabMedia, isFromWebPage, parseAnnounce, parseClockState, parseMessage, parseOffscreenMessage, parseSiteMessage, resolveSiteRequest, isPing, parseMove, parseCounts, parseSound, parseFileCommand } from './messages';
 import { normalizeSettings } from './settings';
 import { initialState } from './timer';
 
@@ -164,5 +164,13 @@ describe('the clock on web pages (#30)', () => {
     expect(parseClockState({ kind: 'overlay', op: 'state', timer, settings: { overlayEnabled: false } })).toEqual({ timer, settings: normalizeSettings({ overlayEnabled: false }) });
     expect(parseClockState({ kind: 'overlay', op: 'state', timer: { v: 2 }, settings: {} })).toBeNull();
     expect(parseClockState({ kind: 'overlay', op: 'state', settings: {} })).toBeNull();
+  });
+});
+
+describe('tab media commands', () => {
+  it('takes only the four transport actions', () => {
+    expect(parseTabMedia({ kind: 'tab-media', op: 'next' })).toBe('next');
+    expect(parseTabMedia({ kind: 'tab-media', op: 'seekto' })).toBeNull();
+    expect(parseTabMedia({ kind: 'music', op: 'play' })).toBeNull();
   });
 });

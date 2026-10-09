@@ -10,7 +10,7 @@
    */
   type Art =
     | { kind: 'noise'; c: [string, string]; ring: string; mark: string; sleeve: string; ink: string }
-    | { kind: 'cd'; color: string; cover: string | null; sleeve: string }
+    | { kind: 'cd'; color: string; cover: string | null; sleeve: string; logo?: { path: string; grid: number } }
     | { kind: 'empty'; sleeve: string };
   /** live: the parent has read the real player state. Until then nothing moves, so a disc opened mid-song is not
    *  spun up from rest. */
@@ -116,7 +116,8 @@
     {#if art.cover}
       <div class="sleeve cover"><img src={art.cover} alt="" /></div>
     {:else}
-      <div class="sleeve" style:--c1={art.color} style:--c2="#1f2f5c" style:color="#ffffff">{art.sleeve}</div>
+      <!-- one line: the sleeve keeps line breaks (pre-line) -->
+      <div class="sleeve" style:--c1={art.color} style:--c2="#1f2f5c" style:color="#ffffff">{#if art.logo}<svg class="logo" viewBox="0 0 {art.logo.grid} {art.logo.grid}"><path d={art.logo.path} /></svg>{/if}{art.sleeve}</div>
     {/if}
   {:else}
     <div class="sleeve empty">{art.sleeve}</div>
@@ -154,6 +155,8 @@
     font: 600 var(--font) / 1.3 var(--font-family-mono); white-space: pre-line; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 6; line-clamp: 6; -webkit-box-orient: vertical;
   }
   .sleeve.cover { padding: 0; }
+  /* A service's sleeve: its logo in white above the name (Figma, Songs: Spotify in the side panel). */
+  .logo { display: block; inline-size: calc(var(--font) * 2); block-size: calc(var(--font) * 2); margin-block-end: calc(var(--font) * 0.8); fill: #ffffff; }
   .sleeve.cover img { inline-size: 100%; block-size: 100%; object-fit: cover; display: block; }
   .sleeve.empty { background: var(--color-bg-sunken); border: 1.5px dashed var(--color-text-secondary); box-shadow: none; color: var(--color-text-secondary); }
   @media (prefers-reduced-motion: reduce) {

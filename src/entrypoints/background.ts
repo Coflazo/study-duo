@@ -7,12 +7,12 @@ import { normalizeSettings } from '@/core/settings';
 import { forgetListens, purgeOlderThan } from '@/core/log';
 import { createSiteMenu, handleSiteRequest, onSiteMenuClick } from '@/background/site-requests';
 import { loadSettings, loadState, musicSeededItem, settingsItem, sitesItem, timerItem } from '@/core/store';
-import { normalizeSites, seedMusicSites } from '@/core/sites';
+import { hostOf, normalizeSites, seedMusicSites } from '@/core/sites';
 import { unlockedItem } from '@/background/site-lock';
 import { clockState, ensureOverlay, keepClocksOnOpenTabs, sendClocks } from '@/background/overlay-inject';
 import { acceptCounts, trackActivity } from '@/background/activity';
 import { hearTab, trackMusic } from '@/background/music';
-import { isMusicStop, isYouTubeVideoHost, parseNowPlaying } from '@/core/music';
+import { isMusicHost, isMusicStop, isYouTubeVideoHost, parseNowPlaying } from '@/core/music';
 import { inQueue, parseSyncRequest, syncConnection, syncDue, trackConnections } from '@/background/connections';
 import { trackHelper } from '@/background/helper';
 import { connectCalendar, disconnectCalendar, parseCalendarRequest } from '@/background/calendar';
@@ -38,7 +38,12 @@ export default defineBackground(() => {
     const player = parsePlayer(raw);
     if (player && !isFromWebPage(sender.url, base)) void playerCommands([player]).catch(console.error);
     const song = parseNowPlaying(raw);
-    if ((song || isMusicStop(raw)) && sender.tab?.id !== undefined && isFromWebPage(sender.url, base)) void hearTab(sender.tab.id, sender.url, song);
+    if ((song || isMusicStop(raw)) && sender.tab?.id !== undefined && isFromWebPage(sender.url, base)) {
+      void hearTab(sender.tab.id, sender.url, song);
+      // The card lists and controls music sites in tabs, whether or not Songs you play keeps them.
+      const host = hostOf(sender.url);
+      if (isMusicHost(host)) void playerCommands([song ? { op: 'tab-report', tabId: sender.tab.id, host: host!, title: song.title, artist: song.artist, playing: song.playing } : { op: 'tab-gone', tabId: sender.tab.id }]).catch(console.error);
+    }
     const counts = parseCounts(raw);
     if (counts && sender.tab?.id !== undefined && isFromWebPage(sender.url, base)) void acceptCounts(sender.tab.id, sender.url, counts);
     if (isClockHello(raw) && isFromWebPage(sender.url, base)) {

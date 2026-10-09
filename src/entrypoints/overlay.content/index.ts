@@ -1,5 +1,5 @@
 import { tickPlan } from '@/core/capsule';
-import { isPing, parseAnnounce, parseClockState, type ClockState } from '@/core/messages';
+import { isPing, parseAnnounce, parseClockState, parseTabMedia, type ClockState } from '@/core/messages';
 import { DEFAULT_SETTINGS } from '@/core/settings';
 import { displayMs, initialState, isBreak } from '@/core/timer';
 import { createAnnouncer } from '@/overlay/announce';
@@ -98,6 +98,12 @@ export default defineContentScript({
       if (isPing(raw)) return void sendResponse(alive());
       const fresh = parseClockState(raw);
       if (fresh) return void hear(fresh);
+      // Play, pause or skip from Study Duo's card: handed to media-keys.content.ts in the page's own world.
+      const op = parseTabMedia(raw);
+      if (op) {
+        if (isMusicHost(hostOf(location.href))) window.dispatchEvent(new CustomEvent('study-duo:media', { detail: op }));
+        return void sendResponse(true);
+      }
       const msg = parseAnnounce(raw);
       if (!msg) return;
       if (!alive()) return teardown();
@@ -326,7 +332,7 @@ export default defineContentScript({
       const read = () => {
         clearTimeout(beat);
         if (!alive()) return;
-        if (!settings.measure.music) return void (beat = setTimeout(read, 60_000));
+        // Read even with Songs you play off: the card shows and controls the tab; the background keeps nothing then.
         // The background takes one song report per 2 s; wait rather than send one it would drop.
         const wait = sentAt + 2_100 - Date.now();
         if (wait > 0) return void (beat = setTimeout(read, wait));

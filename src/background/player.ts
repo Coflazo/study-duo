@@ -1,6 +1,6 @@
 import { addRecords } from '@/core/log';
 import { foldListen } from '@/core/music';
-import { applyPlayer, nextTitle, playingTrack, type PlayerCommand, type PlayerEffect, type PlayerState, type PlayerTrack } from '@/core/player';
+import { applyPlayer, INITIAL_PLAYER, nextTitle, playingTrack, type PlayerCommand, type PlayerEffect, type PlayerState, type PlayerTrack } from '@/core/player';
 import { playerItem, playerTracksItem } from '@/core/session-store';
 import { sessionId } from '@/core/sessions';
 import { normalizeSettings } from '@/core/settings';
@@ -19,7 +19,8 @@ let tracksCache: Record<string, PlayerTrack> | null = null;
 export function playerCommands(cmds: PlayerCommand[], now = Date.now()): Promise<void> {
   const run = queue.then(async () => {
     tracksCache ??= await playerTracksItem.getValue();
-    const before: PlayerState = { ...(await playerItem.getValue()), tracks: tracksCache };
+    // A state saved by an older version lacks the newer fields: the defaults fill them.
+    const before: PlayerState = { ...INITIAL_PLAYER, ...(await playerItem.getValue()), tracks: tracksCache };
     let state = before;
     const effects: PlayerEffect[] = [];
     for (const cmd of cmds) {
@@ -84,6 +85,9 @@ async function carryOut(e: PlayerEffect): Promise<void> {
       return toFile({ op: 'seek', at: e.at, path: e.path });
     case 'file-volume':
       return toFile({ op: 'volume', volume: e.volume });
+    case 'tab':
+      // The music page's own play, pause and skip, through its media session (see media-keys.content.ts).
+      return browser.tabs.sendMessage(e.tabId, { kind: 'tab-media', op: e.op }).then(() => undefined, () => undefined);
     case 'panel-load':
     case 'panel':
     case 'panel-seek':
@@ -91,7 +95,6 @@ async function carryOut(e: PlayerEffect): Promise<void> {
       // Links play in the side panel, in the service's own player; with the panel closed nothing listens.
       return browser.runtime.sendMessage({ target: 'panel', ...e }).then(() => undefined, () => undefined);
     default:
-      // Music in tabs arrives in the next step of #51.
       return;
   }
 }

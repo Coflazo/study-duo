@@ -5,6 +5,7 @@ import { normalizeSettings } from '@/core/settings';
 import { hostOf } from '@/core/sites';
 import { settingsItem, timerItem } from '@/core/store';
 import { listeningItem } from '@/core/session-store';
+import { playerCommands } from './player';
 
 
 let queue: Promise<void> = Promise.resolve();
@@ -45,5 +46,8 @@ export function hearSource(key: string, host: string | null, now: NowPlaying | n
 }
 
 export function trackMusic(): void {
-  browser.tabs.onRemoved.addListener((tabId) => void hearTab(tabId, undefined, null));
+  browser.tabs.onRemoved.addListener((tabId) => {
+    void hearTab(tabId, undefined, null);
+    void playerCommands([{ op: 'tab-gone', tabId }]).catch(console.error);
+  });
 }
