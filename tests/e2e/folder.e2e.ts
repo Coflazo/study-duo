@@ -54,11 +54,7 @@ test('a picked music folder is listed, searched and played song after song by th
 
   // Play from the first song: it plays, then the next one by itself, then the player stops at the end.
   const player = () => page.evaluate(async () => (await chrome.storage.session.get('player')).player);
-  const nowTitle = async () => {
-    const p = await player();
-    const id = p?.queue ? p.queue.items[p.queue.order[p.queue.at]] : null;
-    return id ? p.tracks[id].title : null;
-  };
+  const nowTitle = async () => (await player())?.now?.title ?? null;
   await rows.nth(0).getByRole('button').click();
   await expect.poll(async () => (await player())?.playing).toBe(true);
   await expect.poll(nowTitle).toBe('Gymnopedie');

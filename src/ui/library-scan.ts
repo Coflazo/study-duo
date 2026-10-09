@@ -1,4 +1,4 @@
-import { indexSong, listSongs, type FolderLike, type Track } from '@/core/library';
+import { indexSong, listSongs, songHead, type FolderLike, type Track } from '@/core/library';
 import { saveLibrary, saveThumb } from '@/core/library-db';
 import { readCover, dominantColor, type Cover } from '@/core/tags';
 
@@ -31,9 +31,10 @@ export async function scanFolder(handle: FileSystemDirectoryHandle, onProgress: 
   for (const [i, s] of songs.entries()) {
     try {
       const file = await s.file.getFile();
-      const track = await indexSong(file, s.path);
+      const head = await songHead(file);
+      const track = await indexSong(file, s.path, head);
       if (track.cover) {
-        const cover = readCover(await file.slice(0, 1_000_000).arrayBuffer());
+        const cover = readCover(head);
         const thumb = cover ? await thumbnail(cover) : null;
         if (thumb) {
           thumbs.set(track.id, thumb.blob);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyPlayer, INITIAL_PLAYER, parsePlayer, positionAt, soundToPlayer, type PlayerState, type PlayerTrack } from './player';
+import { applyPlayer, INITIAL_PLAYER, nextTitle, parsePlayer, positionAt, soundToPlayer, type PlayerState, type PlayerTrack } from './player';
 
 const NOW = 1_800_000_000_000;
 const playingNoise: PlayerState = { ...INITIAL_PLAYER, active: 'noise', playing: true, noise: 'pink', volume: 0.5, startedAt: NOW - 60_000, at: NOW - 60_000 };
@@ -99,13 +99,13 @@ describe('the music folder', () => {
 
   it('previous goes to the start of the song first, then to the one before', () => {
     const on = applyPlayer(INITIAL_PLAYER, { op: 'folder', tracks: songs, start: 1, shuffle: false }, NOW).state;
-    expect(applyPlayer(on, { op: 'prev' }, NOW + 10_000).effects).toEqual([{ type: 'file-seek', at: 0 }]);
+    expect(applyPlayer(on, { op: 'prev' }, NOW + 10_000).effects).toEqual([{ type: 'file-seek', at: 0, path: songs[1]!.path }]);
     expect(applyPlayer(on, { op: 'prev' }, NOW + 1_000).effects).toEqual([{ type: 'file-play', track: songs[0], at: 0, volume: 0.6 }]);
   });
 
   it('seeks inside the song, never past its end once its length is known', () => {
     const on = play(INITIAL_PLAYER, [{ op: 'folder', tracks: songs, start: 0, shuffle: false }, { op: 'loaded', duration: 245_000 }]).state;
-    expect(applyPlayer(on, { op: 'seek', ms: 57_000 }, NOW)).toMatchObject({ state: { position: 57_000 }, effects: [{ type: 'file-seek', at: 57_000 }] });
+    expect(applyPlayer(on, { op: 'seek', ms: 57_000 }, NOW)).toMatchObject({ state: { position: 57_000 }, effects: [{ type: 'file-seek', at: 57_000, path: songs[0]!.path }] });
     expect(applyPlayer(on, { op: 'seek', ms: 999_000 }, NOW).state.position).toBe(245_000);
   });
 
@@ -133,5 +133,32 @@ describe('the music folder', () => {
     expect(parsePlayer({ kind: 'player', op: 'folder', tracks: [{ id: 'x' }], start: 0 })).toBeNull();
     expect(parsePlayer({ kind: 'player', op: 'folder', tracks: [], start: 0 })).toBeNull();
     expect(parsePlayer({ kind: 'player', op: 'folder', tracks: [{ ...songs[0], color: 'red; background:url(x)' }], start: 0 })).toEqual({ op: 'folder', tracks: [{ ...songs[0], color: null }], start: 0, shuffle: false });
+  });
+});
+
+describe('reports from the page playing the file', () => {
+  const on = applyPlayer(INITIAL_PLAYER, { op: 'folder', tracks: songs, start: 0, shuffle: false }, NOW).state;
+
+  it('count only for the song that is playing now', () => {
+    expect(applyPlayer(on, { op: 'ended', path: songs[2]!.path }, NOW).state).toBe(on);
+    expect(applyPlayer(on, { op: 'loaded', duration: 9, path: songs[1]!.path }, NOW).state.duration).toBeNull();
+    expect(applyPlayer(on, { op: 'ended', path: songs[0]!.path }, NOW).effects).toEqual([{ type: 'file-play', track: songs[1], at: 0, volume: 0.6 }]);
+  });
+
+  it('never stop noise or another source', () => {
+    expect(applyPlayer(playingNoise, { op: 'problem', problem: 'missing' }, NOW).state).toBe(playingNoise);
+    expect(applyPlayer(playingNoise, { op: 'ended' }, NOW).state).toBe(playingNoise);
+  });
+
+  it('repeat one plays the song again when it ends, but Next still moves on', () => {
+    const one = applyPlayer(on, { op: 'repeat', repeat: 'one' }, NOW).state;
+    expect(applyPlayer(one, { op: 'ended', path: songs[0]!.path }, NOW).effects).toEqual([{ type: 'file-play', track: songs[0], at: 0, volume: 0.6 }]);
+    const next = applyPlayer(one, { op: 'next' }, NOW);
+    expect(next.effects).toEqual([{ type: 'file-play', track: songs[1], at: 0, volume: 0.6 }]);
+    expect(next.state.queue?.repeat).toBe('one');
+  });
+
+  it('names the song after this one', () => {
+    expect(nextTitle(on)).toBe('Song b');
   });
 });

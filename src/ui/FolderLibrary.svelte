@@ -6,7 +6,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { groupTracks, searchTracks, sortTracks, type Track } from '@/core/library';
   import { forgetLibrary, loadFolder, loadTracks, type FolderRecord } from '@/core/library-db';
-  import { INITIAL_PLAYER, playingTrack, type PlayerState, type PlayerTrack } from '@/core/player';
+  import { INITIAL_PLAYER, type PlayerState, type PlayerTrack } from '@/core/player';
   import { playerItem } from '@/core/session-store';
   import { clip } from '@/core/text';
   import { scanFolder } from '@/ui/library-scan';
@@ -14,8 +14,11 @@
   import SignButton from '@/ui/SignButton.svelte';
 
   const VIEWS: Array<['songs' | 'artists' | 'albums', string]> = [['songs', 'Songs'], ['artists', 'Artists'], ['albums', 'Albums']];
-  /** Long lists show this many rows; the search narrows the rest. */
+  /** Long lists show this many rows (and groups); the search narrows the rest. */
   const SHOWN = 300;
+  const GROUPS = 100;
+  /** The player's queue holds at most this many songs: a window of the list around the song picked. */
+  const QUEUE = 5_000;
 
   let folder = $state<FolderRecord | null>(null);
   let tracks = $state<Track[]>([]);
@@ -28,7 +31,7 @@
 
   const found = $derived(sortTracks(searchTracks(tracks, query)));
   const groups = $derived(view === 'songs' ? [] : groupTracks(found, view === 'artists' ? 'artist' : 'album'));
-  const nowId = $derived(player.active === 'folder' ? playingTrack(player)?.id : undefined);
+  const nowId = $derived(player.active === 'folder' ? player.now?.id : undefined);
   const canPick = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
 
   const toPlayer = (t: Track): PlayerTrack => ({ id: t.id, path: t.path, title: t.title, artist: t.artist, album: t.album, genre: t.genre, color: t.color, cover: t.cover });
@@ -36,7 +39,10 @@
 
   function playList(list: Track[], start: number, shuffle = false) {
     if (!list.length) return;
-    void send({ op: 'folder', tracks: list.slice(0, 5_000).map(toPlayer), start, shuffle });
+    // Shuffle starts on a random song, not always the first title.
+    if (shuffle) start = Math.floor(Math.random() * list.length);
+    const from = Math.max(0, Math.min(start - QUEUE / 2, list.length - QUEUE));
+    void send({ op: 'folder', tracks: list.slice(from, from + QUEUE).map(toPlayer), start: start - from, shuffle });
   }
 
   type Handle = FileSystemDirectoryHandle & { queryPermission?(d: { mode: 'read' }): Promise<PermissionState>; requestPermission?(d: { mode: 'read' }): Promise<PermissionState> };
@@ -53,6 +59,8 @@
     } catch {
       return; // closed the picker
     }
+    // The queue's songs live in the old folder: stop before reading a new one.
+    if (player.active === 'folder' && player.playing) await send({ op: 'pause' });
     scanning = { done: 0, total: 0 };
     try {
       tracks = await scanFolder(handle, (done, total) => (scanning = { done, total }));
@@ -139,12 +147,14 @@
       {#if found.length > SHOWN}<p class="help">{found.length - SHOWN} more: search to find them.</p>{/if}
       {#if !found.length}<p class="help">{query ? `No song matches "${query}".` : 'No songs found in this folder.'}</p>{/if}
     {:else}
-      {#each groups.slice(0, 100) as g (g.name)}
+      {#each groups.slice(0, GROUPS) as g (g.name)}
         <div class="group">
           <h3>{g.name} <span>{g.tracks.length}</span></h3>
-          <ul class="songs" class:faded={needsReconnect}>{#each g.tracks as t, i (t.id)}{@render song(t, g.tracks, i)}{/each}</ul>
+          <ul class="songs" class:faded={needsReconnect}>{#each g.tracks.slice(0, SHOWN) as t, i (t.id)}{@render song(t, g.tracks, i)}{/each}</ul>
+          {#if g.tracks.length > SHOWN}<p class="help">{g.tracks.length - SHOWN} more: search to find them.</p>{/if}
         </div>
       {/each}
+      {#if groups.length > GROUPS}<p class="help">{groups.length - GROUPS} more {view === 'artists' ? 'artists' : 'albums'}: search to find them.</p>{/if}
     {/if}
   {/if}
   {#if scanning && !folder}<p class="help" aria-live="polite">Reading {scanning.done} of {scanning.total} songs…</p>{/if}

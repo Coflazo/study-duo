@@ -1,7 +1,7 @@
 import { addRecords } from '@/core/log';
 import { foldListen } from '@/core/music';
-import { applyPlayer, playingTrack, type PlayerCommand, type PlayerEffect, type PlayerState } from '@/core/player';
-import { playerItem } from '@/core/session-store';
+import { applyPlayer, nextTitle, playingTrack, type PlayerCommand, type PlayerEffect, type PlayerState, type PlayerTrack } from '@/core/player';
+import { playerItem, playerTracksItem } from '@/core/session-store';
 import { sessionId } from '@/core/sessions';
 import { normalizeSettings } from '@/core/settings';
 import { settingsItem, timerItem } from '@/core/store';
@@ -9,6 +9,8 @@ import { ensureOffscreen } from './effects';
 import { focusSound } from './sound';
 
 let queue: Promise<unknown> = Promise.resolve();
+/** The folder's songs, kept in memory while the worker lives and in session storage for when it wakes. */
+let tracksCache: Record<string, PlayerTrack> | null = null;
 
 /**
  * Runs player commands one at a time against the stored state, then carries out what they decided. The popup card,
@@ -16,7 +18,8 @@ let queue: Promise<unknown> = Promise.resolve();
  */
 export function playerCommands(cmds: PlayerCommand[], now = Date.now()): Promise<void> {
   const run = queue.then(async () => {
-    const before = await playerItem.getValue();
+    tracksCache ??= await playerTracksItem.getValue();
+    const before: PlayerState = { ...(await playerItem.getValue()), tracks: tracksCache };
     let state = before;
     const effects: PlayerEffect[] = [];
     for (const cmd of cmds) {
@@ -25,7 +28,12 @@ export function playerCommands(cmds: PlayerCommand[], now = Date.now()): Promise
       effects.push(...next.effects);
     }
     state = await logFolder(before, state, now);
-    await playerItem.setValue(state);
+    if (state.tracks !== tracksCache) {
+      tracksCache = state.tracks;
+      await playerTracksItem.setValue(state.tracks);
+    }
+    // Pages get the song on the card and the next title, not the whole list.
+    await playerItem.setValue({ ...state, tracks: {}, now: playingTrack(state), upNext: nextTitle(state) });
     for (const e of effects) await carryOut(e);
   });
   queue = run.catch(() => undefined);
@@ -73,7 +81,7 @@ async function carryOut(e: PlayerEffect): Promise<void> {
     case 'file-pause':
       return toFile({ op: 'pause' });
     case 'file-seek':
-      return toFile({ op: 'seek', at: e.at });
+      return toFile({ op: 'seek', at: e.at, path: e.path });
     case 'file-volume':
       return toFile({ op: 'volume', volume: e.volume });
     default:

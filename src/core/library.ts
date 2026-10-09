@@ -64,9 +64,12 @@ function hash(s: string): string {
   return h.toString(36);
 }
 
+/** The part of a song file where its tags and cover sit. */
+export const songHead = (file: File): Promise<ArrayBuffer> => file.slice(0, HEAD_BYTES).arrayBuffer();
+
 /** One song's record from its first megabyte: tags (or its file name as the title) and whether it has a cover. */
-export async function indexSong(file: File, path: string): Promise<Track> {
-  const head = await file.slice(0, HEAD_BYTES).arrayBuffer();
+export async function indexSong(file: File, path: string, head?: ArrayBuffer): Promise<Track> {
+  head ??= await songHead(file);
   const tags = tagsOrName(readTags(head), file.name);
   return { id: `${hash(`${path}|${file.size}|${file.lastModified}`)}-${hash(path)}`, path, ...tags, cover: readCover(head) !== null, color: null, size: file.size, modified: file.lastModified };
 }

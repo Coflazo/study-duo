@@ -5,17 +5,21 @@ import { loadFolder } from '@/core/library-db';
 /**
  * Plays songs from the music folder in the offscreen page, where audio keeps going with every Study Duo page closed.
  * The folder's handle comes from the library database; the song is read from it only when it plays. Songs fade in and
- * out over a short, ear-shaped curve, so a pause or a handover never clicks.
+ * out over a short, ear-shaped curve, so a pause or a handover never clicks. Commands run one at a time, in order:
+ * a quick "next, next, pause" must end paused on the last song, whatever each file takes to open.
  */
 const FADE = 0.35;
 
 let audio: HTMLAudioElement | null = null;
+let source: MediaElementAudioSourceNode | null = null;
 let gain: GainNode | null = null;
 let url: string | null = null;
 let path: string | null = null;
 let stopping: ReturnType<typeof setTimeout> | undefined;
+let chain: Promise<void> = Promise.resolve();
 
-const tell = (msg: Record<string, unknown>) => browser.runtime.sendMessage({ kind: 'player', ...msg }).catch(() => undefined);
+/** Every report names its song, so the background can ignore one that arrives after the next song started. */
+const tell = (msg: Record<string, unknown>, about: string | null) => browser.runtime.sendMessage({ kind: 'player', ...msg, ...(about ? { path: about } : {}) }).catch(() => undefined);
 
 /** The file at a path in the picked folder, or why it cannot be read. */
 async function fileAt(where: string): Promise<File | 'reconnect' | 'missing'> {
@@ -37,20 +41,24 @@ async function fileAt(where: string): Promise<File | 'reconnect' | 'missing'> {
 
 function release() {
   clearTimeout(stopping);
-  audio?.pause();
-  audio?.removeAttribute('src');
+  if (audio) {
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load(); // lets go of the media resource
+  }
+  source?.disconnect();
   gain?.disconnect();
   if (url) URL.revokeObjectURL(url);
-  audio = null;
-  gain = null;
-  url = null;
-  path = null;
+  audio = source = gain = null;
+  url = path = null;
 }
 
-function fade(ctx: AudioContext, from: number, to: number) {
+function fade(ctx: AudioContext, to: number) {
   if (!gain) return;
   const now = ctx.currentTime;
+  const from = gain.gain.value;
   gain.gain.cancelScheduledValues(now);
+  gain.gain.setValueAtTime(from, now);
   const curve = to > from ? fadeCurve(32, 'in', to) : fadeCurve(32, 'out', from);
   try {
     gain.gain.setValueCurveAtTime(curve, now, FADE);
@@ -59,42 +67,67 @@ function fade(ctx: AudioContext, from: number, to: number) {
   }
 }
 
-export async function fileCommand(ctx: AudioContext, cmd: FileCommand): Promise<void> {
-  if (cmd.op === 'play') {
-    if (path !== cmd.path || !audio) {
-      const file = await fileAt(cmd.path);
-      if (typeof file === 'string') {
-        release();
-        return void tell({ op: 'problem', problem: file });
-      }
-      release();
-      const el = new Audio();
-      url = URL.createObjectURL(file);
-      el.src = url;
-      gain = ctx.createGain();
-      gain.gain.value = 0;
-      ctx.createMediaElementSource(el).connect(gain).connect(ctx.destination);
-      el.addEventListener('loadedmetadata', () => Number.isFinite(el.duration) && tell({ op: 'loaded', duration: Math.round(el.duration * 1000) }));
-      el.addEventListener('ended', () => tell({ op: 'ended' }));
-      audio = el;
-      path = cmd.path;
-    }
-    clearTimeout(stopping);
-    audio.currentTime = cmd.at / 1000;
-    try {
-      await audio.play();
-    } catch {
-      return void tell({ op: 'problem', problem: 'missing' }); // a file the browser cannot decode
-    }
-    fade(ctx, 0, cmd.volume);
-  } else if (cmd.op === 'pause') {
-    if (!audio) return;
-    fade(ctx, gain?.gain.value ?? 0, 0);
-    const el = audio;
-    stopping = setTimeout(() => el.pause(), FADE * 1000 + 30);
-  } else if (cmd.op === 'seek') {
-    if (audio) audio.currentTime = cmd.at / 1000;
-  } else if (gain) {
-    gain.gain.setTargetAtTime(cmd.volume, ctx.currentTime, 0.08);
+async function load(ctx: AudioContext, where: string): Promise<boolean> {
+  if (path === where && audio) return true;
+  const file = await fileAt(where);
+  release();
+  if (typeof file === 'string') {
+    void tell({ op: 'problem', problem: file }, where);
+    return false;
   }
+  const el = new Audio();
+  url = URL.createObjectURL(file);
+  el.src = url;
+  gain = ctx.createGain();
+  gain.gain.value = 0;
+  source = ctx.createMediaElementSource(el);
+  source.connect(gain).connect(ctx.destination);
+  el.addEventListener('loadedmetadata', () => Number.isFinite(el.duration) && tell({ op: 'loaded', duration: Math.round(el.duration * 1000) }, where));
+  el.addEventListener('ended', () => tell({ op: 'ended' }, where));
+  audio = el;
+  path = where;
+  return true;
+}
+
+async function play(ctx: AudioContext, where: string, at: number, volume: number) {
+  if (!(await load(ctx, where)) || !audio) return;
+  clearTimeout(stopping);
+  audio.currentTime = at / 1000;
+  try {
+    await audio.play();
+  } catch (e) {
+    // Cut off by the next command (AbortError) is normal; anything else is a file the browser cannot play.
+    if ((e as DOMException)?.name !== 'AbortError') void tell({ op: 'problem', problem: 'missing' }, where);
+    return;
+  }
+  fade(ctx, volume);
+}
+
+async function run(ctx: AudioContext, cmd: FileCommand): Promise<void> {
+  if (cmd.op === 'play') return play(ctx, cmd.path, cmd.at, cmd.volume);
+  if (cmd.op === 'seek') {
+    // A page Chrome closed after a long quiet stretch comes back empty: load the song again where it was.
+    if (!audio && cmd.path) return play(ctx, cmd.path, cmd.at, gain?.gain.value || 0.6);
+    if (audio) audio.currentTime = cmd.at / 1000;
+    return;
+  }
+  if (cmd.op === 'pause') {
+    if (!audio) return;
+    fade(ctx, 0);
+    const el = audio;
+    clearTimeout(stopping);
+    stopping = setTimeout(() => el.pause(), FADE * 1000 + 30);
+    return;
+  }
+  if (gain) {
+    const now = ctx.currentTime;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setValueAtTime(gain.gain.value, now);
+    gain.gain.setTargetAtTime(cmd.volume, now, 0.08);
+  }
+}
+
+export function fileCommand(ctx: AudioContext, cmd: FileCommand): Promise<void> {
+  chain = chain.then(() => run(ctx, cmd)).catch(console.error);
+  return chain;
 }

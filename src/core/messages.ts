@@ -122,7 +122,7 @@ export function parseSound(raw: unknown): SoundCommand | null {
 }
 
 
-export type FileCommand = { op: 'play'; path: string; at: number; volume: number } | { op: 'pause' } | { op: 'seek'; at: number } | { op: 'volume'; volume: number };
+export type FileCommand = { op: 'play'; path: string; at: number; volume: number } | { op: 'pause' } | { op: 'seek'; at: number; path?: string } | { op: 'volume'; volume: number };
 
 /**
  * A folder song command the background forwards to the offscreen page. The path stays inside the picked folder: no
@@ -135,10 +135,9 @@ export function parseFileCommand(raw: unknown): FileCommand | null {
   const at = typeof r.at === 'number' && Number.isFinite(r.at) && r.at >= 0 ? r.at : null;
   const volume = typeof r.volume === 'number' && Number.isFinite(r.volume) ? Math.min(1, Math.max(0, r.volume)) : null;
   if (r.op === 'pause') return { op: 'pause' };
-  if (r.op === 'seek') return at === null ? null : { op: 'seek', at };
+  const path = typeof r.path === 'string' && r.path.length <= 1_000 && !r.path.split('/').some((p) => p === '' || p === '.' || p === '..') ? r.path : null;
+  if (r.op === 'seek') return at === null ? null : { op: 'seek', at, ...(path ? { path } : {}) };
   if (r.op === 'volume') return volume === null ? null : { op: 'volume', volume };
-  if (r.op !== 'play' || at === null || volume === null || typeof r.path !== 'string' || r.path.length > 1_000) return null;
-  const parts = r.path.split('/');
-  if (parts.some((p) => p === '' || p === '.' || p === '..')) return null;
-  return { op: 'play', path: r.path, at, volume };
+  if (r.op !== 'play' || at === null || volume === null || !path) return null;
+  return { op: 'play', path, at, volume };
 }

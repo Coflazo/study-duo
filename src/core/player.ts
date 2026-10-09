@@ -41,6 +41,9 @@ export interface PlayerState {
   duration: number | null;
   /** Why the folder could not play: Chrome needs the folder again, or the file is gone. */
   problem: 'reconnect' | 'missing' | null;
+  /** For pages: the folder's song and the next title. The full list is stored apart (see background/player.ts). */
+  now: PlayerTrack | null;
+  upNext: string | null;
 }
 
 export const INITIAL_PLAYER: PlayerState = {
@@ -56,6 +59,8 @@ export const INITIAL_PLAYER: PlayerState = {
   tracks: {},
   duration: null,
   problem: null,
+  now: null,
+  upNext: null,
 };
 
 export type PlayerCommand =
@@ -72,9 +77,9 @@ export type PlayerCommand =
   | { op: 'shuffle' }
   | { op: 'repeat'; repeat: Repeat }
   // From the page that plays the file:
-  | { op: 'ended' }
-  | { op: 'loaded'; duration: number }
-  | { op: 'problem'; problem: 'reconnect' | 'missing' };
+  | { op: 'ended'; path?: string }
+  | { op: 'loaded'; duration: number; path?: string }
+  | { op: 'problem'; problem: 'reconnect' | 'missing'; path?: string };
 
 /** What the background has to carry out after a command. Streaming and tabs arrive in later steps (#51). */
 export type PlayerEffect =
@@ -83,7 +88,7 @@ export type PlayerEffect =
   | { type: 'noise-volume'; volume: number }
   | { type: 'file-play'; track: PlayerTrack; at: number; volume: number }
   | { type: 'file-pause' }
-  | { type: 'file-seek'; at: number }
+  | { type: 'file-seek'; at: number; path: string }
   | { type: 'file-volume'; volume: number }
   | { type: 'source-start'; source: PlayerSource }
   | { type: 'source-stop'; source: PlayerSource };
@@ -102,6 +107,8 @@ function parseTrack(raw: unknown): PlayerTrack | null {
   return { id, path, title, artist: text(r.artist, 200) ?? '', album: text(r.album, 200) ?? '', genre: text(r.genre, 100) ?? '', color, cover: r.cover === true };
 }
 
+const pathOf = (r: Record<string, unknown>) => (typeof r.path === 'string' && r.path.length <= 1_000 ? { path: r.path } : {});
+
 /** Player commands, from the extension's own pages only (the background checks the sender). */
 export function parsePlayer(raw: unknown): PlayerCommand | null {
   if (raw === null || typeof raw !== 'object') return null;
@@ -115,8 +122,9 @@ export function parsePlayer(raw: unknown): PlayerCommand | null {
     case 'next':
     case 'prev':
     case 'shuffle':
-    case 'ended':
       return { op: r.op };
+    case 'ended':
+      return { op: 'ended', ...pathOf(r) };
     case 'source':
       return (PLAYER_SOURCES as readonly unknown[]).includes(r.source) ? { op: 'source', source: r.source as PlayerSource } : null;
     case 'noise':
@@ -131,12 +139,12 @@ export function parsePlayer(raw: unknown): PlayerCommand | null {
     }
     case 'loaded': {
       const d = num(r.duration);
-      return d === null || d <= 0 ? null : { op: 'loaded', duration: d };
+      return d === null || d <= 0 ? null : { op: 'loaded', duration: d, ...pathOf(r) };
     }
     case 'repeat':
       return r.repeat === 'off' || r.repeat === 'all' || r.repeat === 'one' ? { op: 'repeat', repeat: r.repeat } : null;
     case 'problem':
-      return r.problem === 'reconnect' || r.problem === 'missing' ? { op: 'problem', problem: r.problem } : null;
+      return r.problem === 'reconnect' || r.problem === 'missing' ? { op: 'problem', problem: r.problem, ...pathOf(r) } : null;
     case 'folder': {
       if (!Array.isArray(r.tracks) || r.tracks.length === 0 || r.tracks.length > MAX_QUEUE) return null;
       const tracks = r.tracks.map(parseTrack);
@@ -177,6 +185,9 @@ function toSong(s: PlayerState, queue: Queue, now: number): { state: PlayerState
   const track = nowTrack(state);
   return { state, effects: s.playing && s.active === 'folder' && track ? [{ type: 'file-play', track, at: 0, volume: s.volume }] : [] };
 }
+
+/** A report from the page playing the file counts only for the folder's current song: a late one is ignored. */
+const aboutThisSong = (s: PlayerState, path: string | undefined) => s.active === 'folder' && (path === undefined || nowTrack(s)?.path === path);
 
 /** The end of the queue: stopped, back at the start of the last song. */
 const atEnd = (s: PlayerState, now: number) => ({ state: { ...s, playing: false, position: 0, at: now, startedAt: null }, effects: s.playing ? [{ type: 'file-pause' } as PlayerEffect] : [] });
@@ -226,11 +237,18 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
       const state: PlayerState = { ...s, active: 'folder', playing: true, queue: { ...queue, repeat: s.queue?.repeat ?? 'off' }, tracks, position: 0, at: now, startedAt: now, duration: null, problem: null };
       return { state, effects: [...before, start(state)!] };
     }
-    case 'next':
-    case 'ended': {
+    case 'next': {
       if (s.active !== 'folder' || !s.queue) return { state: s, effects: [] };
+      // Next always moves on, even with repeat one (which only repeats a song that ends by itself).
+      const next = nextIn({ ...s.queue, repeat: s.queue.repeat === 'one' ? 'all' : s.queue.repeat });
+      if (!next) return atEnd(s, now);
+      return toSong(s, { ...next, repeat: s.queue.repeat }, now);
+    }
+    case 'ended': {
+      if (!aboutThisSong(s, cmd.path) || !s.queue) return { state: s, effects: [] };
       const next = nextIn(s.queue);
       if (!next) return atEnd(s, now);
+      if (s.queue.repeat === 'one') return { state: { ...s, position: 0, at: now, startedAt: now }, effects: [{ type: 'file-play', track: nowTrack(s)!, at: 0, volume: s.volume }] };
       return toSong(s, next, now);
     }
     case 'prev': {
@@ -242,21 +260,28 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
     case 'seek': {
       if (s.active !== 'folder' || !nowTrack(s)) return { state: s, effects: [] };
       const ms = s.duration ? Math.min(cmd.ms, s.duration) : cmd.ms;
-      return { state: { ...s, position: ms, at: now }, effects: s.playing ? [{ type: 'file-seek', at: ms }] : [] };
+      return { state: { ...s, position: ms, at: now }, effects: s.playing ? [{ type: 'file-seek', at: ms, path: nowTrack(s)!.path }] : [] };
     }
     case 'shuffle':
       return s.queue ? { state: { ...s, queue: toggleShuffle(s.queue) }, effects: [] } : { state: s, effects: [] };
     case 'repeat':
       return s.queue ? { state: { ...s, queue: setRepeat(s.queue, cmd.repeat) }, effects: [] } : { state: s, effects: [] };
     case 'loaded':
-      return { state: { ...s, duration: cmd.duration }, effects: [] };
+      return aboutThisSong(s, cmd.path) ? { state: { ...s, duration: cmd.duration }, effects: [] } : { state: s, effects: [] };
     case 'problem':
-      return { state: { ...s, playing: false, startedAt: null, problem: cmd.problem, at: now }, effects: [] };
+      return aboutThisSong(s, cmd.path) ? { state: { ...s, playing: false, startedAt: null, problem: cmd.problem, position: positionAt(s, now), at: now }, effects: [] } : { state: s, effects: [] };
   }
 }
 
 /** The song the folder is on, if any. */
 export const playingTrack = nowTrack;
+
+/** The title of the song after this one in play order, if any. */
+export function nextTitle(s: PlayerState): string | null {
+  const q = s.queue;
+  if (!q || q.at + 1 >= q.order.length) return null;
+  return s.tracks[q.items[q.order[q.at + 1]!]!]?.title ?? null;
+}
 
 /** The Music page's focus sound buttons, as player commands, so there is one player and one state. */
 export function soundToPlayer(cmd: SoundCommand): PlayerCommand[] {
