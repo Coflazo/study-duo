@@ -5,18 +5,19 @@
 #   1. downloads the latest release and its SHA256SUMS from github.com/Coflazo/study-duo over HTTPS,
 #   2. stops unless the SHA-256 matches (and checks GitHub's build attestation when the GitHub CLI is signed in),
 #   3. unzips it to "%USERPROFILE%\Study Duo\chromium" (no admin rights),
-#   4. copies that path to your clipboard and opens your browser's extensions page,
-#   5. prints the three clicks left.
+#   4. copies that path to your clipboard and opens your browser's extensions page (each one you name with
+#      -Browsers chrome,edge,brave,arc,opera,vivaldi,firefox; Firefox opens the signed add-on instead),
+#   5. prints the clicks left.
 # Uninstall: powershell -c "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Coflazo/study-duo/main/install.ps1))) -Uninstall"
 #
 # Optional, with -Helper (same form as -Uninstall above): also installs the desktop helper, a small script that tells
 # Study Duo what desktop music apps are playing, and registers it with your Chromium browsers for Study Duo only.
 # It is off until you turn on Desktop apps in Study Duo's Connections. Read it first: helper/study-duo-helper.ps1
 
-param([switch]$Uninstall, [switch]$Helper)
+param([switch]$Uninstall, [switch]$Helper, [string]$Browsers = '')
 
 function Install-StudyDuo {
-  param([switch]$Uninstall, [switch]$Helper)
+  param([switch]$Uninstall, [switch]$Helper, [string]$Browsers = '')
   $ErrorActionPreference = 'Stop'
   $ProgressPreference = 'SilentlyContinue' # the progress bar makes Invoke-WebRequest very slow on 5.1
   $repo = 'Coflazo/study-duo'
@@ -28,6 +29,51 @@ function Install-StudyDuo {
   $helperDir = Join-Path $homeDir 'helper'
   $hostName = 'com.coflazo.study_duo'
   $extensionId = 'bcggiingdefmehpjcalkfpdnehpcieon'
+  $xpiUrl = if ($env:STUDY_DUO_XPI_URL) { $env:STUDY_DUO_XPI_URL } else { 'https://coflazo.github.io/study-duo/study-duo.xpi' }
+  # Each browser -Browsers knows: where its program may be, and the page to open (Firefox gets the signed add-on).
+  $apps = [ordered]@{
+    chrome  = @('Chrome', 'chrome://extensions', @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe", "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"))
+    edge    = @('Edge', 'edge://extensions', @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe", "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"))
+    brave   = @('Brave', 'brave://extensions', @("$env:ProgramFiles\BraveSoftware\Brave-Browser\Application\brave.exe", "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\Application\brave.exe"))
+    arc     = @('Arc', 'arc://extensions', @("$env:LOCALAPPDATA\Microsoft\WindowsApps\Arc.exe"))
+    opera   = @('Opera', 'opera://extensions', @("$env:LOCALAPPDATA\Programs\Opera\opera.exe"))
+    vivaldi = @('Vivaldi', 'vivaldi://extensions', @("$env:LOCALAPPDATA\Vivaldi\Application\vivaldi.exe"))
+    firefox = @('Firefox', $xpiUrl, @("$env:ProgramFiles\Mozilla Firefox\firefox.exe", "${env:ProgramFiles(x86)}\Mozilla Firefox\firefox.exe"))
+  }
+  $picked = @()
+  if ($Browsers) {
+    foreach ($b in $Browsers.Split(',')) {
+      $key = $b.Trim().ToLowerInvariant()
+      if (-not $apps.Contains($key)) { throw "unknown browser $key (use: $($apps.Keys -join ','))." }
+      $picked += $key
+    }
+  }
+  # Opens one browser at its page, if it is on this computer. With STUDY_DUO_NO_OPEN (tests), says what it would open.
+  function Open-In([string]$key) {
+    $app = $apps[$key]
+    $exe = $app[2] | Where-Object { $env:STUDY_DUO_FAKE_APPS -or (Test-Path $_) } | Select-Object -First 1
+    if (-not $exe) { return $false }
+    if ($env:STUDY_DUO_NO_OPEN) { Write-Host "Would open $($app[0]) at $($app[1])"; return $true }
+    Start-Process -FilePath $exe -ArgumentList $app[1]
+    return $true
+  }
+  function Open-Picked {
+    $chromium = 0
+    foreach ($key in $picked) {
+      $name = $apps[$key][0]
+      if ($key -eq 'firefox') {
+        $published = $true
+        try { Invoke-WebRequest -Method Head -Uri $xpiUrl -UseBasicParsing -TimeoutSec 10 | Out-Null } catch { $published = $false }
+        if (-not $published) { Write-Host 'Firefox: the signed add-on is not published yet, so Firefox was skipped.' }
+        elseif (Open-In $key) { Write-Host 'Opened Firefox: click Allow, then Add.' }
+        else { Write-Host 'Firefox is not installed here, so it was skipped.' }
+        continue
+      }
+      if (Open-In $key) { Write-Host "Opened $name on its extensions page."; $chromium++ }
+      else { Write-Host "$name is not installed here, so it was skipped." }
+    }
+    return $chromium
+  }
   # Each Chromium browser: where its profile lives, and where it looks up native messaging hosts.
   $browserHosts = @(
     @("$env:LOCALAPPDATA\Google\Chrome\User Data", 'HKCU:\Software\Google\Chrome\NativeMessagingHosts'),
@@ -62,6 +108,11 @@ function Install-StudyDuo {
   }
   if ($base -like 'https://*') {
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+  }
+  # Only Firefox: it installs from its signed file, so the Chromium folder is not needed.
+  if ($picked.Count -gt 0 -and -not ($picked | Where-Object { $_ -ne 'firefox' })) {
+    Open-Picked | Out-Null
+    return
   }
   $tmp = Join-Path ([IO.Path]::GetTempPath()) ('study-duo-' + [guid]::NewGuid())
   New-Item -ItemType Directory -Path $tmp | Out-Null
@@ -110,6 +161,10 @@ function Install-StudyDuo {
     Write-Host "  $dest"
     if (-not $env:STUDY_DUO_NO_OPEN) {
       try { Set-Clipboard -Value $dest; Write-Host '(That path is on your clipboard.)' } catch { }
+    }
+    if ($picked.Count -gt 0) {
+      if ((Open-Picked) -eq 0) { Write-Host 'None of the browsers you picked for the folder is on this computer.' }
+    } elseif (-not $env:STUDY_DUO_NO_OPEN) {
       $browsers = @(
         @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", 'chrome'),
         @("${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe", 'chrome'),
@@ -168,7 +223,7 @@ function Install-StudyDuo {
     }
 
     Write-Host ''
-    Write-Host 'Three clicks left, once:'
+    Write-Host 'In each Chromium browser, three clicks left, once:'
     Write-Host '  1. Turn on Developer mode (on the extensions page).'
     Write-Host '  2. Click Load unpacked.'
     Write-Host '  3. Choose the folder above (paste its path into the folder window).'
@@ -181,7 +236,7 @@ function Install-StudyDuo {
 
 # Everything runs from here, so a download cut off halfway never runs half a script.
 try {
-  Install-StudyDuo -Uninstall:$Uninstall -Helper:$Helper
+  Install-StudyDuo -Uninstall:$Uninstall -Helper:$Helper -Browsers $Browsers
 } catch {
   Write-Host "Study Duo: $($_.Exception.Message)" -ForegroundColor Red
   exit 1

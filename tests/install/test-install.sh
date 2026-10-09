@@ -53,6 +53,19 @@ sh < "$ROOT/install.sh" >/dev/null
 grep -q '"0.1.4"' "$DEST/manifest.json" || die "piped install"
 pass "works piped into sh, as curl | sh does"
 
+# --browsers: each picked browser's page, Firefox's signed add-on, plain words for what is missing.
+OUT="$(STUDY_DUO_FAKE_APPS=1 STUDY_DUO_XPI_URL="http://127.0.0.1:$PORT/study-duo.xpi" sh "$ROOT/install.sh" --browsers chrome,brave,firefox)"
+printf '%s\n' "$OUT" | grep -q 'Would open Chrome at chrome://extensions' || die "--browsers did not open Chrome"
+printf '%s\n' "$OUT" | grep -q 'Would open Brave at brave://extensions' || die "--browsers did not open Brave"
+printf '%s\n' "$OUT" | grep -q 'not published yet, so Firefox was skipped' || die "--browsers opened a Firefox add-on that does not exist"
+printf 'xpi' > "$REL/study-duo.xpi"
+OUT="$(STUDY_DUO_FAKE_APPS=1 STUDY_DUO_XPI_URL="http://127.0.0.1:$PORT/study-duo.xpi" sh "$ROOT/install.sh" --browsers firefox)"
+printf '%s\n' "$OUT" | grep -q "Would open Firefox at http://127.0.0.1:$PORT/study-duo.xpi" || die "--browsers firefox did not open the signed add-on"
+printf '%s\n' "$OUT" | grep -q 'Downloading' && die "--browsers firefox downloaded the Chromium folder it does not need"
+pass "opens each picked browser, and Firefox's signed add-on only when it exists"
+if sh "$ROOT/install.sh" --browsers netscape >/dev/null 2>&1; then die "accepted an unknown browser"; fi
+pass "refuses a browser it does not know"
+
 sh "$ROOT/install.sh" --uninstall >/dev/null
 [ ! -d "$DEST" ] || die "uninstall"
 pass "uninstalls"

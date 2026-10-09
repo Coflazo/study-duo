@@ -6,8 +6,9 @@
 #   1. downloads the latest release and its SHA256SUMS from github.com/Coflazo/study-duo over HTTPS,
 #   2. stops unless the SHA-256 matches (and checks GitHub's build attestation when the GitHub CLI is signed in),
 #   3. unzips it to "~/Study Duo/chromium" (a visible folder: no sudo, no admin rights),
-#   4. copies that path to your clipboard and opens your browser's extensions page,
-#   5. prints the three clicks left.
+#   4. copies that path to your clipboard and opens your browser's extensions page (each one you name with
+#      --browsers chrome,edge,brave,arc,opera,vivaldi,firefox; Firefox opens the signed add-on instead),
+#   5. prints the clicks left.
 # Uninstall: sh install.sh --uninstall   (removes the folder and the helper; remove the card in your browser)
 #
 # Optional, with --helper (curl ... | sh -s -- --helper): also installs the desktop helper, a small script that tells
@@ -26,6 +27,8 @@ HELPER="study-duo-helper.sh"
 HELPER_DIR="$HOME_DIR/helper"
 HOST="com.coflazo.study_duo"
 EXTENSION_ID="bcggiingdefmehpjcalkfpdnehpcieon"
+XPI_URL="${STUDY_DUO_XPI_URL:-https://coflazo.github.io/study-duo/study-duo.xpi}"
+BROWSERS="chrome edge brave arc opera vivaldi firefox"
 
 say() { printf '%s\n' "$*"; }
 fail() {
@@ -95,6 +98,70 @@ open_extensions() {
     done
   fi
   return 1
+}
+
+# The app (macOS) or commands (Linux) of a browser, and its extensions page; nothing for a browser it cannot open.
+app_of() {
+  case "$1" in
+    chrome) printf '%s\n' "Google Chrome|google-chrome google-chrome-stable chromium chromium-browser|chrome" ;;
+    edge) printf '%s\n' "Microsoft Edge|microsoft-edge microsoft-edge-stable|edge" ;;
+    brave) printf '%s\n' "Brave Browser|brave-browser|brave" ;;
+    arc) printf '%s\n' "Arc||chrome" ;;
+    opera) printf '%s\n' "Opera|opera|opera" ;;
+    vivaldi) printf '%s\n' "Vivaldi|vivaldi vivaldi-stable|vivaldi" ;;
+    firefox) printf '%s\n' "Firefox|firefox|" ;;
+  esac
+}
+name_of() {
+  case "$1" in chrome) echo Chrome ;; edge) echo Edge ;; brave) echo Brave ;; arc) echo Arc ;; opera) echo Opera ;; vivaldi) echo Vivaldi ;; firefox) echo Firefox ;; esac
+}
+
+# Opens one browser at an address, if it is on this computer. With STUDY_DUO_NO_OPEN (tests), says what it would open.
+open_in() { # $1: browser key, $2: address
+  spec="$(app_of "$1")"
+  app="${spec%%|*}"
+  rest="${spec#*|}"
+  cmds="${rest%|*}"
+  if [ "$(uname -s)" = "Darwin" ]; then
+    [ -d "/Applications/$app.app" ] || [ -d "$HOME/Applications/$app.app" ] || [ -n "${STUDY_DUO_FAKE_APPS:-}" ] || return 1
+    if [ -n "${STUDY_DUO_NO_OPEN:-}" ]; then say "Would open $(name_of "$1") at $2"; return 0; fi
+    open -a "$app" "$2" 2>/dev/null
+    return
+  fi
+  for cmd in $cmds; do
+    if command -v "$cmd" >/dev/null 2>&1 || [ -n "${STUDY_DUO_FAKE_APPS:-}" ]; then
+      if [ -n "${STUDY_DUO_NO_OPEN:-}" ]; then say "Would open $(name_of "$1") at $2"; return 0; fi
+      ("$cmd" "$2" >/dev/null 2>&1 &)
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Each browser named with --browsers: its extensions page, or for Firefox the signed add-on. Prints what happened.
+open_picked() { # $1: space-separated keys
+  chromium=0
+  for b in $1; do
+    if [ "$b" = firefox ]; then
+      if ! download_check "$XPI_URL"; then say "Firefox: the signed add-on is not published yet, so Firefox was skipped."
+      elif open_in firefox "$XPI_URL"; then say "Opened Firefox: click Allow, then Add."
+      else say "Firefox is not installed here, so it was skipped."
+      fi
+      continue
+    fi
+    scheme="$(app_of "$b")"
+    scheme="${scheme##*|}"
+    if open_in "$b" "$scheme://extensions"; then say "Opened $(name_of "$b") on its extensions page."; chromium=$((chromium + 1))
+    else say "$(name_of "$b") is not installed here, so it was skipped."
+    fi
+  done
+  [ "$chromium" -gt 0 ]
+}
+
+download_check() {
+  if command -v curl >/dev/null 2>&1; then curl -fsIL --max-time 10 "$1" >/dev/null 2>&1
+  else wget -q --spider "$1" >/dev/null 2>&1
+  fi
 }
 
 # Where each Chromium browser looks for native messaging hosts, one per line.
@@ -167,13 +234,26 @@ uninstall() {
 
 main() {
   with_helper=""
-  for arg in "$@"; do
-    case "$arg" in
+  picked=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
       --uninstall) uninstall; return 0 ;;
       --helper) with_helper=1 ;;
-      *) fail "unknown option $arg (use --helper or --uninstall)." ;;
+      --browsers)
+        [ $# -ge 2 ] || fail "--browsers needs a list, for example --browsers chrome,firefox."
+        for b in $(printf '%s' "$2" | tr ',' ' '); do
+          case " $BROWSERS " in *" $b "*) picked="$picked $b" ;; *) fail "unknown browser $b (use: $(printf '%s' "$BROWSERS" | tr ' ' ','))." ;; esac
+        done
+        shift ;;
+      *) fail "unknown option $1 (use --browsers, --helper or --uninstall)." ;;
     esac
+    shift
   done
+  # Only Firefox: it installs from its signed file, so the Chromium folder is not needed.
+  if [ -n "$picked" ] && [ "$(printf '%s' "$picked" | tr -d ' ')" = firefox ]; then
+    open_picked firefox || true
+    return 0
+  fi
   if grep -qi microsoft /proc/version 2>/dev/null; then
     fail "this looks like WSL. Run the Windows line in PowerShell instead: powershell -c \"irm https://raw.githubusercontent.com/$REPO/main/install.ps1 | iex\""
   fi
@@ -206,11 +286,15 @@ main() {
   say "Study Duo is ready in:"
   say "  $DEST"
   if copy_path "$DEST"; then say "(That path is on your clipboard.)"; fi
-  open_extensions || say "Open your browser's extensions page (for example chrome://extensions)."
+  if [ -n "$picked" ]; then
+    open_picked "$picked" || say "None of the browsers you picked for the folder is on this computer."
+  else
+    open_extensions || say "Open your browser's extensions page (for example chrome://extensions)."
+  fi
   say ""
   [ -z "$with_helper" ] || install_helper
   say ""
-  say "Three clicks left, once:"
+  say "In each Chromium browser, three clicks left, once:"
   say "  1. Turn on Developer mode (top right of the extensions page)."
   say "  2. Click Load unpacked."
   say "  3. Choose the folder above. On a Mac, press Cmd+Shift+G in that window and paste the path."
