@@ -68,8 +68,9 @@
 
   /** A screenshot with its ring and arrow, from shots/marks.json; nothing at all when the shot does not exist yet. */
   function fillShot(el, name) {
-    const key = `${os}-${shown || 'chrome'}-${name}`;
-    const m = marks[key] || marks[`${os}-${name}`] || marks[name];
+    // Most specific first: this system and browser, then the browser's own page (the same everywhere), then the system.
+    const b = shown || 'chrome';
+    const m = marks[`${os}-${b}-${name}`] || marks[`${b}-${name}`] || marks[`${os}-${name}`] || marks[name];
     el.textContent = '';
     if (!m) return;
     const img = new Image();
