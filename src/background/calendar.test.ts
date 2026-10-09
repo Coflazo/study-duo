@@ -27,6 +27,7 @@ class FakeGoogle {
   /** Every event insert answered with this error, Google's way: { error: { errors: [{ reason }] } }. */
   refuse: { status: number; reason: string } | null = null;
   calls: string[] = [];
+  patched: string[] = [];
   send: CalendarDeps['send'] = async (url, init) => {
     this.calls.push(`${init.method} ${url.replace(API, '')}`);
     if (this.down) throw new NetError('Could not reach www.googleapis.com.');
@@ -49,8 +50,10 @@ class FakeGoogle {
       return { status: 200, data: body };
     }
     const ev = /\/events\/([^/]+)$/.exec(url)?.[1];
+    // Like Google: a deleted event is kept with status "cancelled"; reading it works, and so would patching it.
+    if (ev && init.method === 'GET') return this.deleted.has(ev) ? { status: 200, data: { id: ev, status: 'cancelled' } } : this.events.has(ev) ? { status: 200, data: { id: ev, status: 'confirmed' } } : { status: 404, data: null };
     if (ev && init.method === 'PATCH') {
-      if (this.deleted.has(ev)) return { status: 404, data: null };
+      this.patched.push(ev);
       this.events.set(ev, { ...this.events.get(ev), ...body });
       return { status: 200, data: null };
     }
@@ -158,10 +161,11 @@ describe('syncCalendar', () => {
     expect(String(google.events.get(eventId(s.id))!.description)).toContain('Focus: 5 of 5');
   });
 
-  it('leaves an event the user deleted deleted', async () => {
+  it('leaves an event the user deleted deleted: it checks before updating, and never patches it back', async () => {
     const s = await block({});
     google.deleted.add(eventId(s.id));
     await syncCalendar(NOW, deps);
+    expect(google.patched).toEqual([]);
     expect(google.events.size).toBe(0);
     expect((await g()).error).toBeNull();
     expect((await g()).sent[s.id]).toBeDefined(); // not tried again

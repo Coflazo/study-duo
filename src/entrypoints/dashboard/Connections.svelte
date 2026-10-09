@@ -252,7 +252,7 @@
         <div class="row">
           <div class="text">
             <p class="label" id="fm-title">Last.fm</p>
-            <p class="help" id="fm-help">Needs your Last.fm username and a free API key from last.fm/api.</p>
+            <p class="help" id="fm-help">Needs your Last.fm username and a free API key from last.fm/api. Last.fm does not say which app played a song, so its songs are listed but never used for insights, in case Spotify played them.</p>
           </div>
         </div>
         <form class="row fields" onsubmit={(e) => (e.preventDefault(), connectFm())}>

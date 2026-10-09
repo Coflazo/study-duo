@@ -4,6 +4,11 @@ All notable changes to Study Duo are listed here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+### Fixed
+
+- Songs from Last.fm are no longer used for insights: Last.fm does not say which app played a song, and Spotify's songs must never feed them (#46). They still show in your listens.
+- An event you delete in Google Calendar stays deleted: Study Duo now checks before it updates one.
+
 ### Added
 
 - Your music folder, played like a music app (Chrome and other Chromium browsers): pick a folder on the Music page, search it, browse by song, artist or album, play all or shuffle. Songs keep playing with every Study Duo page closed, fade in and out softly, and keep their place while you switch to noise. Study Duo keeps the songs' names and small covers, never the music. After Chrome restarts, one click reconnects the folder.
