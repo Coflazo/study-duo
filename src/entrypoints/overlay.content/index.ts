@@ -1,7 +1,6 @@
 import { tickPlan } from '@/core/capsule';
-import { isPing, parseAnnounce } from '@/core/messages';
-import { DEFAULT_SETTINGS, normalizeSettings } from '@/core/settings';
-import { settingsItem, timerItem } from '@/core/store';
+import { isPing, parseAnnounce, parseClockState, type ClockState } from '@/core/messages';
+import { DEFAULT_SETTINGS } from '@/core/settings';
 import { displayMs, initialState, isBreak } from '@/core/timer';
 import { createAnnouncer } from '@/overlay/announce';
 import { createClock } from '@/overlay/clock';
@@ -97,6 +96,8 @@ export default defineContentScript({
     const onMessage = (raw: unknown, sender: { id?: string }, sendResponse: (answer: boolean) => void) => {
       if (sender.id !== browser.runtime.id) return;
       if (isPing(raw)) return void sendResponse(alive());
+      const fresh = parseClockState(raw);
+      if (fresh) return void hear(fresh);
       const msg = parseAnnounce(raw);
       if (!msg) return;
       if (!alive()) return teardown();
@@ -108,11 +109,20 @@ export default defineContentScript({
     browser.runtime.onMessage.addListener(onMessage);
     life.signal.addEventListener('abort', () => browser.runtime.onMessage?.removeListener(onMessage));
 
-    // Filled in after the watchers below are in place, so no change between reading and watching is lost.
+    // Filled in by the background: its answer to our hello, then a message at every change. A change that arrives
+    // before the answer wins over it, so nothing between asking and listening is lost.
     let state = initialState();
     let settings = DEFAULT_SETTINGS;
-    let heardTimer = false;
-    let heardSettings = false;
+    let heard = false;
+    const listeners: Array<() => void> = [];
+    function hear(s: ClockState) {
+      heard = true;
+      state = s.timer;
+      settings = s.settings;
+      asked = false; // the lock or the mode may have changed with the phase
+      render();
+      for (const l of listeners) l();
+    }
     let closed = false;
     let near = false;
     let tickedFor: number | null = null;
@@ -274,23 +284,11 @@ export default defineContentScript({
       removed.disconnect();
       clearTimeout(returning);
     });
-    const unwatch = [
-      timerItem.watch((v) => {
-        heardTimer = true;
-        state = v ?? initialState();
-        asked = false; // the lock or the mode may have changed with the phase
-        render();
-      }),
-      settingsItem.watch((v) => {
-        heardSettings = true;
-        settings = normalizeSettings(v ?? DEFAULT_SETTINGS);
-        render();
-      }),
-    ];
-    life.signal.addEventListener('abort', () => unwatch.forEach((u) => u()));
-    const [storedTimer, storedSettings] = await Promise.all([timerItem.getValue(), settingsItem.getValue()]);
-    if (!heardTimer) state = storedTimer;
-    if (!heardSettings) settings = normalizeSettings(storedSettings);
+    const first = parseClockState({ kind: 'overlay', op: 'state', ...((await browser.runtime.sendMessage({ kind: 'overlay', op: 'hello' }).catch(() => null)) ?? {}) });
+    if (first && !heard) {
+      state = first.timer;
+      settings = first.settings;
+    }
 
     // Opt-in input counts (off by default): during running study blocks only, sent once a minute and when the page goes.
     const counter = createInputCounter();
@@ -316,7 +314,7 @@ export default defineContentScript({
     // Switching tabs hides the page: hand over the partial minute while its site's record is still the open one.
     document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && send(), { signal: life.signal });
     life.signal.addEventListener('abort', () => clearInterval(minute));
-    unwatch.push(timerItem.watch(() => syncCounting()), settingsItem.watch(() => syncCounting()));
+    listeners.push(syncCounting);
     syncCounting();
 
     // Now playing, on music sites only: read on media events and on a slow beat, report only changes.

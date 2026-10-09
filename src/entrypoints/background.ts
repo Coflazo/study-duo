@@ -1,6 +1,6 @@
 import { ALARM_PHASE_END, ALARM_REFRESH, applyEffects } from '@/background/effects';
 import { createTimerService } from '@/background/timer-service';
-import { allowedFromSender, isFromWebPage, parseCounts, parseMessage, parseMove, parseSiteMessage, parseSound, resolveSiteRequest } from '@/core/messages';
+import { allowedFromSender, isClockHello, isFromWebPage, parseCounts, parseMessage, parseMove, parseSiteMessage, parseSound, resolveSiteRequest } from '@/core/messages';
 import { playerCommands } from '@/background/player';
 import { parsePlayer, soundToPlayer } from '@/core/player';
 import { normalizeSettings } from '@/core/settings';
@@ -9,7 +9,7 @@ import { createSiteMenu, handleSiteRequest, onSiteMenuClick } from '@/background
 import { loadSettings, loadState, musicSeededItem, settingsItem, sitesItem, timerItem } from '@/core/store';
 import { normalizeSites, seedMusicSites } from '@/core/sites';
 import { unlockedItem } from '@/background/site-lock';
-import { ensureOverlay, keepClocksOnOpenTabs } from '@/background/overlay-inject';
+import { clockState, ensureOverlay, keepClocksOnOpenTabs, sendClocks } from '@/background/overlay-inject';
 import { acceptCounts, trackActivity } from '@/background/activity';
 import { hearTab, trackMusic } from '@/background/music';
 import { isMusicStop, isYouTubeVideoHost, parseNowPlaying } from '@/core/music';
@@ -41,6 +41,10 @@ export default defineBackground(() => {
     if ((song || isMusicStop(raw)) && sender.tab?.id !== undefined && isFromWebPage(sender.url, base)) void hearTab(sender.tab.id, sender.url, song);
     const counts = parseCounts(raw);
     if (counts && sender.tab?.id !== undefined && isFromWebPage(sender.url, base)) void acceptCounts(sender.tab.id, sender.url, counts);
+    if (isClockHello(raw) && isFromWebPage(sender.url, base)) {
+      clockState().then(sendResponse, () => sendResponse(null));
+      return true;
+    }
     const pos = parseMove(raw);
     if (pos) void settingsItem.getValue().then((v) => settingsItem.setValue({ ...normalizeSettings(v), overlayPos: pos })).catch(console.error);
     // "Check now" from the Connections screen; web pages cannot trigger requests.
@@ -86,6 +90,10 @@ export default defineBackground(() => {
     await Promise.all(tabs.map((t) => (t.id === undefined ? undefined : ensureOverlay(t.id))));
   }
   keepClocksOnOpenTabs();
+  // Web pages' scripts cannot read or write Study Duo's storage (Chrome); their clocks get the timer by message (#30).
+  void (browser.storage.local as { setAccessLevel?: (o: { accessLevel: string }) => Promise<void> }).setAccessLevel?.({ accessLevel: 'TRUSTED_CONTEXTS' })?.catch(console.error);
+  timerItem.watch(() => void sendClocks().catch(console.error));
+  settingsItem.watch(() => void sendClocks().catch(console.error));
   trackActivity();
   trackMusic();
   trackConnections();

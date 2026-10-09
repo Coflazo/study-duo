@@ -3,7 +3,7 @@ import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { DEFAULT_SETTINGS } from '@/core/settings';
 import { settingsItem, timerItem } from '@/core/store';
 import { initialState, reduce } from '@/core/timer';
-import { ensureOverlay, keepClocksOnOpenTabs } from './overlay-inject';
+import { clockState, ensureOverlay, keepClocksOnOpenTabs, sendClocks } from './overlay-inject';
 
 const sendMessage = vi.fn();
 const executeScript = vi.fn(async () => []);
@@ -94,5 +94,20 @@ describe('keepClocksOnOpenTabs', () => {
     await fakeBrowser.tabs.onActivated.trigger({ tabId: 4, windowId: 1 });
     await flush();
     expect(sendMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe('clocks get the timer by message (#30)', () => {
+  it('answers with the timer and the settings, and sends them to every web page, ignoring tabs without a clock', async () => {
+    const running = reduce(initialState(), { type: 'start' }, DEFAULT_SETTINGS, 1_000).state;
+    await timerItem.setValue(running);
+    await settingsItem.setValue({ ...DEFAULT_SETTINGS, overlayEnabled: false });
+    expect(await clockState()).toEqual({ timer: running, settings: { ...DEFAULT_SETTINGS, overlayEnabled: false } });
+    query.mockResolvedValue([{ id: 1, active: true }, { id: 2, active: false }]);
+    sendMessage.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('Receiving end does not exist.'));
+    await sendClocks();
+    expect(query).toHaveBeenCalledWith({ url: ['http://*/*', 'https://*/*'] });
+    expect(sendMessage.mock.calls.map((c) => c[0])).toEqual([1, 2]);
+    expect(sendMessage.mock.calls[0]![1]).toMatchObject({ kind: 'overlay', op: 'state', timer: running });
   });
 });
