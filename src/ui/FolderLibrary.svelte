@@ -5,7 +5,7 @@
    */
   import { onDestroy, onMount } from 'svelte';
   import { groupTracks, searchTracks, sortTracks, type Track } from '@/core/library';
-  import { forgetLibrary, loadFolder, loadTracks, type FolderRecord } from '@/core/library-db';
+  import { forgetLibrary, loadFolder, loadTracks, onLibraryChange, type FolderRecord } from '@/core/library-db';
   import { INITIAL_PLAYER, type PlayerState, type PlayerTrack } from '@/core/player';
   import { playerItem } from '@/core/session-store';
   import { clip } from '@/core/text';
@@ -90,12 +90,18 @@
   }
 
   let unwatch: (() => void) | undefined;
+  let unlisten: (() => void) | undefined;
   onMount(async () => {
     unwatch = playerItem.watch((v) => (player = v ?? INITIAL_PLAYER));
+    // Picked or forgotten on another page (the Music page, or the panel's own library): show the same folder here.
+    unlisten = onLibraryChange(() => void Promise.all([loadFolder(), loadTracks()]).then(([f, t]) => ((folder = f), (tracks = t)), () => undefined));
     [player, folder, tracks] = await Promise.all([playerItem.getValue(), loadFolder().catch(() => null), loadTracks().catch(() => [])]);
     await checkPermission();
   });
-  onDestroy(() => unwatch?.());
+  onDestroy(() => {
+    unwatch?.();
+    unlisten?.();
+  });
   $effect(() => {
     if (player.problem === 'reconnect') needsReconnect = true;
   });

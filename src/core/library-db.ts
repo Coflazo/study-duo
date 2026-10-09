@@ -43,9 +43,23 @@ async function withLibrary<T>(fn: (db: IDBPDatabase<Schema>) => Promise<T>): Pro
   }
 }
 
+// Pages that stay open (the side panel, the Music page) hear when another page picks, rescans or forgets the folder.
+const CHANNEL = 'study-duo-library';
+const announce = () => {
+  const c = new BroadcastChannel(CHANNEL);
+  c.postMessage('changed');
+  c.close();
+};
+/** Calls `fn` whenever any Study Duo page saves or forgets the folder. Returns a function that stops listening. */
+export function onLibraryChange(fn: () => void): () => void {
+  const c = new BroadcastChannel(CHANNEL);
+  c.onmessage = () => fn();
+  return () => c.close();
+}
+
 /** A fresh scan: the folder and its songs replace what was kept, and thumbnails of songs that are gone go too. */
-export function saveLibrary(folder: Omit<FolderRecord, 'count'>, tracks: Track[]): Promise<void> {
-  return withLibrary(async (db) => {
+export async function saveLibrary(folder: Omit<FolderRecord, 'count'>, tracks: Track[]): Promise<void> {
+  await withLibrary(async (db) => {
     const tx = db.transaction(['tracks', 'thumbs', 'folder'], 'readwrite');
     const keep = new Set(tracks.map((t) => t.id));
     await tx.objectStore('tracks').clear();
@@ -54,6 +68,7 @@ export function saveLibrary(folder: Omit<FolderRecord, 'count'>, tracks: Track[]
     await tx.objectStore('folder').put({ ...folder, count: tracks.length }, FOLDER);
     await tx.done;
   });
+  announce();
 }
 
 export const loadTracks = (): Promise<Track[]> => withLibrary((db) => db.getAll('tracks'));
@@ -62,9 +77,10 @@ export const saveThumb = (id: string, blob: Blob): Promise<void> => withLibrary(
 export const loadThumb = (id: string): Promise<Blob | null> => withLibrary(async (db) => (await db.get('thumbs', id)) ?? null);
 
 /** "Delete everything" in Your data, or Forget folder: the folder, the songs and the thumbnails. */
-export function forgetLibrary(): Promise<void> {
-  return withLibrary(async (db) => {
+export async function forgetLibrary(): Promise<void> {
+  await withLibrary(async (db) => {
     const tx = db.transaction(['tracks', 'thumbs', 'folder'], 'readwrite');
     await Promise.all([tx.objectStore('tracks').clear(), tx.objectStore('thumbs').clear(), tx.objectStore('folder').clear(), tx.done]);
   });
+  announce();
 }
