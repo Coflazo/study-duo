@@ -9,6 +9,7 @@
   import { settingsItem } from '@/core/store';
   import { clip } from '@/core/text';
   import { ICONS } from '@/ui/icons';
+  import SeekLine from '@/ui/SeekLine.svelte';
   import SleeveArt from '@/ui/SleeveArt.svelte';
 
   /**
@@ -35,7 +36,7 @@
   let menuOpen = $state(false);
   let menuFromKeys = $state(false);
   let now = $state(Date.now());
-  let dragging = $state<number | null>(null);
+  let loaded = $state(false);
   let cover = $state<string | null>(null);
   let srcEl: HTMLButtonElement | undefined = $state();
   let menuEl: HTMLDivElement | undefined = $state();
@@ -45,19 +46,12 @@
   const track = $derived(view === 'folder' ? player.now : null);
   const playing = $derived(player.playing && (view === 'folder' ? player.active === 'folder' : player.active === 'noise' || player.active === null));
   const duration = $derived(player.duration ?? 0);
-  const position = $derived(dragging ?? positionAt(player, now));
+  const position = $derived(positionAt(player, now));
   const upNext = $derived(view === 'folder' ? player.upNext : null);
   const tint = $derived(view === 'folder' ? (track?.color ?? NO_COVER) : noise.tint);
   const label = $derived(view === 'folder' ? 'FOLDER' : 'SOUNDS');
   const sleeveText = $derived(track ? [track.artist, track.album].filter(Boolean).join('\n').toUpperCase() || 'YOUR\nFOLDER' : 'YOUR\nFOLDER');
   const send = (cmd: PlayerCommand) => browser.runtime.sendMessage({ kind: 'player', ...cmd }).catch(() => undefined);
-  const fmt = (ms: number) => {
-    const s = Math.floor(ms / 1000);
-    const h = Math.floor(s / 3600);
-    const m = Math.floor(s / 60) % 60;
-    const ss = String(s % 60).padStart(2, '0');
-    return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
-  };
 
   /** Settings, Spinning disc: "Always" turns it even when the computer asks for less motion. */
   let always = $state(false);
@@ -84,12 +78,13 @@
   });
 
   // The cover thumbnail of the song on the card.
+  const coverId = $derived(track?.cover ? track.id : null);
   $effect(() => {
-    const id = track?.cover ? track.id : null;
+    const id = coverId;
     let url: string | null = null;
     let gone = false;
+    cover = null;
     if (id) void loadThumb(id).then((b) => !gone && b && (cover = url = URL.createObjectURL(b))).catch(() => undefined);
-    else cover = null;
     return () => {
       gone = true;
       if (url) URL.revokeObjectURL(url);
@@ -112,10 +107,16 @@
     if (e.key === 'Escape') {
       e.preventDefault();
       closeMenu(true);
+    } else if (e.key === 'Tab') {
+      closeMenu(false);
     } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus();
     }
+  }
+  function menuBlur(e: FocusEvent) {
+    const to = e.relatedTarget as Node | null;
+    if (to && !menuEl?.contains(to) && !srcEl?.contains(to)) closeMenu(false);
   }
   function outside(e: PointerEvent) {
     if (menuOpen && !menuEl?.contains(e.target as Node) && !srcEl?.contains(e.target as Node)) closeMenu(false);
@@ -144,14 +145,10 @@
     if (h?.requestPermission && (await h.requestPermission({ mode: 'read' }).catch(() => 'denied')) === 'granted') void send({ op: 'play' });
     else openMusicPage();
   }
-  function seekKeys(e: KeyboardEvent) {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-    e.preventDefault();
-    void send({ op: 'seek', ms: Math.max(0, positionAt(player, Date.now()) + (e.key === 'ArrowRight' ? 5_000 : -5_000)) });
-  }
 
   let unwatch: (() => void) | undefined;
   onMount(async () => {
+    void browser.windows.getCurrent().then((w) => (windowId = w.id)).catch(() => undefined);
     const unwatchPlayer = playerItem.watch((v) => (player = v ?? INITIAL_PLAYER));
     const unwatchSettings = settingsItem.watch((v) => (always = normalizeSettings(v).discMotion === 'always'));
     unwatch = () => (unwatchPlayer(), unwatchSettings());
@@ -160,8 +157,8 @@
       settingsItem.getValue().then((v) => normalizeSettings(v).discMotion === 'always'),
       loadFolder().catch(() => null),
     ]);
+    loaded = true;
     document.addEventListener('pointerdown', outside);
-    windowId = (await browser.windows.getCurrent().catch(() => undefined))?.id;
   });
   onDestroy(() => {
     unwatch?.();
@@ -178,7 +175,7 @@
 
 <section class="card" aria-label="Player">
   <div class="body">
-    <SleeveArt {art} {playing} {always} />
+    <SleeveArt {art} {playing} {always} live={loaded} />
     <div class="col">
       <button class="src" bind:this={srcEl} aria-haspopup="menu" aria-expanded={menuOpen} aria-controls="player-sources" onclick={(e) => (menuOpen ? closeMenu(false) : openMenu(e.detail === 0))}>
         <span class="lamp"></span>{label}<svg viewBox="0 0 256 256" aria-hidden="true"><path d={CARET} /></svg>
@@ -224,23 +221,7 @@
       {@render key(playing ? 'Pause' : 'Play', playing ? ICONS.pause : ICONS.play, () => send({ op: 'toggle' }))}
     </div>
   {:else if track}
-    <div class="seek">
-      <span>{fmt(position)}</span>
-      <div class="track" style:--p="{duration ? Math.min(100, (position / duration) * 100) : 0}%">
-        <input
-          type="range" min="0" max={Math.max(1, Math.round(duration / 1000))} step="1" value={Math.round(position / 1000)} disabled={!duration}
-          aria-label="Position" aria-valuetext="{fmt(position)} of {fmt(duration)}"
-          oninput={(e) => (dragging = Number(e.currentTarget.value) * 1000)}
-          onchange={(e) => {
-            void send({ op: 'seek', ms: Number(e.currentTarget.value) * 1000 });
-            dragging = null;
-          }}
-          onkeydown={seekKeys}
-        />
-        {#if dragging !== null}<span class="tip" aria-hidden="true">{fmt(dragging)}</span>{/if}
-      </div>
-      <span>{duration ? fmt(duration) : '0:00'}</span>
-    </div>
+    <SeekLine {position} {duration} stamp={player.at} onseek={(ms) => send({ op: 'seek', ms })} />
     {#if player.queue}
       <p class="foot">Your folder · {player.queue.at + 1} of {player.queue.order.length}{upNext ? ` · Up next: ${clip(upNext, 40)}` : ''}</p>
     {/if}
@@ -248,11 +229,13 @@
 
   {#if menuOpen}
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-    <div class="menu" class:instant={menuFromKeys} id="player-sources" role="menu" tabindex="-1" aria-label="Play from" bind:this={menuEl} onkeydown={menuKeys}>
-      <p class="group">ON THIS COMPUTER</p>
-      {@render item('folder', FOLDER, 'Your folder', folder ? `${clip(folder.name, 30)} · ${folder.count} ${folder.count === 1 ? 'song' : 'songs'}` : 'Choose a folder on the Music page')}
-      {@render item('noise', WAVE, 'Focus noise', 'White, pink or brown')}
-      <div class="sep"></div>
+    <div class="menu" class:instant={menuFromKeys} id="player-sources" role="menu" tabindex="-1" aria-label="Play from" bind:this={menuEl} onkeydown={menuKeys} onfocusout={menuBlur}>
+      <div role="group" aria-labelledby="sources-local">
+        <p class="group" id="sources-local">ON THIS COMPUTER</p>
+        {@render item('folder', FOLDER, 'Your folder', folder ? `${clip(folder.name, 30)} · ${folder.count} ${folder.count === 1 ? 'song' : 'songs'}` : 'Choose a folder on the Music page')}
+        {@render item('noise', WAVE, 'Focus noise', 'White, pink or brown')}
+      </div>
+      <div class="sep" role="separator"></div>
       <button class="open" role="menuitem" onclick={openPanel}>Open the full player</button>
     </div>
   {/if}
@@ -315,23 +298,6 @@
   .key.flip svg { transform: rotate(180deg); }
   .key:active:not(:disabled), .src:active, .action:active { transform: scale(0.97); }
   .key svg { inline-size: 16px; block-size: 16px; fill: currentColor; }
-  .seek { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; font: 500 11px/14px var(--font-family-mono); color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
-  .track { position: relative; }
-  .track input { inline-size: 100%; block-size: 24px; margin: 0; appearance: none; background: transparent; cursor: pointer; }
-  .track input:disabled { cursor: default; }
-  .track input::-webkit-slider-runnable-track {
-    block-size: 4px; border-radius: 2px;
-    background: linear-gradient(var(--color-text-focus), var(--color-text-focus)) 0 / var(--p, 0%) 100% no-repeat, var(--color-bg-sunken);
-  }
-  .track input::-webkit-slider-thumb { appearance: none; inline-size: 12px; block-size: 12px; margin-block-start: -4px; border-radius: 50%; background: var(--color-text-primary); box-shadow: 0 0 0 2px var(--color-bg-panel); transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1); }
-  .track input:active::-webkit-slider-thumb { transform: scale(1.33); }
-  .track input::-moz-range-track { block-size: 4px; border-radius: 2px; background: var(--color-bg-sunken); }
-  .track input::-moz-range-progress { block-size: 4px; border-radius: 2px; background: var(--color-text-focus); }
-  .track input::-moz-range-thumb { inline-size: 12px; block-size: 12px; border: 0; border-radius: 50%; background: var(--color-text-primary); }
-  .tip {
-    position: absolute; inset-block-end: 24px; inset-inline-start: var(--p); transform: translateX(-50%); padding: 3px 6px; border-radius: 4px;
-    background: var(--color-bg-action); color: var(--color-text-on-action); font: 600 11px/14px var(--font-family-mono); pointer-events: none;
-  }
   .foot { margin: 0; font: 500 11px/14px var(--font-family-mono); color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .menu {
     position: absolute; z-index: 4; inset-inline-end: 12px; inset-block-start: 40px; inline-size: min(264px, calc(100% - 24px)); padding-block: 6px;

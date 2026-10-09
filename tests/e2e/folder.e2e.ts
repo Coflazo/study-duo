@@ -131,6 +131,13 @@ test('the side panel: library, then now playing with shuffle, repeat and up next
   // Up next: a click jumps to that song.
   await page.getByRole('list').getByRole('button', { name: /Nocturne/ }).click();
   await expect(page.locator('.title')).toHaveText('Nocturne');
+
+  // The popup opened mid-song shows the disc already out and turning at full speed, never spinning up from rest.
+  const popup = await ctx.newPage();
+  await popup.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  await expect(popup.locator('.art.ready')).toBeVisible();
+  expect(await popup.evaluate(() => ({ out: document.querySelector('.disc')!.classList.contains('out'), turning: document.querySelector('.spin')!.getAnimations().length > 0 }))).toEqual({ out: true, turning: true });
+  await popup.close();
   await page.getByRole('button', { name: 'Pause' }).click();
   await expect.poll(async () => (await player())?.playing).toBe(false);
   await ctx.close();

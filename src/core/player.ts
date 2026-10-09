@@ -258,7 +258,7 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
     }
     case 'jump': {
       if (s.active !== 'folder' || !s.queue || cmd.at >= s.queue.order.length) return { state: s, effects: [] };
-      return toSong({ ...s, playing: true, startedAt: s.playing ? s.startedAt : now }, { ...s.queue, at: cmd.at }, now);
+      return toSong({ ...s, playing: true, problem: null, startedAt: s.playing ? s.startedAt : now }, { ...s.queue, at: cmd.at }, now);
     }
     case 'prev': {
       if (s.active !== 'folder' || !s.queue) return { state: s, effects: [] };

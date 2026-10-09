@@ -15,6 +15,7 @@
   import FolderLibrary from '@/ui/FolderLibrary.svelte';
   import { ICONS } from '@/ui/icons';
   import Segmented from '@/ui/Segmented.svelte';
+  import SeekLine from '@/ui/SeekLine.svelte';
   import SleeveArt from '@/ui/SleeveArt.svelte';
 
   const NOISE: Record<NoiseKind, { name: string; title: string; sleeve: string; c: [string, string]; ink: string; ring: string; mark: string; tint: string; chip: string; chipInk: string }> = {
@@ -39,7 +40,7 @@
   let folder = $state<FolderRecord | null>(null);
   let always = $state(false);
   let now = $state(Date.now());
-  let dragging = $state<number | null>(null);
+  let loaded = $state(false);
   let cover = $state<string | null>(null);
 
   const view = $derived<'noise' | 'folder'>(player.active === 'folder' ? 'folder' : 'noise');
@@ -47,7 +48,7 @@
   const track = $derived(view === 'folder' ? player.now : null);
   const playing = $derived(player.playing && (view === 'folder' ? player.active === 'folder' : player.active === 'noise' || player.active === null));
   const duration = $derived(player.duration ?? 0);
-  const position = $derived(dragging ?? positionAt(player, now));
+  const position = $derived(positionAt(player, now));
   const repeat = $derived<Repeat>(player.queue?.repeat ?? 'off');
   /** The next songs in play order, with their place in the queue, for Up next. */
   const upNext = $derived.by(() => {
@@ -69,18 +70,6 @@
   );
 
   const send = (cmd: PlayerCommand) => browser.runtime.sendMessage({ kind: 'player', ...cmd }).catch(() => undefined);
-  const fmt = (ms: number) => {
-    const s = Math.floor(ms / 1000);
-    const h = Math.floor(s / 3600);
-    const m = Math.floor(s / 60) % 60;
-    const ss = String(s % 60).padStart(2, '0');
-    return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
-  };
-  function seekKeys(e: KeyboardEvent) {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-    e.preventDefault();
-    void send({ op: 'seek', ms: Math.max(0, positionAt(player, Date.now()) + (e.key === 'ArrowRight' ? 5_000 : -5_000)) });
-  }
   async function reconnect() {
     const h = folder?.handle as (FileSystemDirectoryHandle & { requestPermission?(d: { mode: 'read' }): Promise<PermissionState> }) | undefined;
     if (h?.requestPermission && (await h.requestPermission({ mode: 'read' }).catch(() => 'denied')) === 'granted') void send({ op: 'play' });
@@ -91,12 +80,13 @@
     const id = setInterval(() => (now = Date.now()), 500);
     return () => clearInterval(id);
   });
+  const coverId = $derived(track?.cover ? track.id : null);
   $effect(() => {
-    const id = track?.cover ? track.id : null;
+    const id = coverId;
     let url: string | null = null;
     let gone = false;
+    cover = null;
     if (id) void loadThumb(id).then((b) => !gone && b && (cover = url = URL.createObjectURL(b))).catch(() => undefined);
-    else cover = null;
     return () => {
       gone = true;
       if (url) URL.revokeObjectURL(url);
@@ -121,6 +111,7 @@
       loadFolder().catch(() => null),
       settingsItem.getValue().then((v) => normalizeSettings(v).discMotion === 'always'),
     ]);
+    loaded = true;
   });
   onDestroy(() => unwatch.forEach((u) => u()));
 </script>
@@ -140,7 +131,7 @@
 
   {#if section === 'now'}
     <div class="now">
-      <div class="art"><SleeveArt {art} {playing} {always} size="large" /></div>
+      <div class="art"><SleeveArt {art} {playing} {always} live={loaded} size="large" /></div>
       <Segmented options={SOURCES} value={view} label="Play from" onchange={(v) => v !== view && send({ op: 'source', source: v })} />
 
       {#if view === 'noise'}
@@ -173,23 +164,7 @@
           <p class="title" title={track.title}>{clip(track.title)}</p>
           <p class="sub">{player.problem === 'missing' ? 'This file is gone from your folder' : [track.artist, track.album].filter(Boolean).join(' · ') || 'Your folder'}</p>
         </div>
-        <div class="seek">
-          <span>{fmt(position)}</span>
-          <div class="track" style:--p="{duration ? Math.min(100, (position / duration) * 100) : 0}%">
-            <input
-              type="range" min="0" max={Math.max(1, Math.round(duration / 1000))} step="1" value={Math.round(position / 1000)} disabled={!duration}
-              aria-label="Position" aria-valuetext="{fmt(position)} of {fmt(duration)}"
-              oninput={(e) => (dragging = Number(e.currentTarget.value) * 1000)}
-              onchange={(e) => {
-                void send({ op: 'seek', ms: Number(e.currentTarget.value) * 1000 });
-                dragging = null;
-              }}
-              onkeydown={seekKeys}
-            />
-            {#if dragging !== null}<span class="tip" aria-hidden="true">{fmt(dragging)}</span>{/if}
-          </div>
-          <span>{duration ? fmt(duration) : '0:00'}</span>
-        </div>
+        <SeekLine {position} {duration} stamp={player.at} size="large" onseek={(ms) => send({ op: 'seek', ms })} />
         <div class="transport">
           {@render key('Shuffle', SHUFFLE, () => send({ op: 'shuffle' }), { on: !!player.queue?.shuffle, grid: 256 })}
           {@render key('Previous', ICONS.skip, () => send({ op: 'prev' }), { flip: true })}
@@ -207,7 +182,7 @@
         <span>{Math.round(player.volume * 100)}%</span>
       </label>
 
-      {#if view === 'folder' && upNext.length}
+      {#if view === 'folder' && upNext.length && player.problem !== 'reconnect'}
         <section aria-labelledby="next-title">
           <h2 id="next-title" class="eyebrow">Up next</h2>
           <ol class="queue">
@@ -243,14 +218,6 @@
   .noises button { block-size: 40px; border: 0; font: 600 14px/18px var(--font-family-ui); cursor: pointer; }
   .noises button + button { border-inline-start: 1px solid var(--color-border-control); }
   .noises button[aria-checked='true'] { font-weight: 700; box-shadow: inset 0 0 0 2px #17191c; }
-  .seek { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; font: 500 12px/16px var(--font-family-mono); color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
-  .track { position: relative; }
-  .track input { inline-size: 100%; block-size: 24px; margin: 0; appearance: none; background: transparent; cursor: pointer; }
-  .track input::-webkit-slider-runnable-track { block-size: 4px; border-radius: 2px; background: linear-gradient(var(--color-text-focus), var(--color-text-focus)) 0 / var(--p, 0%) 100% no-repeat, var(--color-bg-sunken); }
-  .track input::-webkit-slider-thumb { appearance: none; inline-size: 14px; block-size: 14px; margin-block-start: -5px; border-radius: 50%; background: var(--color-text-primary); box-shadow: 0 0 0 2px var(--color-bg-canvas); }
-  .track input::-moz-range-track { block-size: 4px; border-radius: 2px; background: var(--color-bg-sunken); }
-  .track input::-moz-range-progress { block-size: 4px; border-radius: 2px; background: var(--color-text-focus); }
-  .tip { position: absolute; inset-block-end: 24px; inset-inline-start: var(--p); transform: translateX(-50%); padding: 3px 6px; border-radius: 4px; background: var(--color-bg-action); color: var(--color-text-on-action); font: 600 11px/14px var(--font-family-mono); pointer-events: none; }
   .transport { display: flex; align-items: center; justify-content: center; gap: 8px; }
   .key {
     position: relative; display: grid; place-items: center; inline-size: 40px; block-size: 40px; border: 0; border-radius: 6px; background: none;

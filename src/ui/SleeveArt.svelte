@@ -12,7 +12,10 @@
     | { kind: 'noise'; c: [string, string]; ring: string; mark: string; sleeve: string; ink: string }
     | { kind: 'cd'; color: string; cover: string | null; sleeve: string }
     | { kind: 'empty'; sleeve: string };
-  let { art, playing, always, size = 'small' }: { art: Art; playing: boolean; always: boolean; size?: 'small' | 'large' } = $props();
+  /** live: the parent has read the real player state. Until then nothing moves, so a disc opened mid-song is not
+   *  spun up from rest. */
+  let { art, playing, always, live = true, size = 'small' }: { art: Art; playing: boolean; always: boolean; live?: boolean; size?: 'small' | 'large' } = $props();
+  let started = false;
 
   let out = $state(false);
   let ready = $state(false);
@@ -73,10 +76,9 @@
     void playing;
     void always;
     void spinEl; // a source change swaps the disc on screen: hand the turning to the new one
-    drive();
-  });
-
-  onMount(async () => {
+    if (!live) return;
+    if (started) return drive();
+    started = true;
     // Opened while it plays: the disc is already out and turning at full speed. The music did not just start.
     if (playing && !still()) {
       spin = { angle: Math.random() * 360, speed: FULL_SPEED, accel: 0, settled: true };
@@ -84,10 +86,10 @@
       paint();
       startSteady();
     }
-    await tick();
-    requestAnimationFrame(() => (ready = true));
-    reduce.addEventListener('change', drive);
+    void tick().then(() => requestAnimationFrame(() => (ready = true)));
   });
+
+  onMount(() => reduce.addEventListener('change', drive));
   onDestroy(() => {
     cancelAnimationFrame(raf);
     steady?.cancel();
