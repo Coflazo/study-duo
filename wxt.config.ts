@@ -72,7 +72,7 @@ export default defineConfig({
     host_permissions: ['<all_urls>'],
     // Only the phase-word font, behind a per-session URL so pages cannot fetch it by a fixed address.
     // The install page asks "is Study Duo here yet?" and is told the version, nothing else (Chromium only).
-    ...(browser === 'firefox' ? {} : { externally_connectable: { matches: ['https://coflazo.github.io/*'] } }),
+    ...(browser === 'firefox' ? {} : { externally_connectable: { matches: ['https://coflazo.github.io/study-duo/*'] } }),
     web_accessible_resources: [
       {
         resources: ['fonts/atkinson-next-latin.woff2', 'fonts/atkinson-next-latin-ext.woff2'],

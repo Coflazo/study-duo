@@ -14,10 +14,11 @@
 # Study Duo what desktop music apps are playing, and registers it with your Chromium browsers for Study Duo only.
 # It is off until you turn on Desktop apps in Study Duo's Connections. Read it first: helper/study-duo-helper.ps1
 
-param([switch]$Uninstall, [switch]$Helper, [string]$Browsers = '')
+# -Browsers takes "chrome,edge" as one word or, through the install page's scriptblock line, as a list: both work.
+param([switch]$Uninstall, [switch]$Helper, [string[]]$Browsers = @())
 
 function Install-StudyDuo {
-  param([switch]$Uninstall, [switch]$Helper, [string]$Browsers = '')
+  param([switch]$Uninstall, [switch]$Helper, [string[]]$Browsers = @())
   $ErrorActionPreference = 'Stop'
   $ProgressPreference = 'SilentlyContinue' # the progress bar makes Invoke-WebRequest very slow on 5.1
   $repo = 'Coflazo/study-duo'
@@ -35,18 +36,17 @@ function Install-StudyDuo {
     chrome  = @('Chrome', 'chrome://extensions', @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe", "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"))
     edge    = @('Edge', 'edge://extensions', @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe", "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"))
     brave   = @('Brave', 'brave://extensions', @("$env:ProgramFiles\BraveSoftware\Brave-Browser\Application\brave.exe", "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\Application\brave.exe"))
-    arc     = @('Arc', 'arc://extensions', @("$env:LOCALAPPDATA\Microsoft\WindowsApps\Arc.exe"))
+    arc     = @('Arc', 'chrome://extensions', @("$env:LOCALAPPDATA\Microsoft\WindowsApps\Arc.exe"))
     opera   = @('Opera', 'opera://extensions', @("$env:LOCALAPPDATA\Programs\Opera\opera.exe"))
     vivaldi = @('Vivaldi', 'vivaldi://extensions', @("$env:LOCALAPPDATA\Vivaldi\Application\vivaldi.exe"))
     firefox = @('Firefox', $xpiUrl, @("$env:ProgramFiles\Mozilla Firefox\firefox.exe", "${env:ProgramFiles(x86)}\Mozilla Firefox\firefox.exe"))
   }
   $picked = @()
-  if ($Browsers) {
-    foreach ($b in $Browsers.Split(',')) {
-      $key = $b.Trim().ToLowerInvariant()
-      if (-not $apps.Contains($key)) { throw "unknown browser $key (use: $($apps.Keys -join ','))." }
-      $picked += $key
-    }
+  foreach ($b in ($Browsers -join ',').Split(',')) {
+    $key = $b.Trim().ToLowerInvariant()
+    if (-not $key) { continue }
+    if (-not $apps.Contains($key)) { throw "unknown browser $key (use: $($apps.Keys -join ','))." }
+    if ($picked -notcontains $key) { $picked += $key }
   }
   # Opens one browser at its page, if it is on this computer. With STUDY_DUO_NO_OPEN (tests), says what it would open.
   function Open-In([string]$key) {
@@ -111,6 +111,7 @@ function Install-StudyDuo {
   }
   # Only Firefox: it installs from its signed file, so the Chromium folder is not needed.
   if ($picked.Count -gt 0 -and -not ($picked | Where-Object { $_ -ne 'firefox' })) {
+    if ($Helper) { Write-Host 'The desktop helper works with Chromium browsers only, so it is not installed for Firefox.' }
     Open-Picked | Out-Null
     return
   }

@@ -242,7 +242,7 @@ main() {
       --browsers)
         [ $# -ge 2 ] || fail "--browsers needs a list, for example --browsers chrome,firefox."
         for b in $(printf '%s' "$2" | tr ',' ' '); do
-          case " $BROWSERS " in *" $b "*) picked="$picked $b" ;; *) fail "unknown browser $b (use: $(printf '%s' "$BROWSERS" | tr ' ' ','))." ;; esac
+          case " $BROWSERS " in *" $b "*) case " $picked " in *" $b "*) ;; *) picked="$picked $b" ;; esac ;; *) fail "unknown browser $b (use: $(printf '%s' "$BROWSERS" | tr ' ' ','))." ;; esac
         done
         shift ;;
       *) fail "unknown option $1 (use --browsers, --helper or --uninstall)." ;;
@@ -251,6 +251,7 @@ main() {
   done
   # Only Firefox: it installs from its signed file, so the Chromium folder is not needed.
   if [ -n "$picked" ] && [ "$(printf '%s' "$picked" | tr -d ' ')" = firefox ]; then
+    [ -n "$with_helper" ] && say "The desktop helper works with Chromium browsers only, so it is not installed for Firefox."
     open_picked firefox || true
     return 0
   fi

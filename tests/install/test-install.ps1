@@ -71,6 +71,10 @@ try {
   if ($out -notmatch 'Would open Chrome at chrome://extensions' -or $out -notmatch 'Would open Brave at brave://extensions') { throw "FAIL -Browsers did not open the picked browsers: $out" }
   if ($out -notmatch 'not published yet, so Firefox was skipped') { throw "FAIL -Browsers opened a Firefox add-on that does not exist: $out" }
   Set-Content -Path (Join-Path $rel 'study-duo.xpi') -Value 'xpi'
+  # The install page's own line: the script run as a scriptblock, where "-Browsers chrome,brave" arrives as a list.
+  $line = "& ([scriptblock]::Create((Get-Content -Raw '$(Join-Path $root 'install.ps1')'))) -Browsers chrome,brave"
+  $out = (& $Shell -NoProfile -ExecutionPolicy Bypass -Command $line 6>&1 | Out-String)
+  if ($out -notmatch 'Would open Chrome at chrome://extensions' -or $out -notmatch 'Would open Brave at brave://extensions') { throw "FAIL the page's line with two browsers: $out" }
   $out = (& $Shell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'install.ps1') -Browsers 'firefox' 6>&1 | Out-String)
   if ($out -notmatch [regex]::Escape("Would open Firefox at http://127.0.0.1:$port/study-duo.xpi")) { throw "FAIL -Browsers firefox did not open the signed add-on: $out" }
   if ($out -match 'Downloading') { throw 'FAIL -Browsers firefox downloaded the Chromium folder it does not need' }

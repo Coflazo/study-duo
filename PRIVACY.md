@@ -52,6 +52,10 @@ Nothing reaches YouTube until you paste a link and press Play. Then, and wheneve
 
 If you install it (the install line with `--helper`) and turn on Desktop apps in Connections, a small script on your computer tells Study Duo the title, artist, album and app name of the song your desktop music player is playing: Music or Spotify on a Mac, the players your Linux desktop knows, or the Windows media controls. Browsers are skipped there, since Study Duo reads music sites itself. On a Mac it asks Music and Spotify through Apple Events, so macOS asks you once whether your browser may control them; that permission lets the browser do more than read the song, and it stays after you remove the helper until you take it back in System Settings, Privacy and Security, Automation (or with `tccutil reset AppleEvents com.google.Chrome`). It reads nothing else, writes no files, makes no network connections and answers only Study Duo. Those songs follow the same rules as songs in your tabs: kept only during study blocks and breaks, and not at all while Songs you play is off. Spotify's app is shown but never used for insights. Turning Desktop apps off stops the script and gives back the permission it needed.
 
+## Updates in Firefox
+
+Firefox, not Study Duo, checks for a newer version about once a day: it asks coflazo.github.io/study-duo/updates.json, which GitHub Pages hosts. That request carries what any visit to a web page carries (your IP address, and that a browser asked for that file); it says nothing about your study blocks, sites or music. Chromium browsers do not check: you update them by running the install line again.
+
 ## Contact
 
 Questions: open an issue at [github.com/Coflazo/study-duo/issues](https://github.com/Coflazo/study-duo/issues).

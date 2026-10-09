@@ -18,6 +18,8 @@ const pages = path.join(from, 'pages');
 if (fs.existsSync(path.join(pages, 'marks.json'))) {
   const m = JSON.parse(fs.readFileSync(path.join(pages, 'marks.json'), 'utf8'));
   for (const [key, mark] of Object.entries(m)) {
+    // A downloaded file names the picture: only a plain name in this folder, never a path elsewhere.
+    if (!/^[a-z-]+\.webp$/.test(mark.file) || !/^[a-z-]+$/.test(key)) throw new Error(`unexpected shot ${key}: ${mark.file}`);
     fs.copyFileSync(path.join(pages, mark.file), path.join(OUT, mark.file));
     marks[key] = mark;
   }
@@ -30,6 +32,7 @@ const NAME = { 'windows-terminal': 'windows-terminal', 'windows-folder': 'window
 for (const f of fs.existsSync(win) ? fs.readdirSync(win) : []) {
   if (!f.endsWith('.json')) continue;
   const base = f.replace(/\.json$/, '');
+  if (!/^[a-z-]+$/.test(base)) continue;
   const key = NAME[base] ?? (base.endsWith('-pin') ? base : base.endsWith('-win') ? base.replace(/-win$/, '') : null);
   if (!key || (base.endsWith('-win') && marks[key])) continue;
   const mark = JSON.parse(fs.readFileSync(path.join(win, f), 'utf8'));

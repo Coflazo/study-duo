@@ -64,8 +64,13 @@
   }
 
   const found = detect();
-  let os = store.get('os') || found.os;
-  let picked = store.get('picked') || [found.browser];
+  // What this tab remembered, taken only when it is a system and browsers this page knows: every page on
+  // coflazo.github.io shares this storage, and the browser names go into the line people paste into a terminal.
+  const known = (o, k) => typeof k === 'string' && Object.hasOwn(o, k);
+  const savedOs = store.get('os');
+  let os = known(OS, savedOs) ? savedOs : found.os;
+  const savedPicked = store.get('picked');
+  let picked = Array.isArray(savedPicked) && savedPicked.every((b) => known(NAMES, b)) && savedPicked.length ? savedPicked : [found.browser];
   let shown = null; // the Chromium browser whose screenshots are on screen
   let marks = {};
 
@@ -187,7 +192,8 @@
     } catch { /* not installed yet */ }
   }
   function lookAgain() {
-    if (!store.get('copied') || store.get('arrived')) return;
+    // Only a picked Chromium browser can see Study Duo from this page; in any other, a reload would find nothing.
+    if (!store.get('copied') || store.get('arrived') || !CHROMIUM.includes(found.browser) || !picked.includes(found.browser)) return;
     const last = store.get('reloaded') || 0;
     if (Date.now() - last < 5000) return check();
     store.set('reloaded', Date.now());

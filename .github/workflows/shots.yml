@@ -32,7 +32,7 @@ jobs:
       - name: Brave, Opera and Vivaldi
         shell: powershell
         run: |
-          choco install brave opera vivaldi -y --no-progress --ignore-checksums 2>&1 | Select-String -Pattern 'installed|failed|error' | Out-String | Write-Host
+          choco install brave opera vivaldi -y --no-progress 2>&1 | Select-String -Pattern 'installed|failed|error' | Out-String | Write-Host
           Get-ChildItem "$env:ProgramFiles\BraveSoftware", "$env:LOCALAPPDATA\Programs\Opera", "$env:ProgramFiles\Opera", "$env:LOCALAPPDATA\Vivaldi", "$env:ProgramFiles\Vivaldi" -ErrorAction SilentlyContinue | Select-Object FullName | Out-String | Write-Host
       - name: Shoot
         shell: powershell
