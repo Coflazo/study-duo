@@ -30,6 +30,14 @@
   };
   // Where each browser keeps Developer mode on its extensions page.
   const DEVMODE = { edge: 'In the left column of the page.', opera: 'Top right corner of the page.' };
+  // How each browser keeps an extension in sight, as its toolbar shows it.
+  const PUZZLE = 'Pin it so the timer stays in sight: click the puzzle piece next to the address bar, then the pin beside Study Duo.';
+  const PIN = {
+    chrome: PUZZLE, edge: PUZZLE, brave: PUZZLE,
+    opera: 'Pin it so the timer stays in sight: click the cube next to the address bar, then the pin beside Study Duo.',
+    vivaldi: 'Vivaldi already shows Study Duo at the right of the address bar.',
+    arc: 'Pin it from the extensions button so the timer stays in sight.',
+  };
 
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
@@ -158,6 +166,7 @@
       const here = CHROMIUM.includes(found.browser) && chromium.includes(found.browser) ? found.browser : chromium[0];
       $('[data-waiting]').textContent = `Waiting for Study Duo in ${NAMES[here]}. This page notices when it arrives.`;
       $('[data-arrived]').textContent = `Study Duo is in ${NAMES[here]}.`;
+      $('[data-pin-how]').textContent = PIN[here] || PUZZLE;
     }
     if (picked.includes('firefox')) fillShot($('[data-shot=firefox]'), 'firefox');
   }

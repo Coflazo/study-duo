@@ -1,0 +1,86 @@
+# Screenshots for the install page (site/shots), run by hand when a browser's extensions page or menu changes:
+#   gh workflow run shots.yml && gh run watch
+#   gh run download <run id> -D /tmp/shots && node scripts/shots/collect.mjs /tmp/shots
+# "windows" shoots a real Windows desktop: PowerShell with the install line, the folder window Load unpacked opens, and
+# each browser's extensions menu with the pin (scripts/shots/windows.ps1, by accessible name). "pages" shoots each
+# browser's own extensions page headless at 2x (tests/e2e/site-shots.e2e.ts). macOS runners cannot capture the screen,
+# so the Mac and Linux terminal and folder window are drawings from Figma.
+name: shots
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  LINE_WINDOWS: powershell -c "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/Coflazo/study-duo/main/install.ps1))) -Browsers chrome"
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - name: Put Study Duo where the installer puts it
+        shell: powershell
+        run: |
+          $dest = Join-Path $env:USERPROFILE 'Study Duo\chromium'
+          New-Item -ItemType Directory -Force $dest | Out-Null
+          Copy-Item -Recurse -Force build\chrome-mv3\* $dest
+          Get-ChildItem $dest | Select-Object -First 5 Name | Out-String | Write-Host
+      - name: Brave, Opera and Vivaldi
+        shell: powershell
+        run: |
+          choco install brave opera vivaldi -y --no-progress --ignore-checksums 2>&1 | Select-String -Pattern 'installed|failed|error' | Out-String | Write-Host
+          Get-ChildItem "$env:ProgramFiles\BraveSoftware", "$env:LOCALAPPDATA\Programs\Opera", "$env:ProgramFiles\Opera", "$env:LOCALAPPDATA\Vivaldi", "$env:ProgramFiles\Vivaldi" -ErrorAction SilentlyContinue | Select-Object FullName | Out-String | Write-Host
+      - name: Shoot
+        shell: powershell
+        run: |
+          try { Set-DisplayResolution -Width 1280 -Height 800 -Force -ErrorAction Stop } catch { Write-Host "resolution stays: $_" }
+          .\scripts\shots\windows.ps1 -Browsers chrome,edge,brave,opera -Ext (Join-Path $env:USERPROFILE 'Study Duo\chromium') -Line $env:LINE_WINDOWS -Out shots
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with: { name: windows, path: shots }
+
+  pages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: webp, Brave, Opera and Vivaldi
+        run: |
+          set -x
+          sudo apt-get update -q
+          sudo apt-get install -y -q webp curl gnupg xvfb >/dev/null
+          sudo curl -fsSLo /usr/share/keyrings/brave.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/brave.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main" | sudo tee /etc/apt/sources.list.d/brave.list
+          curl -fsSL https://deb.opera.com/archive.key | gpg --dearmor | sudo tee /usr/share/keyrings/opera.gpg >/dev/null
+          echo "deb [signed-by=/usr/share/keyrings/opera.gpg] https://deb.opera.com/opera-stable/ stable non-free" | sudo tee /etc/apt/sources.list.d/opera.list
+          curl -fsSL https://repo.vivaldi.com/archive/linux_signing_key.pub | gpg --dearmor | sudo tee /usr/share/keyrings/vivaldi.gpg >/dev/null
+          echo "deb [signed-by=/usr/share/keyrings/vivaldi.gpg arch=amd64] https://repo.vivaldi.com/archive/deb/ stable main" | sudo tee /etc/apt/sources.list.d/vivaldi.list
+          sudo apt-get update -q
+          echo "opera-stable opera-stable/add-deb-source boolean false" | sudo debconf-set-selections
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q brave-browser opera-stable vivaldi-stable >/dev/null || true
+          which google-chrome microsoft-edge brave-browser opera vivaldi || true
+      - name: Each browser's extensions page
+        env: { LANGUAGE: en_US, LANG: en_US.UTF-8 }
+        run: |
+          mkdir -p site/shots
+          run() { ls -la "$2" || true; SITE_SHOTS=$1 SITE_SHOTS_EXE=$2 npx playwright test tests/e2e/site-shots.e2e.ts --reporter=line 2>&1 | grep -v "^\s*$" | tail -40 || true; }
+          run chrome /usr/bin/google-chrome
+          run edge /usr/bin/microsoft-edge
+          run brave /usr/bin/brave-browser
+          # Opera and Vivaldi quit when started headless: a real window on a virtual screen instead.
+          export SITE_SHOTS_HEADED=1
+          # /usr/bin/opera and /usr/bin/vivaldi are launchers that start the browser and quit: the binaries themselves.
+          ls -la /usr/lib/x86_64-linux-gnu/opera/opera /opt/vivaldi/vivaldi-bin || true
+          xvfb-run -a -s "-screen 0 1600x1000x24" bash -c 'SITE_SHOTS=opera SITE_SHOTS_EXE=/usr/lib/x86_64-linux-gnu/opera/opera npx playwright test tests/e2e/site-shots.e2e.ts --reporter=line 2>&1 | grep -v "^\s*$" | tail -30' || true
+          xvfb-run -a -s "-screen 0 1600x1000x24" bash -c 'SITE_SHOTS=vivaldi SITE_SHOTS_EXE=/opt/vivaldi/vivaldi-bin npx playwright test tests/e2e/site-shots.e2e.ts --reporter=line 2>&1 | grep -v "^\s*$" | tail -30' || true
+          ls -la site/shots
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with: { name: pages, path: site/shots }
