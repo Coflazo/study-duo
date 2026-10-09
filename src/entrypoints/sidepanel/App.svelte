@@ -6,9 +6,11 @@
   import { onDestroy, onMount } from 'svelte';
   import { loadFolder, loadThumb, type FolderRecord } from '@/core/library-db';
   import type { NoiseKind } from '@/core/noise';
-  import { INITIAL_PLAYER, positionAt, type PlayerCommand, type PlayerState, type PlayerTrack } from '@/core/player';
+  import { INITIAL_PLAYER, positionAt, streamAt, type PlayerCommand, type PlayerState, type PlayerTrack } from '@/core/player';
   import type { Repeat } from '@/core/queue';
-  import { playerItem, playerTracksItem } from '@/core/session-store';
+  import { panelOwnerItem, panelSectionItem, playerItem, playerTracksItem } from '@/core/session-store';
+  import { forgetLink, nameLink, rememberLink, streamLinksItem, type SavedLink } from '@/core/stream-links';
+  import { canonicalYouTube, parseYouTubeLink } from '@/core/youtube';
   import { normalizeSettings } from '@/core/settings';
   import { settingsItem } from '@/core/store';
   import { clip } from '@/core/text';
@@ -17,6 +19,7 @@
   import Segmented from '@/ui/Segmented.svelte';
   import SeekLine from '@/ui/SeekLine.svelte';
   import SleeveArt from '@/ui/SleeveArt.svelte';
+  import StreamFrame from '@/ui/StreamFrame.svelte';
 
   const NOISE: Record<NoiseKind, { name: string; title: string; sleeve: string; c: [string, string]; ink: string; ring: string; mark: string; tint: string; chip: string; chipInk: string }> = {
     white: { name: 'White', title: 'White noise', sleeve: 'WHITE\nNOISE', c: ['#FFFFFF', '#CDD1D5'], ink: '#17191C', ring: 'rgb(23 25 28 / 0.3)', mark: 'rgb(23 25 28 / 0.55)', tint: '#9AA3AD', chip: '#FFFFFF', chipInk: '#17191C' },
@@ -25,8 +28,11 @@
   };
   const KINDS: NoiseKind[] = ['white', 'pink', 'brown'];
   const NO_COVER = '#5876C2';
-  const SECTIONS: Array<['now' | 'library', string]> = [['now', 'Now playing'], ['library', 'Library']];
-  const SOURCES: Array<['folder' | 'noise', string]> = [['folder', 'Your folder'], ['noise', 'Focus noise']];
+  type Section = 'now' | 'library' | 'streaming';
+  const SECTIONS: Array<[Section, string]> = [['now', 'Now playing'], ['library', 'Library'], ['streaming', 'Streaming']];
+  const SOURCES: Array<['folder' | 'noise' | 'youtube', string]> = [['folder', 'Your folder'], ['noise', 'Noise'], ['youtube', 'YouTube']];
+  const YT_RED = '#FF0033';
+  const LINK_PROBLEM = { 'not-youtube': 'That is not a YouTube link.', 'no-video': 'That link has no video or playlist in it.', 'private-list': 'Watch later and Liked videos are private: only YouTube can play them.' } as const;
   /** Phosphor Bold on a 256 grid: shuffle, repeat, speaker-high. */
   const SHUFFLE = 'M240.49,175.51a12,12,0,0,1,0,17l-24,24a12,12,0,0,1-17-17L203,196h-2.09a76.17,76.17,0,0,1-61.85-31.83L97.38,105.78A52.1,52.1,0,0,0,55.06,84H32a12,12,0,0,1,0-24H55.06a76.17,76.17,0,0,1,61.85,31.83l41.71,58.39A52.1,52.1,0,0,0,200.94,172H203l-3.52-3.51a12,12,0,0,1,17-17Zm-95.62-72.62a12,12,0,0,0,16.93-1.13A52,52,0,0,1,200.94,84H203l-3.52,3.51a12,12,0,0,0,17,17l24-24a12,12,0,0,0,0-17l-24-24a12,12,0,0,0-17,17L203,60h-2.09a76,76,0,0,0-57.2,26A12,12,0,0,0,144.87,102.89Zm-33.74,50.22a12,12,0,0,0-16.93,1.13A52,52,0,0,1,55.06,172H32a12,12,0,0,0,0,24H55.06a76,76,0,0,0,57.2-26A12,12,0,0,0,111.13,153.11Z';
   const REPEAT = 'M20,128A76.08,76.08,0,0,1,96,52h99l-3.52-3.51a12,12,0,1,1,17-17l24,24a12,12,0,0,1,0,17l-24,24a12,12,0,0,1-17-17L195,76H96a52.06,52.06,0,0,0-52,52,12,12,0,0,1-24,0Zm204-12a12,12,0,0,0-12,12,52.06,52.06,0,0,1-52,52H61l3.52-3.51a12,12,0,1,0-17-17l-24,24a12,12,0,0,0,0,17l24,24a12,12,0,1,0,17-17L61,204h99a76.08,76.08,0,0,0,76-76A12,12,0,0,0,224,116Z';
@@ -34,7 +40,10 @@
   const NEXT_REPEAT: Record<Repeat, Repeat> = { off: 'all', all: 'one', one: 'off' };
   const REPEAT_LABEL: Record<Repeat, string> = { off: 'Repeat: off', all: 'Repeat: all songs', one: 'Repeat: this song' };
 
-  let section = $state<'now' | 'library'>('now');
+  let section = $state<Section>('now');
+  let links = $state<SavedLink[]>([]);
+  let pasted = $state('');
+  let linkProblem = $state('');
   let player = $state<PlayerState>(INITIAL_PLAYER);
   let tracks = $state<Record<string, PlayerTrack>>({});
   let folder = $state<FolderRecord | null>(null);
@@ -43,10 +52,11 @@
   let loaded = $state(false);
   let cover = $state<string | null>(null);
 
-  const view = $derived<'noise' | 'folder'>(player.active === 'folder' ? 'folder' : 'noise');
+  const view = $derived<'noise' | 'folder' | 'youtube'>(player.active === 'folder' ? 'folder' : player.active === 'youtube' ? 'youtube' : 'noise');
+  const stream = $derived(player.stream?.source === 'youtube' ? player.stream : null);
   const noise = $derived(NOISE[player.noise]);
   const track = $derived(view === 'folder' ? player.now : null);
-  const playing = $derived(player.playing && (view === 'folder' ? player.active === 'folder' : player.active === 'noise' || player.active === null));
+  const playing = $derived(player.playing && (view === 'noise' ? player.active === 'noise' || player.active === null : player.active === view));
   const duration = $derived(player.duration ?? 0);
   const position = $derived(positionAt(player, now));
   const repeat = $derived<Repeat>(player.queue?.repeat ?? 'off');
@@ -66,8 +76,25 @@
       ? { kind: 'noise' as const, c: noise.c, ring: noise.ring, mark: noise.mark, sleeve: noise.sleeve, ink: noise.ink }
       : track
         ? { kind: 'cd' as const, color: track.color ?? NO_COVER, cover, sleeve: [track.artist, track.album].filter(Boolean).join('\n').toUpperCase() || 'YOUR\nFOLDER' }
-        : { kind: 'empty' as const, sleeve: folder ? 'YOUR\nFOLDER' : 'CHOOSE A\nFOLDER' },
+        : { kind: 'empty' as const, sleeve: view === 'youtube' ? 'PASTE A\nLINK' : folder ? 'YOUR\nFOLDER' : 'CHOOSE A\nFOLDER' },
   );
+  const streamPosition = $derived(stream ? streamAt(player, now) : 0);
+
+  function playLink(e: SubmitEvent) {
+    e.preventDefault();
+    const parsed = parseYouTubeLink(pasted);
+    if (!parsed.ok) return void (linkProblem = LINK_PROBLEM[parsed.reason]);
+    linkProblem = '';
+    pasted = '';
+    playSaved(canonicalYouTube(parsed.link));
+  }
+  function playSaved(url: string) {
+    void streamLinksItem.setValue(rememberLink($state.snapshot(links), { source: 'youtube', url }, Date.now()));
+    void panelOwnerItem.setValue(me);
+    const p = parseYouTubeLink(url);
+    void send({ op: 'stream', source: 'youtube', url, ...(p.ok && p.link.start ? { at: p.link.start * 1000 } : {}) });
+    section = 'now';
+  }
 
   const send = (cmd: PlayerCommand) => browser.runtime.sendMessage({ kind: 'player', ...cmd }).catch(() => undefined);
   async function reconnect() {
@@ -76,7 +103,7 @@
   }
 
   $effect(() => {
-    if (!(playing && view === 'folder')) return;
+    if (!(playing && view !== 'noise')) return;
     const id = setInterval(() => (now = Date.now()), 500);
     return () => clearInterval(id);
   });
@@ -95,25 +122,67 @@
   $effect(() => {
     const body = document.body;
     body.style.transition = 'background-color 600ms ease';
-    body.style.backgroundColor = playing ? `color-mix(in oklab, var(--color-bg-canvas) 88%, ${view === 'folder' ? (track?.color ?? NO_COVER) : noise.tint})` : '';
+    body.style.backgroundColor = playing ? `color-mix(in oklab, var(--color-bg-canvas) 88%, ${view === 'folder' ? (track?.color ?? NO_COVER) : view === 'youtube' ? YT_RED : noise.tint})` : '';
   });
 
+  // A saved link takes the title its player reports; unchanged names write nothing.
+  $effect(() => {
+    if (!stream?.title) return;
+    const now = $state.snapshot(links);
+    const named = nameLink(now, stream.url, stream.title, stream.artist);
+    if (named !== now) void streamLinksItem.setValue(named);
+  });
+
+  // While the panel is open the background knows it, so a link it plays stops when it closes. The background may
+  // sleep in between (an open port does not keep it awake): the next state it writes shows it is back, and the panel
+  // connects again then, rather than waking it every 30 s.
+  let port: ReturnType<typeof browser.runtime.connect> | null = null;
+  let closing = false;
+  function connect() {
+    port = browser.runtime.connect({ name: 'player-panel' });
+    port.onDisconnect.addListener(() => (port = null));
+  }
+  const me = crypto.randomUUID();
+  let owner = $state<string | null>(null);
+
   const unwatch: Array<() => void> = [];
+  let heardPlayer = false;
+  let heardTracks = false;
   onMount(async () => {
+    connect();
+    void panelOwnerItem.setValue(me);
     unwatch.push(
-      playerItem.watch((v) => (player = v ?? INITIAL_PLAYER)),
-      playerTracksItem.watch((v) => (tracks = v ?? {})),
+      panelOwnerItem.watch((v) => (owner = v)),
+      playerItem.watch(() => !port && !closing && connect()),
+      streamLinksItem.watch((v) => (links = v ?? [])),
+      playerItem.watch((v) => ((heardPlayer = true), (player = v ?? INITIAL_PLAYER))),
+      playerTracksItem.watch((v) => ((heardTracks = true), (tracks = v ?? {}))),
       settingsItem.watch((v) => (always = normalizeSettings(v).discMotion === 'always')),
     );
-    [player, tracks, folder, always] = await Promise.all([
+    const [p, t, f, a] = await Promise.all([
       playerItem.getValue(),
       playerTracksItem.getValue(),
       loadFolder().catch(() => null),
       settingsItem.getValue().then((v) => normalizeSettings(v).discMotion === 'always'),
     ]);
+    // A change seen while the first read was on its way is newer than that read: it wins.
+    if (!heardPlayer) player = p;
+    if (!heardTracks) tracks = t;
+    folder = f;
+    always = a;
+    links = await streamLinksItem.getValue();
+    const asked = await panelSectionItem.getValue();
+    if (asked) {
+      section = asked;
+      void panelSectionItem.setValue(null);
+    }
     loaded = true;
   });
-  onDestroy(() => unwatch.forEach((u) => u()));
+  onDestroy(() => {
+    closing = true;
+    port?.disconnect();
+    unwatch.forEach((u) => u());
+  });
 </script>
 
 {#snippet key(name: string, path: string, onclick: () => void, opts: { main?: boolean; flip?: boolean; on?: boolean; grid?: number } = {})}
@@ -128,10 +197,18 @@
     <span class="brand">Study Duo</span>
   </header>
   <Segmented options={SECTIONS} value={section} label="Sections" onchange={(v) => (section = v)} />
+  <!-- Only while YouTube is the source: nothing loads from YouTube while the folder or noise plays. -->
+  {#if stream && view === 'youtube'}
+    {#if owner === me}
+      <StreamFrame {player} {stream} />
+    {:else}
+      <p class="elsewhere">YouTube plays in the side panel of another window. <button class="link" onclick={() => panelOwnerItem.setValue(me)}>Play it here</button></p>
+    {/if}
+  {/if}
 
   {#if section === 'now'}
     <div class="now">
-      <div class="art"><SleeveArt {art} {playing} {always} live={loaded} size="large" /></div>
+      {#if !(view === 'youtube' && stream)}<div class="art"><SleeveArt {art} {playing} {always} live={loaded} size="large" /></div>{/if}
       <Segmented options={SOURCES} value={view} label="Play from" onchange={(v) => v !== view && send({ op: 'source', source: v })} />
 
       {#if view === 'noise'}
@@ -147,6 +224,25 @@
           </div>
           {@render key(playing ? 'Pause' : 'Play', playing ? ICONS.pause : ICONS.play, () => send({ op: 'toggle' }), { main: true })}
         </div>
+      {:else if view === 'youtube'}
+        {#if stream}
+          <div class="song">
+            <p class="title" title={stream.title ?? ''}>{clip(stream.title ?? 'YouTube')}</p>
+            <p class="sub">{stream.artist ?? 'Plays in YouTube\'s player, above'}</p>
+          </div>
+          <SeekLine position={streamPosition} duration={stream.duration ?? 0} stamp={stream.at} size="large" onseek={(ms) => send({ op: 'seek', ms })} />
+          <div class="transport">
+            {@render key('Previous', ICONS.skip, () => send({ op: 'prev' }), { flip: true })}
+            {@render key(playing ? 'Pause' : 'Play', playing ? ICONS.pause : ICONS.play, () => send({ op: 'toggle' }), { main: true })}
+            {@render key('Next', ICONS.skip, () => send({ op: 'next' }))}
+          </div>
+        {:else}
+          <div class="song">
+            <p class="title">No link yet</p>
+            <p class="sub">Paste a YouTube video or playlist link; it plays here, in YouTube's player.</p>
+            <button class="action" onclick={() => (section = 'streaming')}>Paste a link</button>
+          </div>
+        {/if}
       {:else if player.problem === 'reconnect'}
         <div class="song">
           <p class="title">Chrome asks again for your folder</p>
@@ -193,8 +289,31 @@
         </section>
       {/if}
     </div>
-  {:else}
+  {:else if section === 'library'}
     <FolderLibrary />
+  {:else}
+    <section class="streaming" aria-labelledby="yt-title">
+      <h2 id="yt-title">YouTube</h2>
+      <p class="sub">Any public video or playlist. It plays here, in YouTube's own player, and stops when this panel closes.</p>
+      <form onsubmit={playLink}>
+        <input aria-label="YouTube link" aria-describedby="yt-problem" placeholder="Paste a YouTube link" autocomplete="off" spellcheck="false" bind:value={pasted} />
+        <button class="action" type="submit">Play</button>
+      </form>
+      <p class="error" id="yt-problem" role="alert">{linkProblem}</p>
+      {#if links.length}
+        <h2 class="eyebrow">Saved links</h2>
+        <ul class="links">
+          {#each links as l (l.url)}
+            <li>
+              <button class="open" onclick={() => playSaved(l.url)}><span class="name">{clip(l.title ?? l.url)}</span>{#if l.artist}<span class="meta">{l.artist}</span>{/if}</button>
+              <button class="forget" aria-label="Forget {l.title ?? 'this link'}" onclick={() => streamLinksItem.setValue(forgetLink($state.snapshot(links), l.url))}>
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d={ICONS.x} /></svg>
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </section>
   {/if}
 </main>
 
@@ -240,6 +359,20 @@
   .queue button:hover { background: var(--color-bg-sunken); }
   .name { font: 600 13px/18px var(--font-family-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .meta { font: 400 11px/14px var(--font-family-ui); color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .streaming { display: grid; gap: 8px; }
+  .elsewhere { margin: 0; font: 400 13px/18px var(--font-family-ui); color: var(--color-text-secondary); }
+  .link { padding: 0; border: 0; background: none; color: var(--color-text-primary); font: 600 13px/18px var(--font-family-ui); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .streaming h2:first-child { margin: 0; font: 700 16px/20px var(--font-family-ui); }
+  form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  form input { min-inline-size: 0; padding: 10px 12px; border: 1px solid var(--color-border-control); border-radius: 6px; background: var(--color-bg-panel); color: var(--color-text-primary); font: 400 14px/18px var(--font-family-ui); }
+  form .action { margin: 0; }
+  .error { margin: 0; min-block-size: 18px; font: 400 13px/18px var(--font-family-ui); color: var(--color-text-focus); }
+  .links { margin: 0; padding: 0; list-style: none; }
+  .links li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .links .open { display: grid; gap: 1px; padding: 8px 10px; border: 0; border-radius: 4px; background: none; color: var(--color-text-primary); text-align: start; cursor: pointer; min-inline-size: 0; }
+  .links .open:hover, .forget:hover { background: var(--color-bg-sunken); }
+  .forget { display: grid; place-items: center; inline-size: 32px; block-size: 32px; border: 0; border-radius: 4px; background: none; color: var(--color-text-secondary); cursor: pointer; }
+  .forget svg { inline-size: 14px; block-size: 14px; fill: currentColor; }
   button:focus-visible, input:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { .key, .action { transition: none; } }
 </style>

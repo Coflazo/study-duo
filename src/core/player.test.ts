@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyPlayer, INITIAL_PLAYER, nextTitle, parsePlayer, positionAt, soundToPlayer, type PlayerState, type PlayerTrack } from './player';
+import { applyPlayer, INITIAL_PLAYER, nextTitle, parsePlayer, positionAt, soundToPlayer, streamAt, type PlayerState, type PlayerTrack } from './player';
 
 const NOW = 1_800_000_000_000;
 const playingNoise: PlayerState = { ...INITIAL_PLAYER, active: 'noise', playing: true, noise: 'pink', volume: 0.5, startedAt: NOW - 60_000, at: NOW - 60_000 };
@@ -44,13 +44,18 @@ describe('applyPlayer', () => {
     const yt: PlayerState = { ...playingNoise, active: 'youtube' };
     const { state, effects } = applyPlayer(yt, { op: 'noise', noise: 'white' }, NOW);
     expect(state).toMatchObject({ active: 'noise', playing: true, noise: 'white' });
-    expect(effects).toEqual([{ type: 'source-stop', source: 'youtube' }, { type: 'noise-start', noise: 'white', volume: 0.5 }]);
+    expect(effects).toEqual([{ type: 'panel', op: 'pause' }, { type: 'noise-start', noise: 'white', volume: 0.5 }]);
   });
 
   it('hands over to another source by itself when something plays, and only changes the card when nothing does', () => {
-    const live = applyPlayer(playingNoise, { op: 'source', source: 'youtube' }, NOW);
+    const link = { source: 'youtube' as const, url: 'https://www.youtube.com/watch?v=X0Cv0l-j86Y', title: null, artist: null, position: 0, at: 0, duration: null, problem: null };
+    const live = applyPlayer({ ...playingNoise, stream: link, panel: true }, { op: 'source', source: 'youtube' }, NOW);
     expect(live.state).toMatchObject({ active: 'youtube', playing: true, startedAt: NOW });
-    expect(live.effects).toEqual([{ type: 'noise-stop' }, { type: 'source-start', source: 'youtube' }]);
+    expect(live.effects).toEqual([{ type: 'noise-stop' }, { type: 'panel', op: 'play' }]);
+    // No link yet: the noise stops and the card waits for one.
+    const empty = applyPlayer(playingNoise, { op: 'source', source: 'youtube' }, NOW);
+    expect(empty.state).toMatchObject({ active: 'youtube', playing: false });
+    expect(empty.effects).toEqual([{ type: 'noise-stop' }]);
     const quiet = applyPlayer({ ...playingNoise, playing: false }, { op: 'source', source: 'folder' }, NOW);
     expect(quiet.state).toMatchObject({ active: 'folder', playing: false });
     expect(quiet.effects).toEqual([]);
@@ -180,5 +185,96 @@ describe('jump', () => {
     const { state, effects } = applyPlayer(s, { op: 'jump', at: 1 }, NOW + 2_000);
     expect(state).toMatchObject({ playing: true, problem: null, startedAt: NOW + 2_000 });
     expect(effects).toEqual([{ type: 'file-play', track: songs[1], at: 0, volume: 0.6 }]);
+  });
+});
+
+describe('streaming in the side panel', () => {
+  const URL1 = 'https://www.youtube.com/watch?v=X0Cv0l-j86Y';
+  const report = (over: Record<string, unknown> = {}) => ({ op: 'stream-report' as const, url: URL1, title: 'Deep Focus', artist: 'Some channel', position: 0, duration: 3_600_000, playing: true, problem: null, ...over });
+  const loaded = () => applyPlayer({ ...INITIAL_PLAYER, panel: true }, { op: 'stream', source: 'youtube', url: URL1 }, NOW).state;
+
+  it('parses links and reports, and nothing else', () => {
+    expect(parsePlayer({ kind: 'player', op: 'stream', source: 'youtube', url: URL1 })).toEqual({ op: 'stream', source: 'youtube', url: URL1 });
+    expect(parsePlayer({ kind: 'player', op: 'stream', source: 'youtube', url: 'javascript:alert(1)' })).toBeNull();
+    expect(parsePlayer({ kind: 'player', op: 'stream', source: 'folder', url: URL1 })).toBeNull();
+    expect(parsePlayer({ kind: 'player', ...report({ title: 'x'.repeat(500), position: -5 }) })).toMatchObject({ op: 'stream-report', title: 'x'.repeat(300), position: 0 });
+    expect(parsePlayer({ kind: 'player', op: 'stream-report', url: URL1, position: 'soon' })).toBeNull();
+  });
+
+  it('a link stops what played, and the panel loads it from the start', () => {
+    const { state, effects } = applyPlayer({ ...playingNoise, panel: true }, { op: 'stream', source: 'youtube', url: URL1 }, NOW);
+    expect(state).toMatchObject({ active: 'youtube', playing: true, stream: { source: 'youtube', url: URL1, position: 0, title: null } });
+    expect(effects).toEqual([{ type: 'noise-stop' }, { type: 'panel-load', source: 'youtube', url: URL1, at: 0, play: true, volume: 0.5 }]);
+  });
+
+  it('play, pause, next, previous, seek and volume go to the panel', () => {
+    const on = loaded();
+    expect(applyPlayer(on, { op: 'pause' }, NOW + 10_000).effects).toEqual([{ type: 'panel', op: 'pause' }]);
+    expect(applyPlayer(on, { op: 'next' }, NOW).effects).toEqual([{ type: 'panel', op: 'next' }]);
+    expect(applyPlayer(on, { op: 'prev' }, NOW).effects).toEqual([{ type: 'panel', op: 'prev' }]);
+    expect(applyPlayer(on, { op: 'seek', ms: 57_000 }, NOW).effects).toEqual([{ type: 'panel-seek', at: 57_000 }]);
+    expect(applyPlayer(on, { op: 'volume', volume: 0.2 }, NOW).effects).toEqual([{ type: 'panel-volume', volume: 0.2 }]);
+    const paused = applyPlayer(on, { op: 'pause' }, NOW + 10_000).state;
+    expect(streamAt(paused, NOW + 99_000)).toBe(10_000);
+    expect(applyPlayer(paused, { op: 'play' }, NOW + 20_000).effects).toEqual([{ type: 'panel', op: 'play' }]);
+  });
+
+  it('keeps the folder in its place while a stream plays', () => {
+    let s = applyPlayer(INITIAL_PLAYER, { op: 'folder', tracks: songs, start: 0, shuffle: false }, NOW).state;
+    s = applyPlayer({ ...s, panel: true }, { op: 'stream', source: 'youtube', url: URL1 }, NOW + 30_000).state;
+    expect(s.position).toBe(30_000);
+    expect(positionAt(s, NOW + 90_000)).toBe(30_000);
+  });
+
+  it("takes the panel's word for the title, the place and whether it plays", () => {
+    let s = applyPlayer(loaded(), report({ position: 12_000 }), NOW + 15_000).state;
+    expect(s.stream).toMatchObject({ title: 'Deep Focus', artist: 'Some channel', duration: 3_600_000, position: 12_000, at: NOW + 15_000 });
+    expect(streamAt(s, NOW + 20_000)).toBe(17_000);
+    // Paused inside YouTube's own player.
+    s = applyPlayer(s, report({ position: 13_000, playing: false }), NOW + 16_000).state;
+    expect(s.playing).toBe(false);
+    // A report about another link is ignored.
+    expect(applyPlayer(s, report({ url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk', playing: true }), NOW).state).toBe(s);
+  });
+
+  it('play pressed inside the embed while noise plays hands over to the stream', () => {
+    const s = applyPlayer(loaded(), { op: 'source', source: 'noise' }, NOW + 1_000).state;
+    const { state, effects } = applyPlayer(s, report({ playing: true }), NOW + 2_000);
+    expect(state).toMatchObject({ active: 'youtube', playing: true });
+    expect(effects).toEqual([{ type: 'noise-stop' }]);
+  });
+
+  it('picks up where it stopped after noise played for a long while', () => {
+    let s = applyPlayer(loaded(), { op: 'source', source: 'noise' }, NOW + 60_000).state;
+    expect(streamAt(s, NOW + 60_000)).toBe(60_000);
+    s = applyPlayer(s, { op: 'source', source: 'youtube' }, NOW + 20 * 60_000).state;
+    expect(streamAt(s, NOW + 20 * 60_000)).toBe(60_000);
+    expect(streamAt(s, NOW + 20 * 60_000 + 5_000)).toBe(65_000);
+  });
+
+  it('a seek or volume change while paused reaches the panel, so play resumes there', () => {
+    const paused = applyPlayer(loaded(), { op: 'pause' }, NOW + 10_000).state;
+    expect(applyPlayer(paused, { op: 'seek', ms: 57_000 }, NOW + 11_000).effects).toEqual([{ type: 'panel-seek', at: 57_000 }]);
+    expect(applyPlayer(paused, { op: 'volume', volume: 0.3 }, NOW + 11_000).effects).toEqual([{ type: 'panel-volume', volume: 0.3 }]);
+  });
+
+  it("starts a link at its own start time (t=)", () => {
+    expect(parsePlayer({ kind: 'player', op: 'stream', source: 'youtube', url: URL1, at: 3_420_000 })).toEqual({ op: 'stream', source: 'youtube', url: URL1, at: 3_420_000 });
+    const { state, effects } = applyPlayer({ ...INITIAL_PLAYER, panel: true }, { op: 'stream', source: 'youtube', url: URL1, at: 3_420_000 }, NOW);
+    expect(state.stream?.position).toBe(3_420_000);
+    expect(effects).toEqual([{ type: 'panel-load', source: 'youtube', url: URL1, at: 3_420_000, play: true, volume: 0.6 }]);
+  });
+
+  it('a closed panel stops the stream; play waits for the panel to open', () => {
+    const closed = applyPlayer(loaded(), { op: 'panel', open: false }, NOW + 5_000);
+    expect(closed.state).toMatchObject({ playing: false, panel: false, stream: { position: 5_000 } });
+    const again = applyPlayer(closed.state, { op: 'play' }, NOW + 6_000);
+    expect(again.state.playing).toBe(true);
+    expect(again.effects).toEqual([]);
+    expect(applyPlayer(again.state, { op: 'panel', open: true }, NOW + 7_000).effects).toEqual([{ type: 'panel', op: 'play' }]);
+    // Picked from the popup while the panel is closed: what played stops, and the link plays once the panel is there.
+    const picked = applyPlayer({ ...playingNoise, stream: closed.state.stream }, { op: 'source', source: 'youtube' }, NOW);
+    expect(picked.state).toMatchObject({ active: 'youtube', playing: true });
+    expect(picked.effects).toEqual([{ type: 'noise-stop' }]);
   });
 });

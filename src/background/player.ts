@@ -84,8 +84,54 @@ async function carryOut(e: PlayerEffect): Promise<void> {
       return toFile({ op: 'seek', at: e.at, path: e.path });
     case 'file-volume':
       return toFile({ op: 'volume', volume: e.volume });
+    case 'panel-load':
+    case 'panel':
+    case 'panel-seek':
+    case 'panel-volume':
+      // Links play in the side panel, in the service's own player; with the panel closed nothing listens.
+      return browser.runtime.sendMessage({ target: 'panel', ...e }).then(() => undefined, () => undefined);
     default:
-      // Streaming and tabs arrive in the next steps of #51.
+      // Music in tabs arrives in the next step of #51.
       return;
   }
+}
+
+/** The side panel holds a port open while it is there: when it closes, a link it played has stopped. */
+export function trackPanel(): void {
+  let open = 0; // side panels in several windows each hold a port
+  browser.runtime.onConnect.addListener((port) => {
+    // Study Duo's own pages only: a web page's script could connect under the same name.
+    if (port.name !== 'player-panel' || port.sender?.id !== browser.runtime.id || !port.sender.url?.startsWith(browser.runtime.getURL('/'))) return;
+    if (++open === 1) void playerCommands([{ op: 'panel', open: true }]).catch(console.error);
+    port.onDisconnect.addListener(() => {
+      if (--open === 0) void playerCommands([{ op: 'panel', open: false }]).catch(console.error);
+    });
+  });
+  // The worker slept while a panel closed: ask the browser whether any panel is still open.
+  const contexts = (browser.runtime as unknown as { getContexts?: (f: { contextTypes: string[] }) => Promise<unknown[]> }).getContexts;
+  if (contexts)
+    void Promise.all([contexts({ contextTypes: ['SIDE_PANEL'] }), playerItem.getValue()])
+      .then(([panels, state]) => (panels.length === 0 && state?.panel ? playerCommands([{ op: 'panel', open: false }]) : undefined))
+      .catch(console.error);
+}
+
+const REFERER_RULE = 7_701;
+/**
+ * YouTube's embedded player refuses to start without a Referer (error 153), and extension pages send none. One rule
+ * adds Study Duo's site as the Referer, only for embeds that Study Duo's own pages open.
+ */
+export async function embedReferer(): Promise<void> {
+  const dnr = browser.declarativeNetRequest;
+  await dnr.updateDynamicRules({
+    removeRuleIds: [REFERER_RULE],
+    addRules: [
+      {
+        id: REFERER_RULE,
+        priority: 1,
+        action: { type: 'modifyHeaders', requestHeaders: [{ header: 'referer', operation: 'set', value: 'https://coflazo.github.io/' }] },
+        // The extension's own origin: its id in Chrome, a random per-install host in Firefox.
+        condition: { requestDomains: ['youtube-nocookie.com', 'youtube.com'], resourceTypes: ['sub_frame'], initiatorDomains: [new URL(browser.runtime.getURL('/')).host] },
+      },
+    ] as Parameters<typeof dnr.updateDynamicRules>[0]['addRules'],
+  });
 }

@@ -1,4 +1,5 @@
 import { forgetLibrary } from './library-db';
+import { streamLinksItem } from './stream-links';
 import { logVersionItem } from './session-store';
 import { STORES, TIME_INDEX, withDb, type ActivityRecord, type BlockedAttempt, type ListenRecord, type StoreName } from './db';
 import type { SessionRecord } from './sessions';
@@ -78,6 +79,7 @@ export async function deleteAll(): Promise<void> {
     for (const store of STORES) await db.clear(store);
   });
   await forgetLibrary(); // the music folder and its song list
+  await streamLinksItem.removeValue(); // links played in the side panel
   await logVersionItem.setValue(Date.now()); // open pages drop what they showed
 }
 

@@ -5,6 +5,23 @@ import { current, handoff, newQueue, nextIn, prevIn, setRepeat, toggleShuffle, t
 /** Every source the player can hand over between. Only one plays at a time. */
 export const PLAYER_SOURCES = ['folder', 'noise', 'youtube', 'spotify', 'apple', 'soundcloud', 'tidal', 'tab'] as const;
 export type PlayerSource = (typeof PLAYER_SOURCES)[number];
+/** Sources that play in the side panel, in the service's own player. */
+export const STREAM_SOURCES = ['youtube', 'spotify', 'apple', 'soundcloud', 'tidal'] as const;
+export type StreamSource = (typeof STREAM_SOURCES)[number];
+export const isStream = (s: unknown): s is StreamSource => (STREAM_SOURCES as readonly unknown[]).includes(s);
+
+/** A link playing in the side panel, and what its player last said. Its place runs forward like the folder's. */
+export interface StreamState {
+  source: StreamSource;
+  url: string;
+  title: string | null;
+  artist: string | null;
+  position: number;
+  at: number;
+  duration: number | null;
+  /** The service will not play it here: embedding is off, or it is gone. */
+  problem: 'embed' | 'gone' | null;
+}
 
 /** A song from the music folder, as the player needs it: what to show, and where to find the file. */
 export interface PlayerTrack {
@@ -44,6 +61,9 @@ export interface PlayerState {
   /** For pages: the folder's song and the next title. The full list is stored apart (see background/player.ts). */
   now: PlayerTrack | null;
   upNext: string | null;
+  /** The link in the side panel, and whether the panel is open to play it. */
+  stream: StreamState | null;
+  panel: boolean;
 }
 
 export const INITIAL_PLAYER: PlayerState = {
@@ -61,6 +81,8 @@ export const INITIAL_PLAYER: PlayerState = {
   problem: null,
   now: null,
   upNext: null,
+  stream: null,
+  panel: false,
 };
 
 export type PlayerCommand =
@@ -77,6 +99,10 @@ export type PlayerCommand =
   | { op: 'seek'; ms: number }
   | { op: 'shuffle' }
   | { op: 'repeat'; repeat: Repeat }
+  | { op: 'stream'; source: StreamSource; url: string; at?: number }
+  // From the side panel:
+  | { op: 'stream-report'; url: string; title: string | null; artist: string | null; position: number; duration: number | null; playing: boolean; problem: 'embed' | 'gone' | null }
+  | { op: 'panel'; open: boolean }
   // From the page that plays the file:
   | { op: 'ended'; path?: string }
   | { op: 'loaded'; duration: number; path?: string }
@@ -91,6 +117,10 @@ export type PlayerEffect =
   | { type: 'file-pause' }
   | { type: 'file-seek'; at: number; path: string }
   | { type: 'file-volume'; volume: number }
+  | { type: 'panel-load'; source: StreamSource; url: string; at: number; play: boolean; volume: number }
+  | { type: 'panel'; op: 'play' | 'pause' | 'next' | 'prev' }
+  | { type: 'panel-seek'; at: number }
+  | { type: 'panel-volume'; volume: number }
   | { type: 'source-start'; source: PlayerSource }
   | { type: 'source-stop'; source: PlayerSource };
 
@@ -146,6 +176,22 @@ export function parsePlayer(raw: unknown): PlayerCommand | null {
       const d = num(r.duration);
       return d === null || d <= 0 ? null : { op: 'loaded', duration: d, ...pathOf(r) };
     }
+    case 'stream': {
+      const url = text(r.url, 2_000);
+      if (!isStream(r.source) || !url || !/^https:\/\/[^\s]+$/.test(url)) return null;
+      const at = num(r.at);
+      return at !== null && at > 0 ? { op: 'stream', source: r.source, url, at } : { op: 'stream', source: r.source, url };
+    }
+    case 'stream-report': {
+      const url = text(r.url, 2_000);
+      const position = num(r.position);
+      if (!url || position === null || typeof r.playing !== 'boolean') return null;
+      const d = num(r.duration);
+      const problem = r.problem === 'embed' || r.problem === 'gone' ? r.problem : null;
+      return { op: 'stream-report', url, title: text(r.title, 300), artist: text(r.artist, 300), position: Math.max(0, position), duration: d && d > 0 ? d : null, playing: r.playing, problem };
+    }
+    case 'panel':
+      return typeof r.open === 'boolean' ? { op: 'panel', open: r.open } : null;
     case 'repeat':
       return r.repeat === 'off' || r.repeat === 'all' || r.repeat === 'one' ? { op: 'repeat', repeat: r.repeat } : null;
     case 'problem':
@@ -168,6 +214,22 @@ export function positionAt(s: PlayerState, now: number): number {
   return s.duration ? Math.min(p, s.duration) : p;
 }
 
+/** Where the side panel's link is now, run forward while it plays. */
+export function streamAt(s: PlayerState, now: number): number {
+  const st = s.stream;
+  if (!st) return 0;
+  const p = s.playing && s.active === st.source ? st.position + Math.max(0, now - st.at) : st.position;
+  return st.duration ? Math.min(p, st.duration) : p;
+}
+
+/** The playing source's place written down, before it stops or hands over. */
+function freeze(s: PlayerState, now: number): PlayerState {
+  if (!s.playing) return s;
+  if (s.active === 'folder') return { ...s, position: positionAt(s, now), at: now };
+  if (s.stream && s.active === s.stream.source) return { ...s, stream: { ...s.stream, position: streamAt(s, now), at: now } };
+  return s;
+}
+
 const nowTrack = (s: PlayerState): PlayerTrack | null => {
   const id = s.queue ? current(s.queue) : null;
   return id ? (s.tracks[id] ?? null) : null;
@@ -180,9 +242,16 @@ function start(s: PlayerState): PlayerEffect | null {
     const track = nowTrack(s);
     return track ? { type: 'file-play', track, at: s.position, volume: s.volume } : null;
   }
+  if (isStream(s.active)) {
+    if (s.stream?.source !== s.active) return null;
+    // A closed panel cannot play: the state says playing, and the panel starts it when it opens.
+    return s.panel ? { type: 'panel', op: 'play' } : null;
+  }
   return { type: 'source-start', source: s.active };
 }
-const stop = (source: PlayerSource): PlayerEffect => (source === 'noise' ? { type: 'noise-stop' } : source === 'folder' ? { type: 'file-pause' } : { type: 'source-stop', source });
+const stop = (source: PlayerSource): PlayerEffect =>
+  source === 'noise' ? { type: 'noise-stop' } : source === 'folder' ? { type: 'file-pause' } : isStream(source) ? { type: 'panel', op: 'pause' } : { type: 'source-stop', source };
+const streamOn = (s: PlayerState) => isStream(s.active) && s.stream?.source === s.active;
 
 /** Moves the folder to another song: from its start, playing it if the folder was playing. */
 function toSong(s: PlayerState, queue: Queue, now: number): { state: PlayerState; effects: PlayerEffect[] } {
@@ -201,23 +270,29 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
   switch (cmd.op) {
     case 'play': {
       if (s.playing) return { state: s, effects: [] };
-      const state: PlayerState = { ...s, active: s.active ?? 'noise', playing: true, startedAt: now, at: now, problem: null };
+      const state: PlayerState = { ...s, active: s.active ?? 'noise', playing: true, startedAt: now, at: now, problem: null, ...(s.stream ? { stream: { ...s.stream, at: now } } : {}) };
       const go = start(state);
-      return go ? { state, effects: [go] } : { state: s, effects: [] };
+      if (go) return { state, effects: [go] };
+      return streamOn(s) ? { state, effects: [] } : { state: s, effects: [] };
     }
     case 'pause':
       if (!s.playing || !s.active) return { state: s, effects: [] };
-      return { state: { ...s, playing: false, startedAt: null, position: positionAt(s, now), at: now }, effects: [stop(s.active)] };
+      return { state: { ...freeze(s, now), playing: false, startedAt: null, at: now }, effects: [stop(s.active)] };
     case 'toggle':
       return applyPlayer(s, { op: s.playing ? 'pause' : 'play' }, now);
     case 'source': {
       const h = handoff({ active: s.active, playing: s.playing }, cmd.source);
-      const leaving: PlayerState = s.playing && s.active === 'folder' ? { ...s, position: positionAt(s, now) } : s;
-      const state: PlayerState = { ...leaving, active: h.active, at: now, ...(h.start ? { startedAt: now } : {}) };
+      const leaving = freeze(s, now);
+      // The link coming back runs on from where it stopped, counted from now.
+      const back = leaving.stream && h.active === leaving.stream.source ? { stream: { ...leaving.stream, at: now } } : {};
+      const state: PlayerState = { ...leaving, ...back, active: h.active, at: now, ...(h.start ? { startedAt: now } : {}) };
       if (!h.start) return { state, effects: [] };
       const go = start(state);
+      if (go) return { state, effects: [stop(h.fadeOut!), go] };
+      // A link whose panel is closed plays when the panel opens.
+      if (streamOn(state)) return { state, effects: [stop(h.fadeOut!)] };
       // A folder with nothing queued: the old source stops and the card shows the folder, waiting.
-      return go ? { state, effects: [stop(h.fadeOut!), go] } : { state: { ...state, playing: false, startedAt: null }, effects: [stop(h.fadeOut!)] };
+      return { state: { ...state, playing: false, startedAt: null }, effects: [stop(h.fadeOut!)] };
     }
     case 'noise': {
       const coloured = { ...s, noise: cmd.noise };
@@ -228,9 +303,12 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
     }
     case 'volume': {
       const state = { ...s, volume: cmd.volume };
+      // The panel's player keeps its own volume even while paused, so it is told either way.
+      if (streamOn(s) && s.panel) return { state, effects: [{ type: 'panel-volume', volume: cmd.volume }] };
       if (!s.playing) return { state, effects: [] };
       if (s.active === 'noise') return { state, effects: [{ type: 'noise-volume', volume: cmd.volume }] };
       if (s.active === 'folder') return { state, effects: [{ type: 'file-volume', volume: cmd.volume }] };
+      if (streamOn(s)) return { state, effects: [{ type: 'panel-volume', volume: cmd.volume }] };
       return { state, effects: [] };
     }
     case 'folder': {
@@ -242,7 +320,32 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
       const state: PlayerState = { ...s, active: 'folder', playing: true, queue: { ...queue, repeat: s.queue?.repeat ?? 'off' }, tracks, position: 0, at: now, startedAt: now, duration: null, problem: null };
       return { state, effects: [...before, start(state)!] };
     }
+    case 'stream': {
+      const before = s.playing && s.active && s.active !== cmd.source ? [stop(s.active)] : [];
+      const from = cmd.at ?? 0;
+      const stream: StreamState = { source: cmd.source, url: cmd.url, title: null, artist: null, position: from, at: now, duration: null, problem: null };
+      const state: PlayerState = { ...freeze(s, now), active: cmd.source, playing: true, startedAt: now, at: now, stream };
+      return { state, effects: [...before, { type: 'panel-load', source: cmd.source, url: cmd.url, at: from, play: true, volume: s.volume }] };
+    }
+    case 'stream-report': {
+      const st = s.stream;
+      if (!st || st.url !== cmd.url) return { state: s, effects: [] };
+      const stream: StreamState = { ...st, title: cmd.title ?? st.title, artist: cmd.artist ?? st.artist, position: cmd.position, at: now, duration: cmd.duration ?? st.duration, problem: cmd.problem };
+      if (s.active === st.source) {
+        const playing = cmd.playing;
+        return { state: { ...s, stream, playing, startedAt: playing ? (s.playing ? s.startedAt : now) : null }, effects: [] };
+      }
+      // Play pressed inside the service's own player: it takes over from whatever played.
+      if (cmd.playing) return { state: { ...s, stream, active: st.source, playing: true, startedAt: now, at: now }, effects: s.playing && s.active ? [stop(s.active)] : [] };
+      return { state: { ...s, stream }, effects: [] };
+    }
+    case 'panel': {
+      if (cmd.open) return { state: { ...s, panel: true }, effects: streamOn(s) && s.playing && !s.panel ? [{ type: 'panel', op: 'play' }] : [] };
+      const state: PlayerState = { ...s, panel: false };
+      return streamOn(s) && s.playing ? { state: { ...freeze(state, now), playing: false, startedAt: null }, effects: [] } : { state, effects: [] };
+    }
     case 'next': {
+      if (streamOn(s)) return { state: s, effects: [{ type: 'panel', op: 'next' }] };
       if (s.active !== 'folder' || !s.queue) return { state: s, effects: [] };
       // Next always moves on, even with repeat one (which only repeats a song that ends by itself).
       const next = nextIn({ ...s.queue, repeat: s.queue.repeat === 'one' ? 'all' : s.queue.repeat });
@@ -261,12 +364,18 @@ export function applyPlayer(s: PlayerState, cmd: PlayerCommand, now: number): { 
       return toSong({ ...s, playing: true, problem: null, startedAt: s.playing ? s.startedAt : now }, { ...s.queue, at: cmd.at }, now);
     }
     case 'prev': {
+      if (streamOn(s)) return { state: s, effects: [{ type: 'panel', op: 'prev' }] };
       if (s.active !== 'folder' || !s.queue) return { state: s, effects: [] };
       const back = prevIn(s.queue, positionAt(s, now));
       if (back.restart) return applyPlayer(s, { op: 'seek', ms: 0 }, now);
       return toSong(s, back.queue, now);
     }
     case 'seek': {
+      if (streamOn(s)) {
+        const at = s.stream!.duration ? Math.min(cmd.ms, s.stream!.duration) : cmd.ms;
+        // YouTube's seek keeps a paused video paused, so the panel moves even while paused.
+        return { state: { ...s, stream: { ...s.stream!, position: at, at: now } }, effects: s.panel ? [{ type: 'panel-seek', at }] : [] };
+      }
       if (s.active !== 'folder' || !nowTrack(s)) return { state: s, effects: [] };
       const ms = s.duration ? Math.min(cmd.ms, s.duration) : cmd.ms;
       return { state: { ...s, position: ms, at: now }, effects: s.playing ? [{ type: 'file-seek', at: ms, path: nowTrack(s)!.path }] : [] };
