@@ -68,3 +68,35 @@ test('a picked music folder is listed, searched and played song after song by th
   await expect(section.getByRole('button', { name: 'Choose a folder' })).toBeVisible();
   await ctx.close();
 });
+
+test('the popup card shows the folder song: cover, seek line, previous and next, and the source list', async () => {
+  const { ctx } = await launch(tempProfile());
+  const page = await ctx.newPage();
+  await page.goto(`chrome-extension://${EXT_ID}/dashboard.html#music`);
+  await fakeFolder(page);
+  const section = page.getByRole('region', { name: 'Your music folder' });
+  await section.getByRole('button', { name: 'Choose a folder' }).click();
+  await expect(section.getByRole('listitem')).toHaveCount(2);
+
+  const popup = await ctx.newPage();
+  await popup.setViewportSize({ width: 360, height: 600 });
+  await popup.goto(`chrome-extension://${EXT_ID}/popup.html`);
+  const card = popup.getByRole('region', { name: 'Player' });
+
+  // Pick the folder from the source list: nothing queued yet, so the card offers Play all.
+  await card.getByRole('button', { name: /SOUNDS/ }).click();
+  await popup.getByRole('menuitemradio', { name: /Your folder/ }).click();
+  await expect(card.getByRole('button', { name: /FOLDER/ })).toBeVisible();
+  await expect(card.getByText('2 songs on this computer')).toBeVisible();
+  await card.getByRole('button', { name: 'Play all' }).click();
+
+  // The song: its title, the seek line with its length, previous and next.
+  await expect(card.locator('.title')).toHaveText('Gymnopedie');
+  await expect(card.getByRole('slider', { name: 'Position' })).toBeEnabled({ timeout: 5_000 });
+  await expect(card.getByText('Your folder · 1 of 2 · Up next: Nocturne')).toBeVisible();
+  await card.getByRole('button', { name: 'Next' }).click();
+  await expect(card.locator('.title')).toHaveText('Nocturne');
+  await card.getByRole('button', { name: 'Pause' }).click();
+  await expect(card.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
+  await ctx.close();
+});
